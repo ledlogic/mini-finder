@@ -77,21 +77,7 @@
               <span class="file-name"><%= img[:filename] %></span>
             </div>
 
-            <% def hl_field(val, matched)
-              return '<em class="empty-val">—</em>' if val.to_s.strip.empty?
-              terms = matched || []
-              val.split(',').map(&:strip).map { |part|
-                hit = terms.any? { |t| t.sub(/^~/,'').length > 0 && part.downcase.include?(t.sub(/^~/,'')) }
-                fuzzy = !hit && terms.any? { |t| t.start_with?('~') && part.downcase.include?(t.sub(/^~/,'')) }
-                if hit
-                  "<mark class='hl-exact'>#{part}</mark>"
-                elsif fuzzy
-                  "<mark class='hl-fuzzy'>#{part}</mark>"
-                else
-                  part
-                end
-              }.join(', ')
-            end %>
+
 
             <table class="result-meta">
               <tr>

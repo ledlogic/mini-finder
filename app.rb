@@ -225,6 +225,40 @@ helpers do
     File.join(row[:source_folder], row[:filename])
   end
 
+  # Highlight matched terms in a comma-separated field value
+  def hl_field(val, matched)
+    return '<em class="empty-val">—</em>' if val.to_s.strip.empty?
+    terms = matched || []
+    val.split(',').map(&:strip).map { |part|
+      hit   = terms.any? { |t| t.sub(/^~/, '').length > 0 && part.downcase.include?(t.sub(/^~/, '')) }
+      fuzzy = !hit && terms.any? { |t| t.start_with?('~') && part.downcase.include?(t.sub(/^~/, '')) }
+      if hit
+        "<mark class='hl-exact'>#{part}</mark>"
+      elsif fuzzy
+        "<mark class='hl-fuzzy'>#{part}</mark>"
+      else
+        part
+      end
+    }.join(', ')
+  end
+
+  # Highlight matched terms in a comma-separated field value
+  def hl_field(val, matched)
+    return '<em class="empty-val">—</em>' if val.to_s.strip.empty?
+    terms = matched || []
+    val.split(',').map(&:strip).map { |part|
+      hit   = terms.any? { |t| t.sub(/^~~/,"").sub(/^~/,"").length > 0 && part.downcase.include?(t.sub(/^~/,"")) }
+      fuzzy = !hit && terms.any? { |t| t.start_with?("~") && part.downcase.include?(t.sub(/^~/,"")) }
+      if hit
+        "<mark class='hl-exact'>\#{part}</mark>"
+      elsif fuzzy
+        "<mark class='hl-fuzzy'>\#{part}</mark>"
+      else
+        part
+      end
+    }.join(", ")
+  end
+
   # Find or build collection record for a given folder path
   def collection_for_folder(folder_path)
     Collections.where(folder_path: folder_path).first
