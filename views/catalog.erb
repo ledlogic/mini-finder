@@ -59,6 +59,7 @@
       <col class="col-weapons">
       <col class="col-stance">
       <col class="col-size">
+      <col class="col-desc">
       <col class="col-actions">
     </colgroup>
     <thead>
@@ -72,6 +73,7 @@
         <th>Weapons</th>
         <th>Stance</th>
         <th>Size</th>
+        <th>Description</th>
         <th></th>
       </tr>
     </thead>
@@ -84,7 +86,7 @@
           <% last_col_id = img[:collection_id] %>
           <% col = @collections[img[:collection_id]] %>
           <tr class="collection-header-row">
-            <td colspan="10">
+            <td colspan="11">
               <span class="col-header-name">
                 <%= col ? (col[:name].to_s.empty? ? '(unnamed collection)' : col[:name]) : File.basename(img[:source_folder]) %>
               </span>
@@ -153,6 +155,7 @@
               <% end %>
             </select>
           </td>
+          <td><input type="text" name="description" class="cell-input cell-desc-input" value="<%= img[:description] %>" placeholder="free text description"></td>
           <td class="cell-actions">
             <button type="submit" class="btn-save" title="Save">✓</button>
             <a href="/edit/<%= img[:id] %>" class="btn-edit" title="Full edit">✎</a>

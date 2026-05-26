@@ -673,3 +673,21 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .autocomplete-confirmed {
   color: var(--text-dim);
 }
+
+/* ── Collection save button dirty state ───────────────────────────────────── */
+.col-save-btn.col-save-dirty {
+  background: #e53e3e !important;
+  box-shadow: 0 0 8px rgba(229,62,62,0.5);
+  animation: pulse-red 1s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 6px rgba(229,62,62,0.4); }
+  50%       { box-shadow: 0 0 14px rgba(229,62,62,0.8); }
+}
+
+/* ── Description column ───────────────────────────────────────────────────── */
+.col-desc       { min-width: 180px; }
+.cell-desc-input { font-style: italic; color: var(--text-dim) !important; }
+.cell-desc-input:focus { font-style: normal; color: var(--text) !important; }
+.desc-cell { font-size: 0.78rem; color: var(--text-dim); line-height: 1.4; max-width: 260px; }

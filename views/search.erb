@@ -104,6 +104,12 @@
                 <th>Size</th>
                 <td><%= hl_field(img[:mini_size], hl[:mini_size]) %></td>
               </tr>
+              <% if img[:description].to_s.strip.length > 0 %>
+              <tr>
+                <th>Desc</th>
+                <td class="desc-cell"><%= hl_field(img[:description], hl[:description]) %></td>
+              </tr>
+              <% end %>
               <% if img[:notes].to_s.strip.length > 0 %>
               <tr>
                 <th>Notes</th>

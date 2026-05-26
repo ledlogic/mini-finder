@@ -12,7 +12,7 @@
 <div class="collections-grid">
   <% @collections.each do |col| %>
     <div class="collection-card">
-      <form action="/collections/<%= col[:id] %>" method="post">
+      <form action="/collections/<%= col[:id] %>" method="post" class="col-form">
         <div class="col-card-header">
           <div class="col-card-meta">
             <% if col[:release_month] %>
@@ -20,7 +20,7 @@
             <% end %>
             <span class="col-count"><%= @counts[col[:id]] || 0 %> images</span>
           </div>
-          <button type="submit" class="btn-save" title="Save">✓</button>
+          <button type="submit" class="btn-save col-save-btn" title="Save">✓</button>
         </div>
 
         <div class="form-group">
@@ -51,3 +51,23 @@
 </div>
 
 <% end %>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.col-form').forEach(form => {
+    const inputs  = form.querySelectorAll('input[type="text"]');
+    const saveBtn = form.querySelector('.col-save-btn');
+    if (!saveBtn) return;
+
+    const originals = {};
+    inputs.forEach(inp => { originals[inp.name] = inp.value; });
+
+    inputs.forEach(inp => {
+      inp.addEventListener('input', () => {
+        const dirty = Array.from(inputs).some(i => i.value !== originals[i.name]);
+        saveBtn.classList.toggle('col-save-dirty', dirty);
+      });
+    });
+  });
+});
+</script>

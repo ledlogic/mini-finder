@@ -48,6 +48,7 @@ DB.create_table?(:images) do
   String   :stance
   String   :mini_size
   String   :notes
+  String   :description
   Boolean  :tagged, default: false
   DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
   DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -57,6 +58,7 @@ end
 [
   "ALTER TABLE images ADD COLUMN collection_id INTEGER REFERENCES collections(id)",
   "ALTER TABLE images ADD COLUMN suggested_name TEXT",
+  "ALTER TABLE images ADD COLUMN description TEXT",
   "ALTER TABLE collections ADD COLUMN release_month TEXT",
   "ALTER TABLE collections ADD COLUMN notes TEXT",
 ].each do |sql|
@@ -81,59 +83,120 @@ SUPPORTED_EXTS = %w[.png .jpg .jpeg .gif .webp .bmp].freeze
 
 # ─── OCR ──────────────────────────────────────────────────────────────────────
 
-# UNIT9 places the name block in different positions depending on artwork layout.
-# We try multiple crop zones and pick the one that yields the most clean ALL-CAPS
-# words — that zone is almost certainly the name block.
+# From analysing UNIT9 image samples, the name block is consistently in the
+# right 60% of the image, between y=65% and y=88%. We use one wide crop zone
+# that captures this whole region, then parse it carefully.
+#
+# Key findings from sample analysis:
+#   - Names are always right-aligned in the bottom portion
+#   - Collection name appears on a darker bar below the mini name
+#   - Accented chars (Ō, Ū, É) need to be normalised
+#   - Mixed case names exist (e.g. "Nomads Tribe", "Security Officer")
+#   - Multi-line names need joining (e.g. DANNY / 'ROAD RAMBLER' / WILLIAMS)
+#   - 2024+ folders contain small thumbnails — skip OCR if image < 400px wide
+
+MIN_OCR_WIDTH = 400  # skip images too small for reliable OCR
+
 CROP_ZONES = [
-  { label: 'upper-right',  x: 0.40, y: 0.68, w: 0.55, h: 0.12 },  # Ash Shepherd style
-  { label: 'lower-right',  x: 0.45, y: 0.78, w: 0.50, h: 0.15 },  # Kunoichi style
-  { label: 'bottom-right', x: 0.40, y: 0.82, w: 0.55, h: 0.12 },  # low placement
-  { label: 'mid-right',    x: 0.50, y: 0.60, w: 0.45, h: 0.18 },  # tall artwork
+  { label: 'name-block-high',  x: 0.38, y: 0.63, w: 0.62, h: 0.20 },
+  { label: 'name-block-mid',   x: 0.38, y: 0.70, w: 0.62, h: 0.20 },
+  { label: 'name-block-low',   x: 0.38, y: 0.76, w: 0.62, h: 0.18 },
+  { label: 'name-block-wider', x: 0.30, y: 0.63, w: 0.70, h: 0.25 },
 ].freeze
 
-# Clean a raw OCR line down to uppercase words only.
-# Returns the cleaned string or nil if it doesn't look like a name.
-def clean_ocr_line(line)
-  cleaned = line.gsub(/^[^A-Z]+/, '').gsub(/[^A-Za-z\s]/, '').strip
-  cleaned if cleaned.length > 3 && cleaned == cleaned.upcase
+# Normalise accented characters Tesseract commonly mangles
+def normalise_accents(str)
+  str
+    .gsub(/[ŌÖO]\s*(?=[A-Z])/, 'O')  # Ō → O mid-word
+    .gsub(/Ō/, 'O').gsub(/ō/, 'o')
+    .gsub(/Ū/, 'U').gsub(/ū/, 'u')
+    .gsub(/É/, 'E').gsub(/é/, 'e')
+    .gsub(/Á/, 'A').gsub(/á/, 'a')
+    .gsub(/Í/, 'I').gsub(/í/, 'i')
 end
 
-# Score a list of candidate name lines — more words, longer text = better.
+# Clean a raw OCR line into a usable name candidate.
+# More permissive than before — allows mixed case and some punctuation.
+def clean_ocr_line(line)
+  # Strip leading noise characters (non-alpha)
+  cleaned = line.gsub(/^[^A-Za-z]+/, '').strip
+  # Remove characters that are definitely noise
+  cleaned = cleaned.gsub(/[|\\@#$%^&*_=<>{}\[\]]/, '').strip
+  # Must be at least 3 chars and mostly letters
+  letter_ratio = cleaned.gsub(/[^A-Za-z]/, '').length.to_f / [cleaned.length, 1].max
+  return nil if cleaned.length < 3 || letter_ratio < 0.5
+  normalise_accents(cleaned)
+end
+
+# Score a zone result — prefer more words, longer names, penalise short noise
 def zone_score(names)
   names.sum { |n| n.split.length * n.length }
 end
 
-# Extract mini name (line 1) and collection name (line 2) from a UNIT9 image.
+# Collapse multi-line names: if two consecutive lines look like parts of the
+# same name (short lines, no collection-bar separator), join them.
+def collapse_name_lines(lines)
+  return lines if lines.length < 2
+  result = []
+  i = 0
+  while i < lines.length
+    line = lines[i]
+    # If next line exists and both are short-ish, they may be one multi-line name
+    if i + 1 < lines.length
+      next_line = lines[i + 1]
+      combined_words = (line + ' ' + next_line).split.length
+      # Join if combined would be ≤6 words and neither looks like a collection tag
+      if combined_words <= 6 && !next_line.include?('.') && line.split.length <= 3
+        result << (line + ' ' + next_line)
+        i += 2
+        next
+      end
+    end
+    result << line
+    i += 1
+  end
+  result
+end
+
+# Extract mini name and collection name from a UNIT9 image.
 # Returns { suggested_name: String|nil, collection_name: String|nil }
 def ocr_unit9_image(image_path)
   return { suggested_name: nil, collection_name: nil } unless File.exist?(image_path)
 
   orig = MiniMagick::Image.open(image_path)
-  w = orig.width
-  h = orig.height
+  w    = orig.width
+  h    = orig.height
+
+  # Skip tiny thumbnails — not full artwork
+  if w < MIN_OCR_WIDTH || h < MIN_OCR_WIDTH
+    return { suggested_name: nil, collection_name: nil }
+  end
 
   best_names = []
   best_score = 0
 
   CROP_ZONES.each do |zone|
-    # Re-open for each crop so we always start from the original
-    img = MiniMagick::Image.open(image_path)
-
+    img    = MiniMagick::Image.open(image_path)
     crop_w = (w * zone[:w]).to_i
     crop_h = (h * zone[:h]).to_i
     crop_x = (w * zone[:x]).to_i
     crop_y = (h * zone[:y]).to_i
 
     img.crop "#{crop_w}x#{crop_h}+#{crop_x}+#{crop_y}"
-    img.colorspace "Gray"
+    img.colorspace 'Gray'
+    # Boost contrast to make text stand out against dark backgrounds
+    img.contrast
+    img.contrast
 
     tmp = File.join(Dir.tmpdir, "unit9_ocr_#{Time.now.to_i}_#{rand(99999)}.jpg")
     img.write(tmp)
 
-    raw = RTesseract.new(tmp, psm: 6).to_s
+    raw   = RTesseract.new(tmp, psm: 6).to_s
     File.delete(tmp) if File.exist?(tmp)
 
-    names = raw.split("\n").map(&:strip).reject(&:empty?).filter_map { |l| clean_ocr_line(l) }
+    lines = raw.split("\n").map(&:strip).reject(&:empty?)
+    names = lines.filter_map { |l| clean_ocr_line(l) }
+    names = collapse_name_lines(names)
     score = zone_score(names)
 
     if score > best_score
@@ -143,13 +206,14 @@ def ocr_unit9_image(image_path)
   end
 
   {
-    suggested_name:  best_names[0],  # e.g. "KUNOICHI SISTERS"
-    collection_name: best_names[1]   # e.g. "BORYOKUDAN"
+    suggested_name:  best_names[0],
+    collection_name: best_names[1]
   }
 rescue => e
   warn "OCR failed for #{image_path}: #{e.message}"
   { suggested_name: nil, collection_name: nil }
 end
+
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -212,6 +276,27 @@ helpers do
               score += 0.5
               highlights[field] ||= []
               highlights[field] << "~#{word}"
+            end
+          end
+        end
+      end
+
+      # Description: higher weight Levenshtein word-level matching
+      desc = row[:description].to_s.downcase
+      unless desc.empty?
+        desc_words = desc.split(/\s+/)
+        q.split.each do |word|
+          if desc.include?(word)
+            score += 2.0
+            highlights[:description] ||= []
+            highlights[:description] << word
+          else
+            best    = desc_words.map { |v| levenshtein(v, word) }.min || 99
+            max_len = [word.length, 1].max
+            if best <= (max_len * 0.35).ceil && word.length > 2
+              score += 1.0
+              highlights[:description] ||= []
+              highlights[:description] << "~#{word}"
             end
           end
         end
@@ -389,15 +474,16 @@ post '/images/:id' do
   halt 404 unless row
 
   Images.where(id: id).update(
-    mini_name:  params[:mini_name].to_s.strip,
-    species:    params[:species].to_s.strip,
-    gender:     params[:gender].to_s.strip,
-    weapons:    params[:weapons].to_s.strip,
-    stance:     params[:stance].to_s.strip,
-    mini_size:  params[:mini_size].to_s.strip,
-    notes:      params[:notes].to_s.strip,
-    tagged:     params[:mini_name].to_s.strip.length > 0,
-    updated_at: Time.now
+    mini_name:   params[:mini_name].to_s.strip,
+    species:     params[:species].to_s.strip,
+    gender:      params[:gender].to_s.strip,
+    weapons:     params[:weapons].to_s.strip,
+    stance:      params[:stance].to_s.strip,
+    mini_size:   params[:mini_size].to_s.strip,
+    notes:       params[:notes].to_s.strip,
+    description: params[:description].to_s.strip,
+    tagged:      params[:mini_name].to_s.strip.length > 0,
+    updated_at:  Time.now
   )
   redirect back
 end
@@ -438,15 +524,16 @@ post '/edit/:id' do
   halt 404 unless Images.where(id: id).first
 
   Images.where(id: id).update(
-    mini_name:  params[:mini_name].to_s.strip,
-    species:    params[:species].to_s.strip,
-    gender:     params[:gender].to_s.strip,
-    weapons:    params[:weapons].to_s.strip,
-    stance:     params[:stance].to_s.strip,
-    mini_size:  params[:mini_size].to_s.strip,
-    notes:      params[:notes].to_s.strip,
-    tagged:     params[:mini_name].to_s.strip.length > 0,
-    updated_at: Time.now
+    mini_name:   params[:mini_name].to_s.strip,
+    species:     params[:species].to_s.strip,
+    gender:      params[:gender].to_s.strip,
+    weapons:     params[:weapons].to_s.strip,
+    stance:      params[:stance].to_s.strip,
+    mini_size:   params[:mini_size].to_s.strip,
+    notes:       params[:notes].to_s.strip,
+    description: params[:description].to_s.strip,
+    tagged:      params[:mini_name].to_s.strip.length > 0,
+    updated_at:  Time.now
   )
   redirect '/catalog'
 end

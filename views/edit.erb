@@ -76,8 +76,13 @@
       </div>
 
       <div class="form-group">
+        <label>Description <span class="hint">free text · Levenshtein searchable</span></label>
+        <textarea name="description" rows="3" placeholder="e.g. Female cyborg warrior with katana, crouching on rooftop. Red LED eyes. Detailed armour plating."><%= @image[:description] %></textarea>
+      </div>
+
+      <div class="form-group">
         <label>Notes</label>
-        <textarea name="notes" rows="3" placeholder="Any extra detail…"><%= @image[:notes] %></textarea>
+        <textarea name="notes" rows="2" placeholder="Any extra detail…"><%= @image[:notes] %></textarea>
       </div>
 
       <div class="form-actions">
