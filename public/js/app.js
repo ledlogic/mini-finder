@@ -23,112 +23,168 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ── Autocomplete ───────────────────────────────────────────────────────────
-let knownNames = [];   // loaded once from /api/names
-let activeDropdown = null;
+// ── Name data ──────────────────────────────────────────────────────────────
+let confirmedNames  = [];  // saved mini_name values
+let suggestedNames  = [];  // OCR suggested_name values (per image)
+let activeDropdown  = null;
 
-async function loadKnownNames() {
+async function loadNameData() {
   try {
-    const res  = await fetch('/api/names');
-    knownNames = await res.json();  // ["Ash Shepherd", "Kunoichi Sisters", ...]
+    const [cnRes, snRes] = await Promise.all([
+      fetch('/api/names'),
+      fetch('/api/suggested_names')
+    ]);
+    confirmedNames = await cnRes.json();
+    suggestedNames = await snRes.json();
   } catch (e) {
-    console.warn('Could not load name suggestions:', e);
+    console.warn('Could not load name data:', e);
   }
 }
 
-// Simple fuzzy match — every character in query appears in order in candidate
+// ── Levenshtein ────────────────────────────────────────────────────────────
+function levenshtein(a, b) {
+  a = a.toLowerCase(); b = b.toLowerCase();
+  const m = a.length, n = b.length;
+  const d = Array.from({length: m+1}, (_, i) =>
+    Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0)
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      d[i][j] = a[i-1] === b[j-1]
+        ? d[i-1][j-1]
+        : 1 + Math.min(d[i-1][j], d[i][j-1], d[i-1][j-1]);
+  return d[m][n];
+}
+
+// ── Fuzzy match ────────────────────────────────────────────────────────────
 function fuzzyMatch(query, candidate) {
   query = query.toLowerCase();
   candidate = candidate.toLowerCase();
-  // Exact substring first
   if (candidate.includes(query)) return true;
-  // Character-order fuzzy
   let qi = 0;
-  for (let ci = 0; ci < candidate.length && qi < query.length; ci++) {
+  for (let ci = 0; ci < candidate.length && qi < query.length; ci++)
     if (candidate[ci] === query[qi]) qi++;
-  }
   return qi === query.length;
 }
 
 function scoreMatch(query, candidate) {
-  query = query.toLowerCase();
-  candidate = candidate.toLowerCase();
+  query = query.toLowerCase(); candidate = candidate.toLowerCase();
   if (candidate.startsWith(query)) return 3;
   if (candidate.includes(query))   return 2;
-  return 1; // fuzzy
+  return 1;
 }
 
+// Highlight matched substring in a name
+function highlightMatch(query, name) {
+  const ql = query.toLowerCase();
+  const nl = name.toLowerCase();
+  const start = nl.indexOf(ql);
+  if (start >= 0) {
+    return name.slice(0, start) +
+      '<mark>' + name.slice(start, start + query.length) + '</mark>' +
+      name.slice(start + query.length);
+  }
+  return name;
+}
+
+// ── Autocomplete ───────────────────────────────────────────────────────────
 function closeAllAutocompletes() {
   document.querySelectorAll('.autocomplete-dropdown').forEach(d => d.remove());
   activeDropdown = null;
 }
 
+function buildDropdown(input, query) {
+  closeAllAutocompletes();
+  if (query.length < 1) return;
+
+  const items = [];
+
+  // 1. Near-match warnings from confirmed names (Levenshtein 1-3, not exact)
+  confirmedNames.forEach(name => {
+    const dist = levenshtein(query, name);
+    const exact = name.toLowerCase() === query.toLowerCase();
+    if (!exact && dist > 0 && dist <= 3 && query.length > 3) {
+      items.push({ type: 'warn', name, dist });
+    }
+  });
+
+  // 2. Fuzzy matches from confirmed names
+  confirmedNames
+    .filter(n => fuzzyMatch(query, n))
+    .forEach(name => {
+      if (!items.find(i => i.name === name)) {
+        items.push({ type: 'confirmed', name, score: scoreMatch(query, name) });
+      }
+    });
+
+  // 3. OCR suggestions (unconfirmed) — fuzzy match
+  suggestedNames
+    .filter(n => n && fuzzyMatch(query, n))
+    .forEach(name => {
+      if (!items.find(i => i.name === name)) {
+        items.push({ type: 'suggested', name, score: scoreMatch(query, name) });
+      }
+    });
+
+  if (items.length === 0) return;
+
+  // Sort: warnings first, then by score desc
+  items.sort((a, b) => {
+    if (a.type === 'warn' && b.type !== 'warn') return -1;
+    if (b.type === 'warn' && a.type !== 'warn') return  1;
+    return (b.score || 0) - (a.score || 0);
+  });
+
+  const dropdown = document.createElement('ul');
+  dropdown.className = 'autocomplete-dropdown';
+
+  items.slice(0, 10).forEach((item, idx) => {
+    const li = document.createElement('li');
+
+    if (item.type === 'warn') {
+      li.className = 'autocomplete-item autocomplete-warn';
+      li.innerHTML = `⚠ Did you mean <strong>${item.name}</strong>? (${item.dist} char difference)`;
+    } else if (item.type === 'suggested') {
+      li.className = 'autocomplete-item autocomplete-suggested';
+      li.innerHTML = `✦ ${highlightMatch(query, item.name)}`;
+    } else {
+      li.className = 'autocomplete-item autocomplete-confirmed';
+      if (idx === 0 || items[0].type === 'warn') li.classList.add('autocomplete-active');
+      li.innerHTML = highlightMatch(query, item.name);
+    }
+
+    li.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      input.value = item.name;
+      input.dispatchEvent(new Event('input'));
+      closeAllAutocompletes();
+      const btn = input.closest('.img-row')?.querySelector('.btn-save');
+      if (btn) btn.style.background = 'var(--accent2)';
+    });
+
+    dropdown.appendChild(li);
+  });
+
+  // Position under input
+  const rect = input.getBoundingClientRect();
+  dropdown.style.top   = (rect.bottom + window.scrollY) + 'px';
+  dropdown.style.left  = (rect.left   + window.scrollX) + 'px';
+  dropdown.style.width = Math.max(rect.width, 220) + 'px';
+
+  document.body.appendChild(dropdown);
+  activeDropdown = dropdown;
+}
+
 function attachAutocomplete(input) {
   input.setAttribute('autocomplete', 'off');
 
-  input.addEventListener('input', () => {
-    closeAllAutocompletes();
-    const query = input.value.trim();
-    if (query.length < 1 || knownNames.length === 0) return;
+  input.addEventListener('input', () => buildDropdown(input, input.value.trim()));
 
-    const matches = knownNames
-      .filter(n => fuzzyMatch(query, n))
-      .sort((a, b) => scoreMatch(query, b) - scoreMatch(query, a))
-      .slice(0, 8);
-
-    if (matches.length === 0) return;
-
-    // Build dropdown
-    const dropdown = document.createElement('ul');
-    dropdown.className = 'autocomplete-dropdown';
-
-    matches.forEach((name, idx) => {
-      const li = document.createElement('li');
-      li.className = 'autocomplete-item';
-      if (idx === 0) li.classList.add('autocomplete-active');
-
-      // Highlight matching portion
-      const ql = query.toLowerCase();
-      const nl = name.toLowerCase();
-      const start = nl.indexOf(ql);
-      if (start >= 0) {
-        li.innerHTML =
-          name.slice(0, start) +
-          '<mark>' + name.slice(start, start + query.length) + '</mark>' +
-          name.slice(start + query.length);
-      } else {
-        li.textContent = name;
-      }
-
-      li.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // prevent input blur before click registers
-        input.value = name;
-        input.dispatchEvent(new Event('input'));
-        closeAllAutocompletes();
-        // Mark save button dirty
-        const btn = input.closest('.img-row')?.querySelector('.btn-save');
-        if (btn) btn.style.background = 'var(--accent2)';
-      });
-
-      dropdown.appendChild(li);
-    });
-
-    // Position under the input
-    const rect = input.getBoundingClientRect();
-    dropdown.style.top    = (rect.bottom + window.scrollY) + 'px';
-    dropdown.style.left   = (rect.left   + window.scrollX) + 'px';
-    dropdown.style.width  = Math.max(rect.width, 200) + 'px';
-
-    document.body.appendChild(dropdown);
-    activeDropdown = dropdown;
-  });
-
-  // Keyboard navigation
   input.addEventListener('keydown', (e) => {
     if (!activeDropdown) return;
     const items = activeDropdown.querySelectorAll('.autocomplete-item');
-    const activeItem = activeDropdown.querySelector('.autocomplete-active');
-    let idx = Array.from(items).indexOf(activeItem);
+    const active = activeDropdown.querySelector('.autocomplete-active');
+    let idx = Array.from(items).indexOf(active);
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -139,30 +195,27 @@ function attachAutocomplete(input) {
       items[idx]?.classList.remove('autocomplete-active');
       items[Math.max(idx - 1, 0)]?.classList.add('autocomplete-active');
     } else if (e.key === 'Enter') {
-      const active = activeDropdown.querySelector('.autocomplete-active');
-      if (active) {
+      const activeItem = activeDropdown.querySelector('.autocomplete-active');
+      if (activeItem) {
         e.preventDefault();
-        input.value = active.textContent.trim();
+        // Extract plain name from the item
+        const nameEl = activeItem.querySelector('strong') || activeItem;
+        input.value = nameEl.textContent.trim();
         input.dispatchEvent(new Event('input'));
         closeAllAutocompletes();
       }
-      // If no dropdown active item, fall through to form submit (handled below)
     } else if (e.key === 'Escape') {
       closeAllAutocompletes();
     }
   });
 
-  input.addEventListener('blur', () => {
-    // Small delay so mousedown on item fires first
-    setTimeout(closeAllAutocompletes, 150);
-  });
+  input.addEventListener('blur', () => setTimeout(closeAllAutocompletes, 150));
 }
 
 // ── DOMContentLoaded ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
 
-  // Load known names for autocomplete
-  await loadKnownNames();
+  await loadNameData();
 
   // Attach autocomplete to all mini_name inputs
   document.querySelectorAll('input[name="mini_name"]').forEach(attachAutocomplete);
@@ -192,7 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 3500);
   }
 
-  // Enter key saves row (only when no autocomplete is active)
+  // Enter saves row (only when no dropdown active)
   document.querySelectorAll('.img-row input').forEach(inp => {
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !activeDropdown) {
@@ -202,6 +255,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Close dropdown on scroll (repositioning is complex, just close)
   window.addEventListener('scroll', closeAllAutocompletes, { passive: true });
 });

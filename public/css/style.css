@@ -647,3 +647,29 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   color: var(--accent);
   font-weight: 600;
 }
+
+/* ── Autocomplete item types ──────────────────────────────────────────────── */
+.autocomplete-warn {
+  color: var(--accent2) !important;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem !important;
+  padding: 8px 12px !important;
+  background: rgba(255,107,53,0.06);
+}
+.autocomplete-warn:hover,
+.autocomplete-warn.autocomplete-active {
+  background: rgba(255,107,53,0.14) !important;
+}
+.autocomplete-warn strong { font-weight: 700; }
+
+.autocomplete-suggested {
+  color: var(--accent3) !important;
+}
+.autocomplete-suggested:hover,
+.autocomplete-suggested.autocomplete-active {
+  background: rgba(168,85,247,0.1) !important;
+}
+
+.autocomplete-confirmed {
+  color: var(--text-dim);
+}

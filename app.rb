@@ -470,6 +470,20 @@ get '/api/names' do
   names.to_json
 end
 
+# Distinct OCR suggested names (unconfirmed) for autocomplete
+get '/api/suggested_names' do
+  content_type :json
+  names = Images
+    .where(Sequel.~(suggested_name: nil))
+    .where(Sequel.~(suggested_name: ""))
+    .where(tagged: false)
+    .select_map(:suggested_name)
+    .flat_map { |n| n.split(",").map(&:strip) }
+    .uniq
+    .sort
+  names.to_json
+end
+
 get '/api/collections' do
   content_type :json
   Collections.all.to_json
