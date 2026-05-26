@@ -71,4 +71,4 @@ puma.state
 .solargraph.yml
 .yardoc/
 *.jpg
-test_ocr.rb
+test_*.rb
