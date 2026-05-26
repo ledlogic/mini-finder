@@ -28,6 +28,18 @@ let confirmedNames  = [];  // saved mini_name values
 let suggestedNames  = [];  // OCR suggested_name values (per image)
 let activeDropdown  = null;
 
+// ── Static vocabulary for fixed fields ────────────────────────────────────
+const FIELD_VOCAB = {
+  species: [
+    'HUMAN', 'ROBOT', 'VEHICLE', 'ALIEN', 'CREATURE',
+    'UNDEAD', 'BEAST', 'CONSTRUCT', 'HYBRID'
+  ],
+  stance: [
+    'STANDING', 'CROUCHING', 'RUNNING', 'KNEELING', 'CHARGING',
+    'PRONE', 'JUMPING', 'RESTING', 'COMBAT', 'MOUNTED'
+  ]
+};
+
 async function loadNameData() {
   try {
     const [cnRes, snRes] = await Promise.all([
@@ -175,6 +187,85 @@ function buildDropdown(input, query) {
   activeDropdown = dropdown;
 }
 
+// ── Simple autocomplete for fixed-vocabulary fields ────────────────────────
+function attachSimpleAutocomplete(input, vocab) {
+  input.setAttribute('autocomplete', 'off');
+
+  input.addEventListener('input', () => {
+    closeAllAutocompletes();
+    const raw   = input.value;
+    // Support comma-separated — complete only the last token
+    const parts = raw.split(',');
+    const query = parts[parts.length - 1].trim();
+    if (query.length < 1) return;
+
+    const matches = vocab.filter(v => v.toLowerCase().startsWith(query.toLowerCase()));
+    if (matches.length === 0) return;
+
+    const dropdown = document.createElement('ul');
+    dropdown.className = 'autocomplete-dropdown';
+
+    matches.forEach((name, idx) => {
+      const li = document.createElement('li');
+      li.className = 'autocomplete-item autocomplete-confirmed';
+      if (idx === 0) li.classList.add('autocomplete-active');
+      // Highlight typed portion
+      li.innerHTML = '<strong>' + name.slice(0, query.length) + '</strong>' + name.slice(query.length);
+
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        // Replace only the last token
+        parts[parts.length - 1] = name;
+        input.value = parts.join(', ');
+        input.dispatchEvent(new Event('input'));
+        closeAllAutocompletes();
+        const btn = input.closest('.img-row')?.querySelector('.btn-save');
+        if (btn) btn.style.background = 'var(--accent2)';
+      });
+
+      dropdown.appendChild(li);
+    });
+
+    const rect = input.getBoundingClientRect();
+    dropdown.style.top   = (rect.bottom + window.scrollY) + 'px';
+    dropdown.style.left  = (rect.left   + window.scrollX) + 'px';
+    dropdown.style.width = Math.max(rect.width, 180) + 'px';
+    document.body.appendChild(dropdown);
+    activeDropdown = dropdown;
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (!activeDropdown) return;
+    const items  = activeDropdown.querySelectorAll('.autocomplete-item');
+    const active = activeDropdown.querySelector('.autocomplete-active');
+    let idx = Array.from(items).indexOf(active);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      items[idx]?.classList.remove('autocomplete-active');
+      items[Math.min(idx + 1, items.length - 1)]?.classList.add('autocomplete-active');
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      items[idx]?.classList.remove('autocomplete-active');
+      items[Math.max(idx - 1, 0)]?.classList.add('autocomplete-active');
+    } else if (e.key === 'Tab' || e.key === 'Enter') {
+      const activeItem = activeDropdown.querySelector('.autocomplete-active');
+      if (activeItem) {
+        e.preventDefault();
+        const parts = input.value.split(',');
+        parts[parts.length - 1] = activeItem.textContent.trim();
+        input.value = parts.join(', ');
+        input.dispatchEvent(new Event('input'));
+        closeAllAutocompletes();
+      }
+    } else if (e.key === 'Escape') {
+      closeAllAutocompletes();
+    }
+  });
+
+  input.addEventListener('blur', () => setTimeout(closeAllAutocompletes, 150));
+}
+
 function attachAutocomplete(input) {
   input.setAttribute('autocomplete', 'off');
 
@@ -219,6 +310,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Attach autocomplete to all mini_name inputs
   document.querySelectorAll('input[name="mini_name"]').forEach(attachAutocomplete);
+
+  // Attach static vocabulary autocomplete to species and stance
+  document.querySelectorAll('input[name="species"]').forEach(inp => attachSimpleAutocomplete(inp, FIELD_VOCAB.species));
+  document.querySelectorAll('input[name="stance"]').forEach(inp => attachSimpleAutocomplete(inp, FIELD_VOCAB.stance));
 
   // Dirty-row save button highlight
   document.querySelectorAll('.img-row').forEach(row => {
