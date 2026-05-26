@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNIT9 Miniatures Catalog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;600;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="sidenav">
+    <div class="sidenav-brand">
+      <span class="brand-unit">UNIT</span><span class="brand-9">9</span>
+      <span class="brand-sub">CATALOG</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="/catalog" class="<%= request.path_info.start_with?('/catalog') || request.path_info == '/' ? 'active' : '' %>">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10"/></svg>
+        Catalog
+      </a></li>
+      <li><a href="/search" class="<%= request.path_info == '/search' ? 'active' : '' %>">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Search
+      </a></li>
+    </ul>
+    <form action="/scan" method="post" class="scan-form">
+      <button type="submit" class="btn-scan">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Scan Folder
+      </button>
+    </form>
+    <div class="sidenav-footer">
+      <code class="root-path"><%= settings.root_folder %></code>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <% if params[:scanned] %>
+      <div class="toast">✓ Found <strong><%= params[:scanned] %></strong> new image<%= params[:scanned].to_i == 1 ? '' : 's' %></div>
+    <% end %>
+    <%= yield %>
+  </main>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

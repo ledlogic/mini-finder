@@ -1,0 +1,155 @@
+<div class="page-header">
+  <div>
+    <h1>Search</h1>
+    <p class="page-sub">Fuzzy match across all fields · scored by relevance</p>
+  </div>
+</div>
+
+<form action="/search" method="get" class="search-form">
+  <div class="search-bar">
+    <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" name="q" value="<%= @params['q'] %>" placeholder="Search names, species, weapons… fuzzy matching included" class="search-main" autofocus>
+    <button type="submit" class="btn-primary">Search</button>
+  </div>
+
+  <details class="field-filters" <%= @params.any? { |k,v| %w[mini_name species gender weapons stance mini_size].include?(k) && v.to_s.strip.length > 0 } ? 'open' : '' %>>
+    <summary>Field Filters</summary>
+    <div class="filter-grid">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" name="mini_name" value="<%= @params['mini_name'] %>" placeholder="e.g. Zara">
+      </div>
+      <div class="form-group">
+        <label>Species</label>
+        <input type="text" name="species" value="<%= @params['species'] %>" placeholder="e.g. Elf">
+      </div>
+      <div class="form-group">
+        <label>Gender</label>
+        <select name="gender">
+          <option value="">Any</option>
+          <% ['M','F','NA'].each do |g| %>
+            <option value="<%= g %>" <%= @params['gender'] == g ? 'selected' : '' %>><%= g %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Weapons</label>
+        <input type="text" name="weapons" value="<%= @params['weapons'] %>" placeholder="e.g. Sword">
+      </div>
+      <div class="form-group">
+        <label>Stance</label>
+        <input type="text" name="stance" value="<%= @params['stance'] %>" placeholder="e.g. Combat">
+      </div>
+      <div class="form-group">
+        <label>Size</label>
+        <select name="mini_size">
+          <option value="">Any</option>
+          <% ['S','M','L'].each do |s| %>
+            <option value="<%= s %>" <%= @params['mini_size'] == s ? 'selected' : '' %>><%= s %></option>
+          <% end %>
+        </select>
+      </div>
+    </div>
+  </details>
+</form>
+
+<% if @query_made %>
+  <div class="results-header">
+    <span class="results-count"><%= @results.length %> result<%= @results.length == 1 ? '' : 's' %></span>
+    <span class="results-sorted">sorted by score</span>
+  </div>
+
+  <% if @results.empty? %>
+    <div class="empty-state">No matches found. Try broader terms or check spelling.</div>
+  <% else %>
+    <div class="results-grid">
+      <% @results.each do |result| %>
+        <% img = result[:row]; score = result[:score]; hl = result[:highlights] %>
+        <div class="result-card">
+          <div class="result-image-wrap" onclick="openLightbox('/image_file/<%= img[:id] %>')">
+            <img src="/image_file/<%= img[:id] %>" alt="<%= img[:filename] %>" loading="lazy" class="result-image">
+            <div class="score-badge"><%= score %></div>
+          </div>
+
+          <div class="result-body">
+            <div class="result-file">
+              <span class="folder-name"><%= File.basename(img[:source_folder]) %></span>
+              <span class="file-name"><%= img[:filename] %></span>
+            </div>
+
+            <% def hl_field(val, matched)
+              return '<em class="empty-val">—</em>' if val.to_s.strip.empty?
+              terms = matched || []
+              val.split(',').map(&:strip).map { |part|
+                hit = terms.any? { |t| t.sub(/^~/,'').length > 0 && part.downcase.include?(t.sub(/^~/,'')) }
+                fuzzy = !hit && terms.any? { |t| t.start_with?('~') && part.downcase.include?(t.sub(/^~/,'')) }
+                if hit
+                  "<mark class='hl-exact'>#{part}</mark>"
+                elsif fuzzy
+                  "<mark class='hl-fuzzy'>#{part}</mark>"
+                else
+                  part
+                end
+              }.join(', ')
+            end %>
+
+            <table class="result-meta">
+              <tr>
+                <th>Name</th>
+                <td><%= hl_field(img[:mini_name], hl[:mini_name]) %></td>
+              </tr>
+              <tr>
+                <th>Species</th>
+                <td><%= hl_field(img[:species], hl[:species]) %></td>
+              </tr>
+              <tr>
+                <th>Gender</th>
+                <td><%= hl_field(img[:gender], hl[:gender]) %></td>
+              </tr>
+              <tr>
+                <th>Weapons</th>
+                <td><%= hl_field(img[:weapons], hl[:weapons]) %></td>
+              </tr>
+              <tr>
+                <th>Stance</th>
+                <td><%= hl_field(img[:stance], hl[:stance]) %></td>
+              </tr>
+              <tr>
+                <th>Size</th>
+                <td><%= hl_field(img[:mini_size], hl[:mini_size]) %></td>
+              </tr>
+              <% if img[:notes].to_s.strip.length > 0 %>
+              <tr>
+                <th>Notes</th>
+                <td><%= hl_field(img[:notes], hl[:notes]) %></td>
+              </tr>
+              <% end %>
+            </table>
+
+            <% if hl.any? %>
+              <div class="match-tags">
+                <% hl.each do |field, terms| %>
+                  <% terms.each do |t| %>
+                    <span class="match-tag <%= t.start_with?('~') ? 'match-fuzzy' : 'match-exact' %>">
+                      <%= field %> · <%= t %>
+                    </span>
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
+
+            <div class="result-actions">
+              <a href="/edit/<%= img[:id] %>" class="btn-edit-sm">Edit ✎</a>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="Preview">
+</div>

@@ -1,0 +1,100 @@
+<div class="page-header">
+  <div>
+    <h1>Edit Image</h1>
+    <p class="page-sub"><%= @image[:source_folder] %> / <strong><%= @image[:filename] %></strong></p>
+  </div>
+  <a href="/catalog" class="btn-back">← Back to Catalog</a>
+</div>
+
+<div class="edit-layout">
+  <div class="edit-image-panel">
+    <img src="/image_file/<%= @image[:id] %>" alt="<%= @image[:filename] %>" class="edit-image">
+    <div class="edit-meta-info">
+      <% if @image[:image_size] %>
+        <span class="meta-chip">📐 <%= @image[:image_size] %></span>
+      <% end %>
+      <span class="meta-chip">🗂 <%= File.basename(@image[:source_folder]) %></span>
+      <span class="meta-chip status-<%= @image[:tagged] ? 'tagged' : 'untagged' %>">
+        <%= @image[:tagged] ? '✓ Tagged' : '○ Untagged' %>
+      </span>
+    </div>
+  </div>
+
+  <div class="edit-form-panel">
+    <form action="/edit/<%= @image[:id] %>" method="post" class="edit-form">
+
+      <div class="form-group">
+        <label>Mini Name(s) <span class="hint">comma-separated for multiple</span></label>
+        <input type="text" name="mini_name" value="<%= @image[:mini_name] %>" placeholder="e.g. Zara, Rex, The Watcher" autofocus>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Species <span class="hint">comma-separated</span></label>
+          <input type="text" name="species" value="<%= @image[:species] %>" placeholder="e.g. Human, Elf, Orc">
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <div class="multi-check">
+            <% ['M','F','NA'].each do |g| %>
+              <label class="check-label">
+                <input type="checkbox" name="gender_<%= g %>" value="<%= g %>"
+                  <%= @image[:gender].to_s.split(',').map(&:strip).include?(g) ? 'checked' : '' %>
+                  onchange="syncGenderField()">
+                <%= g %>
+              </label>
+            <% end %>
+          </div>
+          <input type="hidden" name="gender" id="gender-hidden" value="<%= @image[:gender] %>">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Weapons <span class="hint">comma-separated</span></label>
+        <input type="text" name="weapons" value="<%= @image[:weapons] %>" placeholder="e.g. Sword, Pistol, Staff">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Stance <span class="hint">comma-separated</span></label>
+          <input type="text" name="stance" value="<%= @image[:stance] %>" placeholder="e.g. Combat, Resting, Charging">
+        </div>
+        <div class="form-group">
+          <label>Size</label>
+          <div class="multi-check">
+            <% ['S','M','L'].each do |s| %>
+              <label class="check-label">
+                <input type="checkbox" name="size_<%= s %>" value="<%= s %>"
+                  <%= @image[:mini_size].to_s.split(',').map(&:strip).include?(s) ? 'checked' : '' %>
+                  onchange="syncSizeField()">
+                <%= s %>
+              </label>
+            <% end %>
+          </div>
+          <input type="hidden" name="mini_size" id="size-hidden" value="<%= @image[:mini_size] %>">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea name="notes" rows="3" placeholder="Any extra detail…"><%= @image[:notes] %></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Save Changes</button>
+        <a href="/catalog" class="btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function syncGenderField() {
+  const vals = ['M','F','NA'].filter(v => document.querySelector(`input[name=gender_${v}]`).checked);
+  document.getElementById('gender-hidden').value = vals.join(',');
+}
+function syncSizeField() {
+  const vals = ['S','M','L'].filter(v => document.querySelector(`input[name=size_${v}]`).checked);
+  document.getElementById('size-hidden').value = vals.join(',');
+}
+</script>

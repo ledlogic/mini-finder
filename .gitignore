@@ -1,3 +1,14 @@
+# ── Database ──────────────────────────────────────────────────────────────────
+db/catalog.db
+db/catalog.db-shm
+db/catalog.db-wal
+
+# ── Bundler ───────────────────────────────────────────────────────────────────
+.bundle/
+vendor/bundle/
+Gemfile.lock
+
+# ── Ruby ──────────────────────────────────────────────────────────────────────
 *.gem
 *.rbc
 /.config
@@ -5,52 +16,57 @@
 /InstalledFiles
 /pkg/
 /spec/reports/
-/spec/examples.txt
 /test/tmp/
 /test/version_tmp/
 /tmp/
-
-# Used by dotenv library to load environment variables.
-# .env
-
-# Ignore Byebug command history file.
 .byebug_history
 
-## Specific to RubyMotion:
-.dat*
-.repl_history
-build/
-*.bridgesupport
-build-iPhoneOS/
-build-iPhoneSimulator/
+# ── Logs ──────────────────────────────────────────────────────────────────────
+log/
+*.log
 
-## Specific to RubyMotion (use of CocoaPods):
-#
-# We recommend against adding the Pods directory to your .gitignore. However
-# you should judge for yourself, the pros and cons are mentioned at:
-# https://guides.cocoapods.org/using/using-cocoapods.html#should-i-check-the-pods-directory-into-source-control
-#
-# vendor/Pods/
+# ── Environment / Secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
 
-## Documentation cache and generated files:
-/.yardoc/
-/_yardoc/
-/doc/
-/rdoc/
+# ── OS junk ───────────────────────────────────────────────────────────────────
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-## Environment normalization:
-/.bundle/
-/vendor/bundle
-/lib/bundler/man/
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
 
-# for a library or gem, you might want to ignore these files since the code is
-# intended to run in multiple environments; otherwise, check them in:
-# Gemfile.lock
-# .ruby-version
-# .ruby-gemset
+# Linux
+*~
 
-# unless supporting rvm < 1.11.0 or doing something fancy, ignore this:
-.rvmrc
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+# Eclipse
+.project
+.classpath
+.settings/
+.metadata/
+bin/
+*.launch
 
-# Used by RuboCop. Remote config files pulled in from inherit_from directive.
-# .rubocop-https?--*
+# RubyMine / JetBrains
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# ── Sinatra / Puma ────────────────────────────────────────────────────────────
+puma.state
+.puma/
+
+# ── Solargraph ────────────────────────────────────────────────────────────────
+.solargraph.yml
+.yardoc/

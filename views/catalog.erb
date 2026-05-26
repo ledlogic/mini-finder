@@ -1,0 +1,160 @@
+<div class="page-header">
+  <div>
+    <h1>Image Catalog</h1>
+    <p class="page-sub">
+      <% if @show_all %>
+        All <%= @total %> images
+        &nbsp;·&nbsp; <a href="/catalog">Show untagged only</a>
+      <% else %>
+        <%= @total %> untagged image<%= @total == 1 ? '' : 's' %>
+        &nbsp;·&nbsp; <a href="/catalog?show_all=1">Show all</a>
+      <% end %>
+    </p>
+  </div>
+  <div class="toolbar-right">
+    <div class="thumb-sizer" title="Thumbnail size">
+      <button class="size-btn" onclick="setThumbSize(60)"  data-size="60">S</button>
+      <button class="size-btn" onclick="setThumbSize(120)" data-size="120">M</button>
+      <button class="size-btn" onclick="setThumbSize(240)" data-size="240">L</button>
+      <button class="size-btn" onclick="setThumbSize(320)" data-size="320">XL</button>
+    </div>
+    <% if @total == 0 && !@show_all %>
+      <span class="badge badge-ok">✓ All tagged</span>
+    <% end %>
+  </div>
+</div>
+
+<% if @images.empty? %>
+  <div class="empty-state">
+    <p>No images found. Use <strong>Scan Folder</strong> to discover images.</p>
+  </div>
+<% else %>
+
+<div class="catalog-table-wrap">
+  <table class="catalog-table" id="catalog-table">
+    <colgroup>
+      <col class="col-thumb">
+      <col class="col-path">
+      <col class="col-name">
+      <col class="col-species">
+      <col class="col-gender">
+      <col class="col-weapons">
+      <col class="col-stance">
+      <col class="col-size">
+      <col class="col-actions">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Preview</th>
+        <th>File</th>
+        <th>Name(s)</th>
+        <th>Species</th>
+        <th>Gender</th>
+        <th>Weapons</th>
+        <th>Stance</th>
+        <th>Size</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @images.each do |img| %>
+        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %>" data-id="<%= img[:id] %>">
+          <form action="/images/<%= img[:id] %>" method="post">
+          <td class="cell-thumb">
+            <div class="thumb-wrap">
+              <img
+                src="/image_file/<%= img[:id] %>"
+                alt="<%= img[:filename] %>"
+                loading="lazy"
+                class="thumb"
+                onclick="openLightbox(this.src)"
+              >
+              <% if img[:tagged] %><span class="tag-dot">✓</span><% end %>
+            </div>
+          </td>
+          <td class="cell-path">
+            <span class="folder-name"><%= File.basename(img[:source_folder]) %></span>
+            <span class="file-name"><%= img[:filename] %></span>
+            <% if img[:image_size] %><span class="img-size-badge"><%= img[:image_size] %></span><% end %>
+          </td>
+          <td><input type="text" name="mini_name"  class="cell-input" value="<%= img[:mini_name] %>"  placeholder="e.g. Zara, Rex"></td>
+          <td><input type="text" name="species"    class="cell-input" value="<%= img[:species] %>"    placeholder="e.g. Human, Elf"></td>
+          <td>
+            <select name="gender" class="cell-select">
+              <option value="">—</option>
+              <% ['M','F','NA','M,F','M,NA','F,NA','M,F,NA'].each do |g| %>
+                <option value="<%= g %>" <%= img[:gender] == g ? 'selected' : '' %>><%= g %></option>
+              <% end %>
+            </select>
+          </td>
+          <td><input type="text" name="weapons"    class="cell-input" value="<%= img[:weapons] %>"    placeholder="e.g. Sword, Gun"></td>
+          <td><input type="text" name="stance"     class="cell-input" value="<%= img[:stance] %>"     placeholder="e.g. Combat, Rest"></td>
+          <td>
+            <select name="mini_size" class="cell-select">
+              <option value="">—</option>
+              <% ['S','M','L','S,M','M,L','S,M,L'].each do |s| %>
+                <option value="<%= s %>" <%= img[:mini_size] == s ? 'selected' : '' %>><%= s %></option>
+              <% end %>
+            </select>
+          </td>
+          <td class="cell-actions">
+            <button type="submit" class="btn-save" title="Save">✓</button>
+            <a href="/edit/<%= img[:id] %>" class="btn-edit" title="Full edit">✎</a>
+          </td>
+          </form>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<% if @pages > 1 %>
+  <div class="pagination">
+    <% if @page > 1 %>
+      <a href="/catalog?page=<%= @page - 1 %><%= @show_all ? '&show_all=1' : '' %>" class="page-btn">← Prev</a>
+    <% end %>
+    <span class="page-info">Page <%= @page %> of <%= @pages %></span>
+    <% if @page < @pages %>
+      <a href="/catalog?page=<%= @page + 1 %><%= @show_all ? '&show_all=1' : '' %>" class="page-btn">Next →</a>
+    <% end %>
+  </div>
+<% end %>
+
+<% end %>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="Preview">
+</div>
+
+<script>
+// Restore saved size on page load
+(function() {
+  const saved = localStorage.getItem('thumbSize');
+  if (saved) applyThumbSize(parseInt(saved), false);
+})();
+
+function setThumbSize(px) {
+  localStorage.setItem('thumbSize', px);
+  applyThumbSize(px, true);
+}
+
+function applyThumbSize(px, animate) {
+  const thumbs = document.querySelectorAll('.thumb');
+  const wraps  = document.querySelectorAll('.thumb-wrap');
+  thumbs.forEach(t => {
+    if (animate) t.style.transition = 'width 0.2s, height 0.2s';
+    t.style.width  = px + 'px';
+    t.style.height = px + 'px';
+  });
+  // Also adjust the col-thumb width so the column fits
+  const col = document.querySelector('.col-thumb');
+  if (col) col.style.width = (px + 12) + 'px';
+
+  // Highlight active button
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.classList.toggle('size-btn-active', parseInt(btn.dataset.size) === px);
+  });
+}
+</script>
