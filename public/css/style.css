@@ -174,7 +174,13 @@ body {
 .thumb-wrap { position: relative; display: inline-block; }
 .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius); cursor: pointer; border: 1px solid var(--border); display: block; background: var(--bg3); transition: transform 0.15s; }
 .thumb:hover { transform: scale(1.05); border-color: var(--accent); }
-.tag-dot { position: absolute; top: -4px; right: -4px; background: var(--ok); color: #fff; font-size: 0.6rem; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.tag-dot {
+  position: absolute; top: -4px; right: -4px;
+  background: var(--ok); color: #fff;
+  font-size: 0.6rem; width: 14px; height: 14px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  cursor: help;
+}
 
 .folder-name { display: block; color: var(--accent); font-size: 0.72rem; font-family: var(--font-mono); }
 .file-name   { display: block; color: var(--text-dim); font-size: 0.7rem; font-family: var(--font-mono); word-break: break-all; }
@@ -686,8 +692,111 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   50%       { box-shadow: 0 0 14px rgba(229,62,62,0.8); }
 }
 
-/* ── Description column ───────────────────────────────────────────────────── */
-.col-desc       { min-width: 180px; }
-.cell-desc-input { font-style: italic; color: var(--text-dim) !important; }
-.cell-desc-input:focus { font-style: normal; color: var(--text) !important; }
+/* ── Description inline under filename ────────────────────────────────────── */
+.cell-desc-inline {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  font-size: 0.76rem;
+  font-family: var(--font-mono);
+  font-style: italic;
+  color: var(--text-dim);
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  resize: none;
+  line-height: 1.4;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cell-desc-inline:focus {
+  outline: none;
+  font-style: normal;
+  color: var(--text);
+  border-color: var(--accent);
+  background: rgba(0,212,255,0.04);
+}
+.cell-desc-inline::placeholder { color: var(--text-faint); opacity: 0.5; }
 .desc-cell { font-size: 0.78rem; color: var(--text-dim); line-height: 1.4; max-width: 260px; }
+
+/* ── Mini count column ────────────────────────────────────────────────────── */
+.col-count   { width: 58px; }
+.count-select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-family: var(--font-head);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 2px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.count-select:focus { outline: none; border-color: var(--accent); color: var(--text); }
+
+/* Highlight group images */
+.count-select option[value="2"],
+.count-select option[value="3"],
+.count-select option[value="4+"] { color: var(--accent2); }
+
+.count-badge {
+  display: inline-block;
+  background: rgba(255,107,53,0.12);
+  border: 1px solid rgba(255,107,53,0.4);
+  color: var(--accent2);
+  font-family: var(--font-head);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* ── Collection saved highlight ───────────────────────────────────────────── */
+.collection-card-saved {
+  border-color: var(--ok) !important;
+  box-shadow: 0 0 16px rgba(34,197,94,0.2);
+  transition: border-color 0.5s, box-shadow 0.5s;
+}
+.col-saved-badge {
+  font-size: 0.7rem;
+  color: var(--ok);
+  font-family: var(--font-head);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* ── Collection folder label ──────────────────────────────────────────────── */
+.col-folder-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 6px 10px;
+  background: var(--bg3);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.col-folder-icon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+.col-folder-label code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Collection card focused (from catalog link) ──────────────────────────── */
+.collection-card-focused {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 20px rgba(0,212,255,0.25);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}

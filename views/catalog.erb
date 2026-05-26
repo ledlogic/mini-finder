@@ -59,7 +59,7 @@
       <col class="col-weapons">
       <col class="col-stance">
       <col class="col-size">
-      <col class="col-desc">
+      <col class="col-count">
       <col class="col-actions">
     </colgroup>
     <thead>
@@ -73,7 +73,7 @@
         <th>Weapons</th>
         <th>Stance</th>
         <th>Size</th>
-        <th>Description</th>
+        <th title="Number of minis in the image">#</th>
         <th></th>
       </tr>
     </thead>
@@ -93,7 +93,7 @@
               <% if col && col[:release_month] %>
                 <span class="col-header-month"><%= col[:release_month] %></span>
               <% end %>
-              <a href="/collections" class="col-header-edit">edit collection ✎</a>
+              <a href="/collections#col-<%= col ? col[:id] : '' %>" class="col-header-edit">edit collection ✎</a>
             </td>
           </tr>
         <% end %>
@@ -112,7 +112,7 @@
                 class="thumb"
                 onclick="openLightbox(this.src)"
               >
-              <% if img[:tagged] %><span class="tag-dot">✓</span><% end %>
+              <% if img[:tagged] %><span class="tag-dot" title="Tagged — metadata has been saved for this image">✓</span><% end %>
             </div>
           </td>
           <td class="cell-folder">
@@ -124,6 +124,9 @@
           <td class="cell-file">
             <span class="file-name"><%= img[:filename] %></span>
             <% if img[:image_size] %><span class="img-size-badge"><%= img[:image_size] %></span><% end %>
+            <textarea name="description" class="cell-input cell-desc-inline"
+                      rows="2"
+                      placeholder="description…"><%= img[:description] %></textarea>
           </td>
           <td class="cell-name-td">
             <input type="text" name="mini_name" class="cell-input"
@@ -155,7 +158,16 @@
               <% end %>
             </select>
           </td>
-          <td><input type="text" name="description" class="cell-input cell-desc-input" value="<%= img[:description] %>" placeholder="free text description"></td>
+          <td class="cell-count">
+            <select name="mini_count" class="cell-select count-select" title="Number of minis in this image">
+              <% [1,2,3,'4+'].each do |n| %>
+                <% val = n.to_s %>
+                <% cur = (img[:mini_count] || 1) %>
+                <% selected = (n == '4+' ? cur >= 4 : cur == n) ? 'selected' : '' %>
+                <option value="<%= val %>" <%= selected %>><%= val %></option>
+              <% end %>
+            </select>
+          </td>
           <td class="cell-actions">
             <button type="submit" class="btn-save" title="Save">✓</button>
             <a href="/edit/<%= img[:id] %>" class="btn-edit" title="Full edit">✎</a>

@@ -49,6 +49,7 @@ DB.create_table?(:images) do
   String   :mini_size
   String   :notes
   String   :description
+  Integer  :mini_count, default: 1
   Boolean  :tagged, default: false
   DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
   DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -59,6 +60,7 @@ end
   "ALTER TABLE images ADD COLUMN collection_id INTEGER REFERENCES collections(id)",
   "ALTER TABLE images ADD COLUMN suggested_name TEXT",
   "ALTER TABLE images ADD COLUMN description TEXT",
+  "ALTER TABLE images ADD COLUMN mini_count INTEGER DEFAULT 1",
   "ALTER TABLE collections ADD COLUMN release_month TEXT",
   "ALTER TABLE collections ADD COLUMN notes TEXT",
 ].each do |sql|
@@ -482,6 +484,7 @@ post '/images/:id' do
     mini_size:   params[:mini_size].to_s.strip,
     notes:       params[:notes].to_s.strip,
     description: params[:description].to_s.strip,
+    mini_count:  [params[:mini_count].to_i, 1].max,
     tagged:      params[:mini_name].to_s.strip.length > 0,
     updated_at:  Time.now
   )
@@ -507,7 +510,7 @@ post '/collections/:id' do
     notes:      params[:notes].to_s.strip,
     updated_at: Time.now
   )
-  redirect '/collections'
+  redirect "/collections?saved=#{id}"
 end
 
 # ── Full edit page ─────────────────────────────────────────────────────────────
@@ -532,6 +535,7 @@ post '/edit/:id' do
     mini_size:   params[:mini_size].to_s.strip,
     notes:       params[:notes].to_s.strip,
     description: params[:description].to_s.strip,
+    mini_count:  [params[:mini_count].to_i, 1].max,
     tagged:      params[:mini_name].to_s.strip.length > 0,
     updated_at:  Time.now
   )
@@ -546,7 +550,7 @@ get '/search' do
   @query_made = false
   @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
 
-  has_query = %i[q mini_name species gender weapons stance mini_size collection].any? do |k|
+  has_query = %i[q mini_name species gender weapons stance mini_size mini_count collection].any? do |k|
     params[k.to_s].to_s.strip.length > 0
   end
 
@@ -561,6 +565,16 @@ get '/search' do
         c[:name].to_s.downcase.include?(col_filter)
       }.map { |c| c[:id] }
       dataset = Images.where(collection_id: matching_col_ids)
+    end
+
+    # Filter by mini count if set
+    mc_filter = params['mini_count'].to_s.strip
+    unless mc_filter.empty?
+      if mc_filter == '4+'
+        dataset = dataset.where { mini_count >= 4 }
+      else
+        dataset = dataset.where(mini_count: mc_filter.to_i)
+      end
     end
 
     scored = dataset.map do |row|

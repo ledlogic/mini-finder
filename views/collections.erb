@@ -9,18 +9,32 @@
   <div class="empty-state">No collections yet. Use <strong>Scan Folder</strong> to discover images.</div>
 <% else %>
 
+<% saved_id = params[:saved].to_i %>
+
 <div class="collections-grid">
   <% @collections.each do |col| %>
-    <div class="collection-card">
+    <% is_saved = saved_id > 0 && col[:id] == saved_id %>
+    <div class="collection-card <%= is_saved ? 'collection-card-saved' : '' %>"
+         id="col-<%= col[:id] %>">
       <form action="/collections/<%= col[:id] %>" method="post" class="col-form">
+
         <div class="col-card-header">
           <div class="col-card-meta">
             <% if col[:release_month] %>
               <span class="col-month"><%= col[:release_month] %></span>
             <% end %>
             <span class="col-count"><%= @counts[col[:id]] || 0 %> images</span>
+            <% if is_saved %>
+              <span class="col-saved-badge">✓ saved</span>
+            <% end %>
           </div>
           <button type="submit" class="btn-save col-save-btn" title="Save">✓</button>
+        </div>
+
+        <%# Always show folder name so unnamed cards are identifiable %>
+        <div class="col-folder-label">
+          <svg viewBox="0 0 24 24" class="col-folder-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <code><%= File.basename(col[:folder_path]) %></code>
         </div>
 
         <div class="form-group">
@@ -31,7 +45,7 @@
         </div>
 
         <div class="form-group">
-          <label>Folder</label>
+          <label>Full Path</label>
           <code class="col-folder"><%= col[:folder_path] %></code>
         </div>
 
@@ -41,7 +55,7 @@
         </div>
 
         <div class="col-card-footer">
-          <a href="/catalog?show_all=1&collection_id=<%= col[:id] %>" class="col-browse-link">
+          <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>" class="col-browse-link">
             Browse images →
           </a>
         </div>
@@ -54,14 +68,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  // Dirty-state save button
   document.querySelectorAll('.col-form').forEach(form => {
     const inputs  = form.querySelectorAll('input[type="text"]');
     const saveBtn = form.querySelector('.col-save-btn');
     if (!saveBtn) return;
-
     const originals = {};
     inputs.forEach(inp => { originals[inp.name] = inp.value; });
-
     inputs.forEach(inp => {
       inp.addEventListener('input', () => {
         const dirty = Array.from(inputs).some(i => i.value !== originals[i.name]);
@@ -69,5 +82,23 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   });
+
+  // Scroll saved card into view after a save
+  const saved = document.querySelector('.collection-card-saved');
+  if (saved) {
+    saved.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => saved.classList.remove('collection-card-saved'), 3000);
+  }
+
+  // Highlight card targeted by anchor (e.g. from catalog "edit collection" link)
+  const anchor = window.location.hash;
+  if (anchor && !saved) {
+    const target = document.querySelector(anchor);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('collection-card-focused');
+      setTimeout(() => target.classList.remove('collection-card-focused'), 3000);
+    }
+  }
 });
 </script>

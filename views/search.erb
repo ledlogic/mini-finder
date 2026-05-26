@@ -49,6 +49,15 @@
           <% end %>
         </select>
       </div>
+      <div class="form-group">
+        <label># Minis</label>
+        <select name="mini_count">
+          <option value="">Any</option>
+          <% ['1','2','3','4+'].each do |n| %>
+            <option value="<%= n %>" <%= @params['mini_count'] == n ? 'selected' : '' %>><%= n %></option>
+          <% end %>
+        </select>
+      </div>
     </div>
   </details>
 </form>
@@ -104,6 +113,12 @@
                 <th>Size</th>
                 <td><%= hl_field(img[:mini_size], hl[:mini_size]) %></td>
               </tr>
+              <% if (img[:mini_count] || 1) > 1 %>
+              <tr>
+                <th># Minis</th>
+                <td><span class="count-badge"><%= img[:mini_count] %></span></td>
+              </tr>
+              <% end %>
               <% if img[:description].to_s.strip.length > 0 %>
               <tr>
                 <th>Desc</th>
