@@ -70,3 +70,5 @@ puma.state
 # ── Solargraph ────────────────────────────────────────────────────────────────
 .solargraph.yml
 .yardoc/
+*.jpg
+test_ocr.rb
