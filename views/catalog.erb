@@ -4,14 +4,31 @@
     <p class="page-sub">
       <% if @show_all %>
         All <%= @total %> images
-        &nbsp;·&nbsp; <a href="/catalog">Show untagged only</a>
+        &nbsp;·&nbsp; <a href="/catalog<%= @folder_filter.empty? ? '' : "?folder=#{CGI.escape(@folder_filter)}" %>">Show untagged only</a>
       <% else %>
         <%= @total %> untagged image<%= @total == 1 ? '' : 's' %>
-        &nbsp;·&nbsp; <a href="/catalog?show_all=1">Show all</a>
+        &nbsp;·&nbsp; <a href="/catalog?show_all=1<%= @folder_filter.empty? ? '' : "&folder=#{CGI.escape(@folder_filter)}" %>">Show all</a>
       <% end %>
     </p>
   </div>
   <div class="toolbar-right">
+
+    <%# ── Folder filter dropdown ── %>
+    <form action="/catalog" method="get" class="folder-filter-form">
+      <input type="hidden" name="show_all" value="<%= @show_all ? '1' : '0' %>">
+      <select name="folder" class="folder-select" onchange="this.form.submit()">
+        <option value="">All folders</option>
+        <% @folders.each do |f| %>
+          <option value="<%= f %>" <%= @folder_filter == f ? 'selected' : '' %>>
+            <%= File.basename(f) %>
+          </option>
+        <% end %>
+      </select>
+      <% unless @folder_filter.empty? %>
+        <a href="/catalog<%= @show_all ? '?show_all=1' : '' %>" class="clear-filter" title="Clear filter">✕</a>
+      <% end %>
+    </form>
+
     <div class="thumb-sizer" title="Thumbnail size">
       <button class="size-btn" onclick="setThumbSize(60)"  data-size="60">S</button>
       <button class="size-btn" onclick="setThumbSize(120)" data-size="120">M</button>
@@ -34,7 +51,8 @@
   <table class="catalog-table" id="catalog-table">
     <colgroup>
       <col class="col-thumb">
-      <col class="col-path">
+      <col class="col-folder">
+      <col class="col-file">
       <col class="col-name">
       <col class="col-species">
       <col class="col-gender">
@@ -46,6 +64,7 @@
     <thead>
       <tr>
         <th>Preview</th>
+        <th>Folder</th>
         <th>File</th>
         <th>Name(s)</th>
         <th>Species</th>
@@ -57,9 +76,31 @@
       </tr>
     </thead>
     <tbody>
+      <% last_col_id = nil %>
       <% @images.each do |img| %>
+
+        <%# ── Collection header row (only when not filtered to one folder) ── %>
+        <% if @folder_filter.empty? && img[:collection_id] != last_col_id %>
+          <% last_col_id = img[:collection_id] %>
+          <% col = @collections[img[:collection_id]] %>
+          <tr class="collection-header-row">
+            <td colspan="10">
+              <span class="col-header-name">
+                <%= col ? (col[:name].to_s.empty? ? '(unnamed collection)' : col[:name]) : File.basename(img[:source_folder]) %>
+              </span>
+              <% if col && col[:release_month] %>
+                <span class="col-header-month"><%= col[:release_month] %></span>
+              <% end %>
+              <a href="/collections" class="col-header-edit">edit collection ✎</a>
+            </td>
+          </tr>
+        <% end %>
+
+        <%# ── Image row ── %>
         <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %>" data-id="<%= img[:id] %>">
           <form action="/images/<%= img[:id] %>" method="post">
+          <input type="hidden" name="folder"   value="<%= @folder_filter %>">
+          <input type="hidden" name="show_all" value="<%= @show_all ? '1' : '0' %>">
           <td class="cell-thumb">
             <div class="thumb-wrap">
               <img
@@ -72,13 +113,28 @@
               <% if img[:tagged] %><span class="tag-dot">✓</span><% end %>
             </div>
           </td>
-          <td class="cell-path">
-            <span class="folder-name"><%= File.basename(img[:source_folder]) %></span>
+          <td class="cell-folder">
+            <a href="/catalog?folder=<%= CGI.escape(img[:source_folder]) %><%= @show_all ? '&show_all=1' : '' %>"
+               class="folder-link" title="<%= img[:source_folder] %>">
+              <%= File.basename(img[:source_folder]) %>
+            </a>
+          </td>
+          <td class="cell-file">
             <span class="file-name"><%= img[:filename] %></span>
             <% if img[:image_size] %><span class="img-size-badge"><%= img[:image_size] %></span><% end %>
           </td>
-          <td><input type="text" name="mini_name"  class="cell-input" value="<%= img[:mini_name] %>"  placeholder="e.g. Zara, Rex"></td>
-          <td><input type="text" name="species"    class="cell-input" value="<%= img[:species] %>"    placeholder="e.g. Human, Elf"></td>
+          <td class="cell-name-td">
+            <input type="text" name="mini_name" class="cell-input"
+                   value="<%= img[:mini_name] %>"
+                   id="name-input-<%= img[:id] %>">
+            <% if img[:suggested_name].to_s.strip.length > 0 && img[:mini_name].to_s.strip.empty? %>
+              <button type="button" class="btn-suggestion"
+                      onclick="useSuggestion(<%= img[:id] %>, '<%= img[:suggested_name].gsub("'", "\\'") %>')">
+                ✦ <%= img[:suggested_name] %>
+              </button>
+            <% end %>
+          </td>
+          <td><input type="text" name="species"   class="cell-input" value="<%= img[:species] %>"></td>
           <td>
             <select name="gender" class="cell-select">
               <option value="">—</option>
@@ -87,8 +143,8 @@
               <% end %>
             </select>
           </td>
-          <td><input type="text" name="weapons"    class="cell-input" value="<%= img[:weapons] %>"    placeholder="e.g. Sword, Gun"></td>
-          <td><input type="text" name="stance"     class="cell-input" value="<%= img[:stance] %>"     placeholder="e.g. Combat, Rest"></td>
+          <td><input type="text" name="weapons"   class="cell-input" value="<%= img[:weapons] %>"></td>
+          <td><input type="text" name="stance"    class="cell-input" value="<%= img[:stance] %>"></td>
           <td>
             <select name="mini_size" class="cell-select">
               <option value="">—</option>
@@ -110,26 +166,25 @@
 
 <% if @pages > 1 %>
   <div class="pagination">
+    <% base = "/catalog?#{@show_all ? 'show_all=1&' : ''}#{@folder_filter.empty? ? '' : "folder=#{CGI.escape(@folder_filter)}&"}" %>
     <% if @page > 1 %>
-      <a href="/catalog?page=<%= @page - 1 %><%= @show_all ? '&show_all=1' : '' %>" class="page-btn">← Prev</a>
+      <a href="<%= base %>page=<%= @page - 1 %>" class="page-btn">← Prev</a>
     <% end %>
     <span class="page-info">Page <%= @page %> of <%= @pages %></span>
     <% if @page < @pages %>
-      <a href="/catalog?page=<%= @page + 1 %><%= @show_all ? '&show_all=1' : '' %>" class="page-btn">Next →</a>
+      <a href="<%= base %>page=<%= @page + 1 %>" class="page-btn">Next →</a>
     <% end %>
   </div>
 <% end %>
 
 <% end %>
 
-<!-- Lightbox -->
 <div id="lightbox" class="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="Preview">
 </div>
 
 <script>
-// Restore saved size on page load
 (function() {
   const saved = localStorage.getItem('thumbSize');
   if (saved) applyThumbSize(parseInt(saved), false);
@@ -141,20 +196,26 @@ function setThumbSize(px) {
 }
 
 function applyThumbSize(px, animate) {
-  const thumbs = document.querySelectorAll('.thumb');
-  const wraps  = document.querySelectorAll('.thumb-wrap');
-  thumbs.forEach(t => {
+  document.querySelectorAll('.thumb').forEach(t => {
     if (animate) t.style.transition = 'width 0.2s, height 0.2s';
     t.style.width  = px + 'px';
     t.style.height = px + 'px';
   });
-  // Also adjust the col-thumb width so the column fits
   const col = document.querySelector('.col-thumb');
   if (col) col.style.width = (px + 12) + 'px';
-
-  // Highlight active button
   document.querySelectorAll('.size-btn').forEach(btn => {
     btn.classList.toggle('size-btn-active', parseInt(btn.dataset.size) === px);
   });
+}
+
+function useSuggestion(id, name) {
+  const input = document.getElementById('name-input-' + id);
+  if (input) {
+    input.value = name;
+    input.dispatchEvent(new Event('input'));
+    input.focus();
+    const btn = input.closest('td').querySelector('.btn-suggestion');
+    if (btn) btn.style.display = 'none';
+  }
 }
 </script>

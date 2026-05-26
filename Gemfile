@@ -11,3 +11,7 @@ gem 'json'
 gem "rackup", "~> 2.3"
 
 gem "dotenv", "~> 3.2"
+
+gem "rtesseract", "~> 3.1"
+
+gem "mini_magick", "~> 5.3"

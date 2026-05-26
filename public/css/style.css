@@ -181,12 +181,13 @@ body {
 .img-size-badge { display: inline-block; background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; font-size: 0.62rem; color: var(--text-faint); padding: 1px 5px; margin-top: 2px; }
 
 .cell-input {
-  width: 100%; background: transparent; border: none; border-bottom: 1px solid transparent;
-  color: var(--text); font-family: var(--font-mono); font-size: 0.82rem; padding: 4px 2px;
-  transition: border-color 0.15s;
+  width: 100%; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text); font-family: var(--font-mono); font-size: 0.82rem; padding: 4px 6px;
+  transition: border-color 0.15s, background 0.15s;
 }
-.cell-input:focus { outline: none; border-bottom-color: var(--accent); background: rgba(0,212,255,0.04); }
-.cell-input::placeholder { color: var(--text-faint); }
+.cell-input:focus { outline: none; border-color: var(--accent); background: rgba(0,212,255,0.04); }
+.cell-input::placeholder { color: transparent; user-select: none; }
 
 .cell-select {
   width: 100%; background: var(--bg); border: 1px solid var(--border);
@@ -392,3 +393,257 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 }
 .size-btn:hover { background: var(--bg2); color: var(--text); }
 .size-btn-active { background: var(--accent) !important; color: #000 !important; }
+
+/* ── Collection header rows ───────────────────────────────────────────────── */
+.collection-header-row td {
+  background: var(--bg3);
+  border-top: 2px solid var(--accent);
+  border-bottom: 1px solid var(--border2);
+  padding: 8px 12px;
+}
+.col-header-name {
+  font-family: var(--font-head);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-right: 12px;
+}
+.col-header-month {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  margin-right: 12px;
+}
+.col-header-edit {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.col-header-edit:hover { opacity: 1; color: var(--accent2); }
+
+/* ── OCR suggestion button ────────────────────────────────────────────────── */
+.cell-name-td { position: relative; }
+.btn-suggestion {
+  display: block;
+  margin-top: 3px;
+  background: rgba(168,85,247,0.1);
+  border: 1px solid rgba(168,85,247,0.4);
+  border-radius: var(--radius);
+  color: var(--accent3);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  text-align: left;
+}
+.btn-suggestion:hover {
+  background: rgba(168,85,247,0.2);
+  border-color: var(--accent3);
+}
+
+/* ── Collections page ─────────────────────────────────────────────────────── */
+.collections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.collection-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  transition: border-color 0.15s;
+}
+.collection-card:hover { border-color: var(--border2); }
+.col-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.col-card-meta { display: flex; align-items: center; gap: 10px; }
+.col-month {
+  font-family: var(--font-head);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+.col-count {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+.collection-card .form-group { margin-bottom: 12px; }
+.collection-card label {
+  display: block;
+  font-family: var(--font-head);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.col-name-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-head);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 7px 10px;
+  transition: border-color 0.15s;
+}
+.col-name-input:focus { outline: none; border-color: var(--accent); }
+.col-name-input.unset { border-color: rgba(168,85,247,0.4); color: var(--accent3); }
+.collection-card input[type=text] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  transition: border-color 0.15s;
+}
+.collection-card input[type=text]:focus { outline: none; border-color: var(--accent); }
+.col-folder {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-faint);
+  word-break: break-all;
+  line-height: 1.5;
+}
+.col-card-footer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.col-browse-link {
+  font-size: 0.78rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-family: var(--font-head);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.col-browse-link:hover { text-decoration: underline; }
+
+/* ── Thumb sizer toolbar ──────────────────────────────────────────────────── */
+.toolbar-right { display: flex; align-items: center; gap: 12px; }
+.thumb-sizer { display: flex; gap: 4px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; }
+.size-btn {
+  background: transparent; border: none; color: var(--text-dim);
+  font-family: var(--font-head); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.05em; padding: 4px 9px; border-radius: 3px;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.size-btn:hover { background: var(--bg2); color: var(--text); }
+.size-btn-active { background: var(--accent) !important; color: #000 !important; }
+
+/* ── Folder column & filter ───────────────────────────────────────────────── */
+.col-folder  { width: 120px; }
+.col-file    { width: 160px; }
+
+.cell-folder { vertical-align: middle; }
+.folder-link {
+  display: inline-block;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-decoration: none;
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: var(--radius);
+  padding: 3px 7px;
+  transition: background 0.15s, border-color 0.15s;
+  word-break: break-all;
+}
+.folder-link:hover {
+  background: rgba(0,212,255,0.14);
+  border-color: var(--accent);
+}
+
+.cell-file { vertical-align: middle; }
+
+.folder-filter-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.folder-select {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  max-width: 200px;
+  transition: border-color 0.15s;
+}
+.folder-select:focus { outline: none; border-color: var(--accent); }
+.clear-filter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.75rem;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.clear-filter:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* ── Autocomplete dropdown ────────────────────────────────────────────────── */
+.autocomplete-dropdown {
+  position: absolute;
+  z-index: 500;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 4px 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.autocomplete-item {
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.autocomplete-item:hover,
+.autocomplete-item.autocomplete-active {
+  background: rgba(0,212,255,0.08);
+  color: var(--text);
+}
+.autocomplete-item mark {
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+}

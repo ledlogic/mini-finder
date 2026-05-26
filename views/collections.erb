@@ -1,0 +1,53 @@
+<div class="page-header">
+  <div>
+    <h1>Collections</h1>
+    <p class="page-sub"><%= @collections.length %> folder<%= @collections.length == 1 ? '' : 's' %> scanned</p>
+  </div>
+</div>
+
+<% if @collections.empty? %>
+  <div class="empty-state">No collections yet. Use <strong>Scan Folder</strong> to discover images.</div>
+<% else %>
+
+<div class="collections-grid">
+  <% @collections.each do |col| %>
+    <div class="collection-card">
+      <form action="/collections/<%= col[:id] %>" method="post">
+        <div class="col-card-header">
+          <div class="col-card-meta">
+            <% if col[:release_month] %>
+              <span class="col-month"><%= col[:release_month] %></span>
+            <% end %>
+            <span class="col-count"><%= @counts[col[:id]] || 0 %> images</span>
+          </div>
+          <button type="submit" class="btn-save" title="Save">✓</button>
+        </div>
+
+        <div class="form-group">
+          <label>Collection Name</label>
+          <input type="text" name="name" value="<%= col[:name] %>"
+                 placeholder="e.g. ASH NOMADS"
+                 class="col-name-input <%= col[:name].to_s.empty? ? 'unset' : '' %>">
+        </div>
+
+        <div class="form-group">
+          <label>Folder</label>
+          <code class="col-folder"><%= col[:folder_path] %></code>
+        </div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <input type="text" name="notes" value="<%= col[:notes] %>" placeholder="Optional notes">
+        </div>
+
+        <div class="col-card-footer">
+          <a href="/catalog?show_all=1&collection_id=<%= col[:id] %>" class="col-browse-link">
+            Browse images →
+          </a>
+        </div>
+      </form>
+    </div>
+  <% end %>
+</div>
+
+<% end %>

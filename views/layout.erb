@@ -19,6 +19,10 @@
         <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10"/></svg>
         Catalog
       </a></li>
+      <li><a href="/collections" class="<%= request.path_info.start_with?('/collections') ? 'active' : '' %>">
+        <svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/><circle cx="19" cy="17" r="2"/></svg>
+        Collections
+      </a></li>
       <li><a href="/search" class="<%= request.path_info == '/search' ? 'active' : '' %>">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         Search
