@@ -246,159 +246,7 @@ end
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
-helpers do
-  def levenshtein(s, t)
-    s = s.downcase; t = t.downcase
-    return t.length if s.empty?
-    return s.length if t.empty?
-    d = Array.new(s.length + 1) { |i| Array.new(t.length + 1, 0) }
-    (0..s.length).each { |i| d[i][0] = i }
-    (0..t.length).each { |j| d[0][j] = j }
-    (1..t.length).each do |j|
-      (1..s.length).each do |i|
-        cost = s[i-1] == t[j-1] ? 0 : 1
-        d[i][j] = [d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost].min
-      end
-    end
-    d[s.length][t.length]
-  end
-
-  def score_row(row, params)
-    score = 0.0
-    highlights = {}
-    q = params[:q].to_s.strip.downcase
-
-    FIELD_WEIGHTS.each do |field, weight|
-      filter_val = params[field].to_s.strip.downcase
-      next if filter_val.empty?
-      row_vals     = row[field].to_s.downcase.split(',').map(&:strip)
-      filter_terms = filter_val.split(',').map(&:strip).reject(&:empty?)
-      matched = []
-      filter_terms.each do |term|
-        if row_vals.any? { |v| v.include?(term) }
-          score += weight
-          matched << term
-        else
-          best    = row_vals.map { |v| levenshtein(v, term) }.min || 99
-          max_len = [term.length, 1].max
-          if best <= (max_len * 0.4).ceil
-            score += weight * (1.0 - best.to_f / max_len) * 0.5
-            matched << "~#{term}"
-          end
-        end
-      end
-      highlights[field] = matched unless matched.empty?
-    end
-
-    unless q.empty?
-      text_fields = %i[mini_name species weapons stance notes]
-      text_fields.each do |field|
-        cell = row[field].to_s.downcase
-        q.split.each do |word|
-          if cell.include?(word)
-            score += 1.5
-            highlights[field] ||= []
-            highlights[field] << word
-          else
-            best = cell.split(/[\s,]+/).map { |v| levenshtein(v, word) }.min || 99
-            if best <= (word.length * 0.4).ceil && word.length > 2
-              score += 0.5
-              highlights[field] ||= []
-              highlights[field] << "~#{word}"
-            end
-          end
-        end
-      end
-
-      # Description: higher weight Levenshtein word-level matching
-      desc = row[:description].to_s.downcase
-      unless desc.empty?
-        desc_words = desc.split(/\s+/)
-        q.split.each do |word|
-          if desc.include?(word)
-            score += 2.0
-            highlights[:description] ||= []
-            highlights[:description] << word
-          else
-            best    = desc_words.map { |v| levenshtein(v, word) }.min || 99
-            max_len = [word.length, 1].max
-            if best <= (max_len * 0.35).ceil && word.length > 2
-              score += 1.0
-              highlights[:description] ||= []
-              highlights[:description] << "~#{word}"
-            end
-          end
-        end
-      end
-    end
-
-    { score: score.round(2), highlights: highlights }
-  end
-
-  def full_path(row)
-    File.join(row[:source_folder], row[:filename])
-  end
-
-  # Returns the source PDF path for a collection folder if it exists
-  def collection_pdf_path(folder_path)
-    pdf = folder_path + ".pdf"
-    File.exist?(pdf) ? pdf : nil
-  end
-
-  # Server URL to stream a collection PDF via the app
-  def pdf_url(collection_id)
-    "/pdf/#{collection_id}"
-  end
-
-  # Highlight matched terms in a comma-separated field value
-  def hl_field(val, matched)
-    return '<em class="empty-val">—</em>' if val.to_s.strip.empty?
-    terms = matched || []
-    val.split(',').map(&:strip).map { |part|
-      hit   = terms.any? { |t| t.sub(/^~/, '').length > 0 && part.downcase.include?(t.sub(/^~/, '')) }
-      fuzzy = !hit && terms.any? { |t| t.start_with?('~') && part.downcase.include?(t.sub(/^~/, '')) }
-      if hit
-        "<mark class='hl-exact'>#{part}</mark>"
-      elsif fuzzy
-        "<mark class='hl-fuzzy'>#{part}</mark>"
-      else
-        part
-      end
-    }.join(', ')
-  end
-
-  # Highlight matched terms in a comma-separated field value
-  def hl_field(val, matched)
-    return '<em class="empty-val">—</em>' if val.to_s.strip.empty?
-    terms = matched || []
-    val.split(',').map(&:strip).map { |part|
-      hit   = terms.any? { |t| t.sub(/^~~/,"").sub(/^~/,"").length > 0 && part.downcase.include?(t.sub(/^~/,"")) }
-      fuzzy = !hit && terms.any? { |t| t.start_with?("~") && part.downcase.include?(t.sub(/^~/,"")) }
-      if hit
-        "<mark class='hl-exact'>\#{part}</mark>"
-      elsif fuzzy
-        "<mark class='hl-fuzzy'>\#{part}</mark>"
-      else
-        part
-      end
-    }.join(", ")
-  end
-
-  # Find or build collection record for a given folder path
-  def collection_for_folder(folder_path)
-    Collections.where(folder_path: folder_path).first
-  end
-
-  # Parse a release month from a folder name containing YYYY-MM or YYYYMM
-  def parse_release_month(folder_name)
-    base = File.basename(folder_name)
-    if (m = base.match(/(\d{4})-(\d{2})/))
-      "#{m[1]}-#{m[2]}"
-    elsif (m = base.match(/(\d{4})(\d{2})/))
-      "#{m[1]}-#{m[2]}"
-    end
-  end
-end
+require_relative 'helpers'
 
 # ─── Scanner ──────────────────────────────────────────────────────────────────
 
@@ -478,6 +326,7 @@ end
 get '/catalog' do
   @show_all      = params[:show_all] == '1'
   @folder_filter = params[:folder].to_s.strip
+  @status_filter = params[:status].to_s.strip  # 'unprinted', 'unpainted', 'untagged'
   @page          = [params[:page].to_i, 1].max
   @per_page      = 25
   @root          = settings.root_folder
@@ -485,11 +334,23 @@ get '/catalog' do
   # All distinct folders for the dropdown
   @folders = Images.distinct.select_map(:source_folder).sort
 
-  dataset = @show_all ? Images.order(:source_folder, :filename)
-                      : Images.where(tagged: false).order(:source_folder, :filename)
+  dataset = Images.order(:source_folder, :filename)
+
+  # Tagged/untagged
+  dataset = dataset.where(tagged: false) unless @show_all || @status_filter == 'untagged'
 
   # Apply folder filter if set
   dataset = dataset.where(source_folder: @folder_filter) unless @folder_filter.empty?
+
+  # Apply status filter
+  case @status_filter
+  when 'unprinted'
+    dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
+  when 'unpainted'
+    dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
+  when 'untagged'
+    dataset = dataset.where(tagged: false)
+  end
 
   @total  = dataset.count
   @images = dataset.limit(@per_page, (@page - 1) * @per_page).all
@@ -537,11 +398,37 @@ end
 # ── Collections management ────────────────────────────────────────────────────
 
 get '/collections' do
+  @filter = params[:filter].to_s.strip  # e.g. 'unprinted', 'unpainted', ''
+
   @collections = Collections.order(:release_month, :name).all
+
   # Attach image counts
   @counts = Images.group_and_count(:collection_id).each_with_object({}) do |r, h|
     h[r[:collection_id]] = r[:count]
   end
+
+  # Attach print/paint stats per collection
+  @stats = {}
+  @collections.each do |col|
+    rows = Images.where(collection_id: col[:id]).select(:printed, :painted).all
+    @stats[col[:id]] = {
+      total:    rows.length,
+      printed:  rows.sum { |r| r[:printed].to_i },
+      painted:  rows.sum { |r| r[:painted].to_i },
+      unprinted: rows.count { |r| r[:printed].to_i == 0 },
+      unpainted: rows.count { |r| r[:painted].to_i == 0 }
+    }
+  end
+
+  # Apply filter
+  if @filter == 'unprinted'
+    @collections = @collections.select { |c| (@stats[c[:id]] || {})[:printed].to_i == 0 }
+  elsif @filter == 'unpainted'
+    @collections = @collections.select { |c| (@stats[c[:id]] || {})[:painted].to_i == 0 }
+  elsif @filter == 'partially_printed'
+    @collections = @collections.select { |c| s = @stats[c[:id]]; s && s[:printed] > 0 && s[:unprinted] > 0 }
+  end
+
   # Preview image per collection — use cover if set, else first image
   @previews = {}
   @collections.each do |col|

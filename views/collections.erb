@@ -5,8 +5,24 @@
   </div>
 </div>
 
+<div class="col-filter-bar">
+  <% filters = [
+    ['', 'All'],
+    ['unprinted',         '🖨 0 printed'],
+    ['unpainted',         '🎨 0 painted'],
+    ['partially_printed', '🖨 Partial'],
+  ] %>
+  <% filters.each do |val, label| %>
+    <a href="/collections<%= val.empty? ? '' : "?filter=#{val}" %>"
+       class="col-filter-btn <%= @filter == val ? 'col-filter-active' : '' %>">
+      <%= label %>
+    </a>
+  <% end %>
+  <span class="col-filter-count"><%= @collections.length %> collection<%= @collections.length == 1 ? '' : 's' %></span>
+</div>
+
 <% if @collections.empty? %>
-  <div class="empty-state">No collections yet. Use <strong>Scan Folder</strong> to discover images.</div>
+  <div class="empty-state">No collections match this filter.</div>
 <% else %>
 
 <% saved_id = params[:saved].to_i %>
@@ -77,6 +93,16 @@
         <div class="form-group">
           <label>Notes</label>
           <input type="text" name="notes" value="<%= col[:notes] %>" placeholder="Optional notes">
+        </div>
+
+        <% s = @stats[col[:id]] || {} %>
+        <div class="col-stats-row">
+          <span class="col-stat" title="Total images"><span class="col-stat-icon">⬡</span> <%= s[:total] || 0 %></span>
+          <span class="col-stat <%= (s[:printed] || 0) == 0 ? 'col-stat-zero' : '' %>" title="Printed"><span class="col-stat-icon">🖨</span> <%= s[:printed] || 0 %></span>
+          <span class="col-stat <%= (s[:painted] || 0) == 0 ? 'col-stat-zero' : '' %>" title="Painted"><span class="col-stat-icon">🎨</span> <%= s[:painted] || 0 %></span>
+          <% if (s[:unprinted] || 0) > 0 %>
+            <span class="col-stat col-stat-warn" title="Images with 0 prints">⚠ <%= s[:unprinted] %> unprinted</span>
+          <% end %>
         </div>
 
         <div class="col-card-footer">
