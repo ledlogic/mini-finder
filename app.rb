@@ -346,8 +346,10 @@ get '/catalog' do
   case @status_filter
   when 'unprinted'
     dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
+    dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
   when 'unpainted'
     dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
+    dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
   when 'untagged'
     dataset = dataset.where(tagged: false)
   end

@@ -1195,3 +1195,11 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   border-color: var(--accent) !important;
   color: var(--accent) !important;
 }
+
+/* ── Stat link ────────────────────────────────────────────────────────────── */
+.col-stat-link {
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+  transition: opacity 0.15s;
+}
+.col-stat-link:hover { opacity: 0.75; }

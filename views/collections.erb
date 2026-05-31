@@ -101,7 +101,16 @@
           <span class="col-stat <%= (s[:printed] || 0) == 0 ? 'col-stat-zero' : '' %>" title="Printed"><span class="col-stat-icon">🖨</span> <%= s[:printed] || 0 %></span>
           <span class="col-stat <%= (s[:painted] || 0) == 0 ? 'col-stat-zero' : '' %>" title="Painted"><span class="col-stat-icon">🎨</span> <%= s[:painted] || 0 %></span>
           <% if (s[:unprinted] || 0) > 0 %>
-            <span class="col-stat col-stat-warn" title="Images with 0 prints">⚠ <%= s[:unprinted] %> unprinted</span>
+            <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>&status=unprinted"
+               class="col-stat col-stat-warn col-stat-link" title="View unprinted images in catalog">
+              ⚠ <%= s[:unprinted] %> unprinted
+            </a>
+          <% end %>
+          <% if (s[:unpainted] || 0) > 0 && (s[:painted] || 0) > 0 %>
+            <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>&status=unpainted"
+               class="col-stat col-stat-warn col-stat-link" title="View unpainted images in catalog">
+              ⚠ <%= s[:unpainted] %> unpainted
+            </a>
           <% end %>
         </div>
 
