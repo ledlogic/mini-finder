@@ -326,7 +326,10 @@ end
 get '/catalog' do
   @show_all      = params[:show_all] == '1'
   @folder_filter = params[:folder].to_s.strip
-  @status_filter = params[:status].to_s.strip  # 'unprinted', 'unpainted', 'untagged'
+  @status_filter = params[:status].to_s.strip  # legacy single filter
+  @f_untagged    = params[:f_untagged]  == '1'
+  @f_unprinted   = params[:f_unprinted] == '1'
+  @f_unpainted   = params[:f_unpainted] == '1'
   @page          = [params[:page].to_i, 1].max
   @per_page      = 25
   @root          = settings.root_folder
@@ -336,25 +339,53 @@ get '/catalog' do
 
   dataset = Images.order(:source_folder, :filename)
 
-  # Tagged/untagged
-  dataset = dataset.where(tagged: false) unless @show_all || @status_filter == 'untagged'
+  # When print/paint flags active, show all tagged states
+  any_flag = @f_untagged || @f_unprinted || @f_unpainted
+  @show_all = true if @f_unprinted || @f_unpainted
 
-  # Apply folder filter if set
+  # Tagged/untagged base filter
+  dataset = dataset.where(tagged: false) unless @show_all || any_flag
+
+  # Apply folder filter
   dataset = dataset.where(source_folder: @folder_filter) unless @folder_filter.empty?
 
-  # Apply status filter
+  # Apply flag filters (combinable)
+  dataset = dataset.where(tagged: false) if @f_untagged
+  if @f_unprinted
+    dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
+    dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+  end
+  if @f_unpainted
+    dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
+    dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+  end
+
+  # Legacy single status filter (from collections page links)
   case @status_filter
   when 'unprinted'
+    @f_unprinted = true
     dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
   when 'unpainted'
+    @f_unpainted = true
     dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
   when 'untagged'
+    @f_untagged = true
     dataset = dataset.where(tagged: false)
   end
 
   @total  = dataset.count
+
+  # Calculate folder total for "X filtered / Y in folder" display
+  if !@folder_filter.empty?
+    # Always show folder total when a folder is selected
+    folder_base = Images.where(source_folder: @folder_filter)
+    folder_base = folder_base.where(tagged: false) unless @show_all || @status_filter == 'untagged'
+    @total_unfiltered = folder_base.count
+    # nil means no folder context — keep the value even if equal to @total
+  end
+
   @images = dataset.limit(@per_page, (@page - 1) * @per_page).all
   @pages  = (@total.to_f / @per_page).ceil
 

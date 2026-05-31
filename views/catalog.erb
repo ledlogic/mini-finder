@@ -1,44 +1,74 @@
 <%
   base_params = {}
-  base_params[:folder]   = @folder_filter   unless @folder_filter.empty?
-  base_params[:show_all] = '1'              if @show_all
-  base_params[:status]   = @status_filter   unless @status_filter.empty?
-  def q(h); h.map{|k,v| "#{k}=#{CGI.escape(v.to_s)}"}.join('&'); end
+  base_params[:folder]      = @folder_filter  unless @folder_filter.empty?
+  base_params[:show_all]    = '1'             if @show_all && !@f_unprinted && !@f_unpainted
+  base_params[:f_untagged]  = '1'             if @f_untagged
+  base_params[:f_unprinted] = '1'             if @f_unprinted
+  base_params[:f_unpainted] = '1'             if @f_unpainted
 %>
 <div class="page-header">
   <div>
     <h1>Image Catalog</h1>
     <p class="page-sub">
-      <%= @total %> image<%= @total == 1 ? '' : 's' %>
-      <% unless @status_filter.empty? %>
-        &nbsp;·&nbsp; <a href="/catalog?<%= q(base_params.reject{|k,_| k == :status}) %>">Clear filter</a>
+      <% if @total_unfiltered && @total_unfiltered != @total %>
+        <strong><%= @total %></strong> filtered / <%= @total_unfiltered %> in folder
+      <% elsif @total_unfiltered %>
+        <%= @total %> in folder
+      <% else %>
+        <%= @total %> image<%= @total == 1 ? '' : 's' %>
       <% end %>
-      <% if @show_all && @status_filter.empty? %>
+      <% if @f_untagged || @f_unprinted || @f_unpainted %>
+        &nbsp;·&nbsp; <a href="/catalog?<%= q(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted].include?(k)}) %>">Clear filters</a>
+      <% end %>
+      <% unless @folder_filter.empty? %>
+        &nbsp;·&nbsp; <a href="/catalog?<%= q(base_params.reject{|k,_| k == :folder}) %>">All folders</a>
+      <% end %>
+      <% if @show_all && @status_filter.empty? && @folder_filter.empty? %>
         &nbsp;·&nbsp; <a href="/catalog?<%= q(base_params.reject{|k,_| k == :show_all}) %>">Show untagged only</a>
-      <% elsif @status_filter.empty? %>
+      <% elsif @status_filter.empty? && @folder_filter.empty? %>
         &nbsp;·&nbsp; <a href="/catalog?<%= q(base_params.merge(show_all: '1')) %>">Show all</a>
       <% end %>
     </p>
   </div>
   <div class="toolbar-right">
 
-    <%# ── Status filter pills ── %>
+    <%# ── Status flag toggles ── %>
     <div class="status-filter-pills">
-      <% status_opts = [['','All'], ['untagged','○ Untagged'], ['unprinted','🖨 Unprinted'], ['unpainted','🎨 Unpainted']] %>
-      <% status_opts.each do |val, label| %>
-        <% pill_params = base_params.merge(val.empty? ? {show_all: '1'} : {status: val, show_all: '1'}).reject{|k,_| val.empty? && k == :status} %>
-        <a href="/catalog?<%= q(pill_params) %>"
-           class="status-pill <%= @status_filter == val || (@status_filter.empty? && val.empty?) ? 'status-pill-active' : '' %>">
+      <span class="status-pills-label">Filter:</span>
+      <%
+        flags = [
+          [:f_untagged,  '○ Untagged',  @f_untagged],
+          [:f_unprinted, '🖨 Unprinted', @f_unprinted],
+          [:f_unpainted, '🎨 Unpainted', @f_unpainted],
+        ]
+        flags.each do |key, label, active|
+          toggled = base_params.dup
+          if active
+            toggled.delete(key)  # toggle off
+          else
+            toggled[key] = '1'   # toggle on
+          end
+      %>
+        <a href="/catalog?<%= q(toggled) %>"
+           class="status-pill <%= active ? 'status-pill-active' : '' %>">
           <%= label %>
         </a>
+      <% end %>
+      <% if @f_untagged || @f_unprinted || @f_unpainted %>
+        <a href="/catalog?<%= q(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted].include?(k)}) %>"
+           class="status-pill-clear">✕ clear</a>
       <% end %>
     </div>
 
     <%# ── Folder filter dropdown ── %>
     <form action="/catalog" method="get" class="folder-filter-form">
-      <input type="hidden" name="status" value="<%= @status_filter %>">
-      <input type="hidden" name="show_all" value="<%= @show_all ? '1' : '0' %>">
-      <input type="hidden" name="status"   value="<%= @status_filter %>">
+      <input type="hidden" name="show_all"    value="<%= @show_all ? '1' : '0' %>">
+      <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
+      <input type="hidden" name="f_unprinted" value="<%= @f_unprinted ? '1' : '' %>">
+      <input type="hidden" name="f_unpainted" value="<%= @f_unpainted ? '1' : '' %>">
+      <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
+      <input type="hidden" name="f_unprinted" value="<%= @f_unprinted ? '1' : '' %>">
+      <input type="hidden" name="f_unpainted" value="<%= @f_unpainted ? '1' : '' %>">
       <select name="folder" class="folder-select" onchange="this.form.submit()">
         <option value="">All folders</option>
         <% @folders.each do |f| %>
@@ -157,9 +187,14 @@
         <%# ── Image row ── %>
         <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
           <form action="/images/<%= img[:id] %>" method="post">
-          <input type="hidden" name="folder"   value="<%= @folder_filter %>">
-          <input type="hidden" name="show_all" value="<%= @show_all ? '1' : '0' %>">
-          <input type="hidden" name="status"   value="<%= @status_filter %>">
+          <input type="hidden" name="folder"      value="<%= @folder_filter %>">
+          <input type="hidden" name="show_all"    value="<%= @show_all ? '1' : '0' %>">
+          <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
+          <input type="hidden" name="f_unprinted" value="<%= @f_unprinted ? '1' : '' %>">
+          <input type="hidden" name="f_unpainted" value="<%= @f_unpainted ? '1' : '' %>">
+          <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
+      <input type="hidden" name="f_unprinted" value="<%= @f_unprinted ? '1' : '' %>">
+      <input type="hidden" name="f_unpainted" value="<%= @f_unpainted ? '1' : '' %>">
           <td class="cell-thumb">
             <div class="thumb-wrap">
               <img
@@ -264,7 +299,8 @@
 
 <% if @pages > 1 %>
   <div class="pagination">
-    <% base = "/catalog?#{@show_all ? 'show_all=1&' : ''}#{@folder_filter.empty? ? '' : "folder=#{CGI.escape(@folder_filter)}&"}#{@status_filter.empty? ? '' : "status=#{@status_filter}&"}" %>
+    <% flag_str = "#{@f_untagged ? 'f_untagged=1&' : ''}#{@f_unprinted ? 'f_unprinted=1&' : ''}#{@f_unpainted ? 'f_unpainted=1&' : ''}" %>
+  <% base = "/catalog?#{@show_all ? 'show_all=1&' : ''}#{@folder_filter.empty? ? '' : "folder=#{CGI.escape(@folder_filter)}&"}#{flag_str}" %>
     <% if @page > 1 %>
       <a href="<%= base %>page=<%= @page - 1 %>" class="page-btn">← Prev</a>
     <% end %>

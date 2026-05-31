@@ -167,7 +167,7 @@ body {
 .col-species { min-width: 100px; }
 .col-gender  { width: 90px; }
 .col-weapons { min-width: 100px; }
-.col-stance  { min-width: 90px; }
+.col-stance  { min-width: 160px; }
 .col-size    { width: 80px; }
 .col-actions { width: 72px; }
 
@@ -563,7 +563,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .size-btn-active { background: var(--accent) !important; color: #000 !important; }
 
 /* ── Folder column & filter ───────────────────────────────────────────────── */
-.col-folder  { width: 120px; }
+.col-folder  { width: 70px; }
 .col-file    { width: 160px; }
 
 .cell-folder { vertical-align: middle; }
@@ -721,7 +721,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .desc-cell { font-size: 0.78rem; color: var(--text-dim); line-height: 1.4; max-width: 260px; }
 
 /* ── Mini count / printed / painted column ────────────────────────────────── */
-.col-count   { width: 72px; }
+.col-count   { width: 58px; }
 
 .count-stack {
   display: flex;
@@ -745,13 +745,14 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .count-mini-select {
   flex: 1;
   min-width: 0;
+  width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-dim);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  padding: 2px 2px;
+  font-size: 0.72rem;
+  padding: 1px 1px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 }
@@ -1203,3 +1204,24 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   transition: opacity 0.15s;
 }
 .col-stat-link:hover { opacity: 0.75; }
+
+/* ── Status pills label and clear button ──────────────────────────────────── */
+.status-pills-label {
+  font-family: var(--font-head);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+.status-pill-clear {
+  padding: 5px 10px;
+  border: 1px dashed var(--border2);
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.status-pill-clear:hover { border-color: var(--accent2); color: var(--accent2); }
