@@ -301,10 +301,44 @@ function attachSimpleAutocomplete(input, vocab) {
   input.addEventListener('blur', () => setTimeout(closeAllAutocompletes, 150));
 }
 
+// Words in the name field that imply a group/bundle — auto-set mini_count to 4+
+const GROUP_KEYWORDS = /\b(bundle|pack|set|group|squad|collection|crew|gang|team|trio|duo|pair|sisters|brothers|twins|friends|party|warband|unit)\b/i;
+
+function syncMiniCount(input) {
+  const val = input.value.trim();
+  if (!GROUP_KEYWORDS.test(val)) return;
+
+  // Find the mini_count select in the same row (catalog) or on the page (edit)
+  const row = input.closest('.img-row');
+  if (row) {
+    const select = row.querySelector('select[name="mini_count"]');
+    if (select && (select.value === '1' || select.value === '')) {
+      select.value = '4+';
+      select.dispatchEvent(new Event('input'));
+      // Flash to draw attention
+      select.style.transition = 'background 0.3s';
+      select.style.background = 'rgba(255,107,53,0.25)';
+      setTimeout(() => select.style.background = '', 1200);
+    }
+  } else {
+    // Edit page — find by name
+    const select = document.querySelector('select[name="mini_count"]');
+    if (select && (select.value === '1' || select.value === '')) {
+      select.value = '4+';
+      select.style.transition = 'background 0.3s';
+      select.style.background = 'rgba(255,107,53,0.25)';
+      setTimeout(() => select.style.background = '', 1200);
+    }
+  }
+}
+
 function attachAutocomplete(input) {
   input.setAttribute('autocomplete', 'off');
 
-  input.addEventListener('input', () => buildDropdown(input, input.value.trim()));
+  input.addEventListener('input', () => {
+    buildDropdown(input, input.value.trim());
+    syncMiniCount(input);
+  });
 
   input.addEventListener('keydown', (e) => {
     if (!activeDropdown) return;
