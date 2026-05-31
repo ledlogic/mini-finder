@@ -1225,3 +1225,14 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   transition: all 0.15s;
 }
 .status-pill-clear:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* ── Edit form name row with detect button ────────────────────────────────── */
+.edit-name-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.edit-name-row input[type=text] {
+  flex: 1;
+  margin-bottom: 0;
+}

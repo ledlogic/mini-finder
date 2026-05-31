@@ -25,7 +25,18 @@
 
       <div class="form-group">
         <label>Mini Name(s) <span class="hint">comma-separated for multiple</span></label>
-        <input type="text" name="mini_name" value="<%= @image[:mini_name] %>" placeholder="e.g. Zara, Rex, The Watcher" autofocus>
+        <div class="edit-name-row">
+          <input type="text" name="mini_name" id="edit-mini-name"
+                 value="<%= @image[:mini_name] %>"
+                 placeholder="e.g. Zara, Rex, The Watcher" autofocus>
+          <button type="button" class="btn-detect" id="btn-detect-name"
+                  onclick="detectEditName(<%= @image[:id] %>)"
+                  title="Scan image for name text">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Detect
+          </button>
+        </div>
+        <div id="edit-detect-result" class="col-detect-result" style="margin-top:6px;"></div>
       </div>
 
       <div class="form-row">
@@ -123,6 +134,48 @@
 </div>
 
 <script>
+async function detectEditName(id) {
+  const btn    = document.getElementById('btn-detect-name');
+  const result = document.getElementById('edit-detect-result');
+  const input  = document.getElementById('edit-mini-name');
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Scanning…';
+  result.innerHTML = '';
+
+  try {
+    const res  = await fetch(`/images/${id}/detect_name`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      result.innerHTML = `<span class="detect-error">✕ ${data.error}</span>`;
+      return;
+    }
+
+    let html = '';
+    if (data.suggested_name)
+      html += `<span class="detect-chip detect-mini" onclick="useEditDetected('edit-mini-name', '${data.suggested_name.replace(/'/g,"\'")}', this)">✦ ${data.suggested_name}</span>`;
+    if (data.collection_name)
+      html += `<span class="detect-chip detect-col" onclick="useEditDetected('edit-mini-name', '${data.collection_name.replace(/'/g,"\'")}', this)">⊕ ${data.collection_name}</span>`;
+    if (!html)
+      html = '<span class="detect-error">No text found</span>';
+
+    result.innerHTML = '<span class="detect-label">Click to use: </span>' + html;
+  } catch(e) {
+    result.innerHTML = '<span class="detect-error">✕ Request failed</span>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Detect';
+  }
+}
+
+function useEditDetected(inputId, value, chip) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.value = value;
+  document.querySelectorAll('#edit-detect-result .detect-chip').forEach(c => c.classList.remove('detect-chip-active'));
+  chip.classList.add('detect-chip-active');
+}
+
 function syncGenderField() {
   const vals = ['M','F','NA'].filter(v => document.querySelector(`input[name=gender_${v}]`).checked);
   document.getElementById('gender-hidden').value = vals.join(',');

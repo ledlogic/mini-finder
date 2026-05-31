@@ -129,18 +129,40 @@ end
 # More permissive than before — allows mixed case and some punctuation.
 def clean_ocr_line(line)
   # Strip leading noise characters (non-alpha, non-quote)
-  cleaned = line.gsub(/^[^A-Za-z'"]+/, '').strip
-  # Remove characters that are definitely noise but keep apostrophes/quotes for names like 'TITANESS'
+  cleaned = line.gsub(/^[^A-Za-z\'\"-]+/, '').strip
+  # Remove characters that are definitely noise, keep apostrophes/hyphens
   cleaned = cleaned.gsub(/[|\\@#$%^&*_=<>{}\[\]]/, '').strip
   # Collapse multiple spaces
   cleaned = cleaned.gsub(/\s+/, ' ').strip
-  # Must be at least 3 chars and mostly letters
+  # Must be at least 2 chars and mostly letters (allow short names like JI, SAN)
   letter_ratio = cleaned.gsub(/[^A-Za-z]/, '').length.to_f / [cleaned.length, 1].max
-  return nil if cleaned.length < 3 || letter_ratio < 0.5
+  return nil if cleaned.length < 2 || letter_ratio < 0.4
   normalise_accents(cleaned)
 end
 
-# Score a zone result — prefer more words, longer names, penalise short noise
+# Try to join split names e.g. YŪGEN / JII-SAN across two OCR lines
+def join_split_name(lines)
+  return lines if lines.length < 2
+  collection_words = /corp|friends|raiders|nomads|officer|sisters|squad|tribe/i
+  result = []
+  i = 0
+  while i < lines.length
+    line = lines[i]
+    next_line = lines[i + 1] if i + 1 < lines.length
+    if next_line &&
+       line.split.length <= 2 &&
+       next_line.split.length <= 3 &&
+       !next_line.match?(collection_words) &&
+       !line.match?(collection_words)
+      result << "#{line} #{next_line}"
+      i += 2
+    else
+      result << line
+      i += 1
+    end
+  end
+  result
+end
 def zone_score(names)
   names.sum { |n| n.split.length * n.length }
 end
@@ -209,6 +231,7 @@ def ocr_unit9_image(image_path)
     lines = raw.split("\n").map(&:strip).reject(&:empty?)
     names = lines.filter_map { |l| clean_ocr_line(l) }
     names = collapse_name_lines(names)
+    names = join_split_name(names)
     score = zone_score(names)
 
     if score > best_score
@@ -377,13 +400,21 @@ get '/catalog' do
 
   @total  = dataset.count
 
-  # Calculate folder total for "X filtered / Y in folder" display
+  # Calculate comparison total for "X filtered / Y total" display
+  any_active_flag = @f_untagged || @f_unprinted || @f_unpainted
+
   if !@folder_filter.empty?
-    # Always show folder total when a folder is selected
+    # Folder selected — compare against folder total (without flag filters)
     folder_base = Images.where(source_folder: @folder_filter)
-    folder_base = folder_base.where(tagged: false) unless @show_all || @status_filter == 'untagged'
+    folder_base = folder_base.where(tagged: false) unless @show_all || @f_untagged
     @total_unfiltered = folder_base.count
-    # nil means no folder context — keep the value even if equal to @total
+    @total_context    = 'in folder'
+  elsif any_active_flag
+    # Flag filters only — compare against full unfiltered DB
+    grand_base = Images
+    grand_base = grand_base.where(tagged: false) unless @show_all || @f_untagged
+    @total_unfiltered = grand_base.count
+    @total_context    = 'total'
   end
 
   @images = dataset.limit(@per_page, (@page - 1) * @per_page).all
@@ -610,6 +641,24 @@ end
 get '/api/collections' do
   content_type :json
   Collections.all.to_json
+end
+
+# OCR detect name for a single image
+get '/images/:id/detect_name' do
+  content_type :json
+  img = Images.where(id: params[:id].to_i).first
+  halt 404, { error: 'Not found' }.to_json unless img
+
+  path = File.join(img[:source_folder], img[:filename])
+  halt 422, { error: 'File not on disk' }.to_json unless File.exist?(path)
+
+  result = ocr_unit9_image(path)
+
+  if result[:suggested_name].nil? && result[:collection_name].nil?
+    halt 422, { error: 'No text found in image' }.to_json
+  end
+
+  result.to_json
 end
 
 # Set cover image for a collection

@@ -11,9 +11,9 @@
     <h1>Image Catalog</h1>
     <p class="page-sub">
       <% if @total_unfiltered && @total_unfiltered != @total %>
-        <strong><%= @total %></strong> filtered / <%= @total_unfiltered %> in folder
+        <strong><%= @total %></strong> filtered / <%= @total_unfiltered %> <%= @total_context %>
       <% elsif @total_unfiltered %>
-        <%= @total %> in folder
+        <%= @total %> <%= @total_context %>
       <% else %>
         <%= @total %> image<%= @total == 1 ? '' : 's' %>
       <% end %>

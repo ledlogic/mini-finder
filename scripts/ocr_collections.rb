@@ -38,11 +38,35 @@ def normalise_accents(str)
 end
 
 def clean_ocr_line(line)
-  cleaned = line.gsub(/^[^A-Za-z]+/, '').strip
-  cleaned = cleaned.gsub(/[|\\@#$%^&*_=<>{}]/, '').strip
+  cleaned = line.gsub(/^[^A-Za-z\'\"-]+/, '').strip
+  cleaned = cleaned.gsub(/[|\\@#$%^&*_=<>{}\[\]]/, '').strip
+  cleaned = cleaned.gsub(/\s+/, ' ').strip
   letter_ratio = cleaned.gsub(/[^A-Za-z]/, '').length.to_f / [cleaned.length, 1].max
-  return nil if cleaned.length < 3 || letter_ratio < 0.5
+  return nil if cleaned.length < 2 || letter_ratio < 0.4
   normalise_accents(cleaned)
+end
+
+def join_split_name(lines)
+  return lines if lines.length < 2
+  collection_words = /corp|friends|raiders|nomads|officer|sisters|squad|tribe/i
+  result = []
+  i = 0
+  while i < lines.length
+    line = lines[i]
+    next_line = lines[i + 1] if i + 1 < lines.length
+    if next_line &&
+       line.split.length <= 2 &&
+       next_line.split.length <= 3 &&
+       !next_line.match?(collection_words) &&
+       !line.match?(collection_words)
+      result << "#{line} #{next_line}"
+      i += 2
+    else
+      result << line
+      i += 1
+    end
+  end
+  result
 end
 
 def zone_score(names)
@@ -103,6 +127,7 @@ def ocr_image(image_path)
     lines = raw.split("\n").map(&:strip).reject(&:empty?)
     names = lines.filter_map { |l| clean_ocr_line(l) }
     names = collapse_name_lines(names)
+    names = join_split_name(names)
     score = zone_score(names)
 
     if score > best_score
