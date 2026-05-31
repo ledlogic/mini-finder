@@ -20,10 +20,12 @@ MIN_OCR_WIDTH = 400   # skip tiny thumbnails
 SAMPLES_TO_TRY = 5   # try up to N images per folder until OCR succeeds
 
 CROP_ZONES = [
-  { label: 'name-block-high',  x: 0.38, y: 0.63, w: 0.62, h: 0.20 },
-  { label: 'name-block-mid',   x: 0.38, y: 0.70, w: 0.62, h: 0.20 },
-  { label: 'name-block-low',   x: 0.38, y: 0.76, w: 0.62, h: 0.18 },
-  { label: 'name-block-wider', x: 0.30, y: 0.63, w: 0.70, h: 0.25 },
+  { label: 'name-block-high',       x: 0.38, y: 0.63, w: 0.62, h: 0.20 },
+  { label: 'name-block-mid',        x: 0.38, y: 0.70, w: 0.62, h: 0.20 },
+  { label: 'name-block-low',        x: 0.38, y: 0.76, w: 0.62, h: 0.18 },
+  { label: 'name-block-bottom',     x: 0.38, y: 0.80, w: 0.62, h: 0.18 },
+  { label: 'name-block-wider',      x: 0.30, y: 0.63, w: 0.70, h: 0.25 },
+  { label: 'name-block-right-only', x: 0.52, y: 0.72, w: 0.48, h: 0.26 },
 ].freeze
 
 def normalise_accents(str)

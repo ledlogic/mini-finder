@@ -29,6 +29,7 @@ DB.create_table?(:collections) do
   String   :name                          # e.g. "ASH NOMADS"
   String   :release_month                 # e.g. "2026-02" parsed from folder
   String   :notes
+  Integer  :cover_image_id
   DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
   DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
 end
@@ -63,6 +64,7 @@ end
   "ALTER TABLE images ADD COLUMN mini_count INTEGER DEFAULT 1",
   "ALTER TABLE collections ADD COLUMN release_month TEXT",
   "ALTER TABLE collections ADD COLUMN notes TEXT",
+  "ALTER TABLE collections ADD COLUMN cover_image_id INTEGER",
 ].each do |sql|
   begin; DB.run(sql); rescue Sequel::DatabaseError; end
 end
@@ -100,10 +102,12 @@ SUPPORTED_EXTS = %w[.png .jpg .jpeg .gif .webp .bmp].freeze
 MIN_OCR_WIDTH = 400  # skip images too small for reliable OCR
 
 CROP_ZONES = [
-  { label: 'name-block-high',  x: 0.38, y: 0.63, w: 0.62, h: 0.20 },
-  { label: 'name-block-mid',   x: 0.38, y: 0.70, w: 0.62, h: 0.20 },
-  { label: 'name-block-low',   x: 0.38, y: 0.76, w: 0.62, h: 0.18 },
-  { label: 'name-block-wider', x: 0.30, y: 0.63, w: 0.70, h: 0.25 },
+  { label: 'name-block-high',       x: 0.38, y: 0.63, w: 0.62, h: 0.20 },
+  { label: 'name-block-mid',        x: 0.38, y: 0.70, w: 0.62, h: 0.20 },
+  { label: 'name-block-low',        x: 0.38, y: 0.76, w: 0.62, h: 0.18 },
+  { label: 'name-block-bottom',     x: 0.38, y: 0.80, w: 0.62, h: 0.18 },
+  { label: 'name-block-wider',      x: 0.30, y: 0.63, w: 0.70, h: 0.25 },
+  { label: 'name-block-right-only', x: 0.52, y: 0.72, w: 0.48, h: 0.26 },
 ].freeze
 
 # Normalise accented characters Tesseract commonly mangles
@@ -120,10 +124,12 @@ end
 # Clean a raw OCR line into a usable name candidate.
 # More permissive than before — allows mixed case and some punctuation.
 def clean_ocr_line(line)
-  # Strip leading noise characters (non-alpha)
-  cleaned = line.gsub(/^[^A-Za-z]+/, '').strip
-  # Remove characters that are definitely noise
+  # Strip leading noise characters (non-alpha, non-quote)
+  cleaned = line.gsub(/^[^A-Za-z'"]+/, '').strip
+  # Remove characters that are definitely noise but keep apostrophes/quotes for names like 'TITANESS'
   cleaned = cleaned.gsub(/[|\\@#$%^&*_=<>{}\[\]]/, '').strip
+  # Collapse multiple spaces
+  cleaned = cleaned.gsub(/\s+/, ' ').strip
   # Must be at least 3 chars and mostly letters
   letter_ratio = cleaned.gsub(/[^A-Za-z]/, '').length.to_f / [cleaned.length, 1].max
   return nil if cleaned.length < 3 || letter_ratio < 0.5
@@ -207,9 +213,26 @@ def ocr_unit9_image(image_path)
     end
   end
 
+  # Line 0: mini name (e.g. "JOHNNY")
+  # Line 1: subtitle/role (e.g. "SECURITY OFFICER") — may be part of name
+  # Line 2: collection/faction (e.g. "MICROMACHINES CORP")
+  # If we have 3+ lines, line 2 is likely the collection.
+  # If we have 2 lines, line 1 is the collection.
+  # If line 1 looks like a role/subtitle (short, all caps descriptor), use line 2 for collection.
+  mini    = best_names[0]
+  line1   = best_names[1]
+  line2   = best_names[2]
+
+  # Heuristic: if line1 is a short role descriptor and line2 exists, use line2 as collection
+  collection = if line2 && line1 && line1.split.length <= 3
+    line2
+  else
+    line1
+  end
+
   {
-    suggested_name:  best_names[0],
-    collection_name: best_names[1]
+    suggested_name:  mini,
+    collection_name: collection
   }
 rescue => e
   warn "OCR failed for #{image_path}: #{e.message}"
@@ -310,6 +333,17 @@ helpers do
 
   def full_path(row)
     File.join(row[:source_folder], row[:filename])
+  end
+
+  # Returns the source PDF path for a collection folder if it exists
+  def collection_pdf_path(folder_path)
+    pdf = folder_path + ".pdf"
+    File.exist?(pdf) ? pdf : nil
+  end
+
+  # Server URL to stream a collection PDF via the app
+  def pdf_url(collection_id)
+    "/pdf/#{collection_id}"
   end
 
   # Highlight matched terms in a comma-separated field value
@@ -499,6 +533,15 @@ get '/collections' do
   @counts = Images.group_and_count(:collection_id).each_with_object({}) do |r, h|
     h[r[:collection_id]] = r[:count]
   end
+  # Preview image per collection — use cover if set, else first image
+  @previews = {}
+  @collections.each do |col|
+    img = if col[:cover_image_id]
+      Images.where(id: col[:cover_image_id]).first
+    end
+    img ||= Images.where(collection_id: col[:id]).order(:filename).first
+    @previews[col[:id]] = img if img
+  end
   erb :collections
 end
 
@@ -506,7 +549,7 @@ post '/collections/:id' do
   id = params[:id].to_i
   halt 404 unless Collections.where(id: id).first
   Collections.where(id: id).update(
-    name:       params[:name].to_s.strip,
+    name:       params[:name].to_s.strip.upcase,
     notes:      params[:notes].to_s.strip,
     updated_at: Time.now
   )
@@ -587,6 +630,20 @@ get '/search' do
   erb :search
 end
 
+# ── Serve source PDF for a collection ────────────────────────────────────────
+
+get '/pdf/:id' do
+  col = Collections.where(id: params[:id].to_i).first
+  halt 404, 'Collection not found' unless col
+
+  pdf_path = col[:folder_path] + '.pdf'
+  halt 404, "PDF not found: #{pdf_path}" unless File.exist?(pdf_path)
+
+  content_type 'application/pdf'
+  headers['Content-Disposition'] = "inline; filename=\"#{File.basename(pdf_path)}\""
+  send_file pdf_path
+end
+
 get '/api/images' do
   content_type :json
   Images.all.to_json
@@ -622,4 +679,52 @@ end
 get '/api/collections' do
   content_type :json
   Collections.all.to_json
+end
+
+# Set cover image for a collection
+post '/collections/:id/set_cover' do
+  col_id = params[:id].to_i
+  img_id = params[:image_id].to_i
+  halt 404 unless Collections.where(id: col_id).first
+  halt 404 unless Images.where(id: img_id, collection_id: col_id).first
+  Collections.where(id: col_id).update(cover_image_id: img_id, updated_at: Time.now)
+  content_type :json
+  { ok: true, image_id: img_id }.to_json
+end
+
+# OCR a single collection folder and return suggested names
+post '/collections/:id/detect_name' do
+  content_type :json
+  id  = params[:id].to_i
+  col = Collections.where(id: id).first
+  halt 404, { error: 'Not found' }.to_json unless col
+
+  # Try up to 5 images in the folder until OCR succeeds
+  candidates = Images
+    .where(source_folder: col[:folder_path])
+    .order(:filename)
+    .all
+    .select { |img| File.exist?(File.join(img[:source_folder], img[:filename])) }
+
+  if candidates.empty?
+    halt 422, { error: 'No image files found on disk' }.to_json
+  end
+
+  result = nil
+  candidates.first(5).each do |img|
+    path = File.join(img[:source_folder], img[:filename])
+    r    = ocr_unit9_image(path)
+    next if r[:suggested_name].nil? && r[:collection_name].nil?
+    result = r
+    break
+  end
+
+  if result.nil?
+    halt 422, { error: 'OCR found no text in this folder' }.to_json
+  end
+
+  {
+    suggested_name:  result[:suggested_name],
+    collection_name: result[:collection_name]
+  }.to_json
 end

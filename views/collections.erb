@@ -16,6 +16,17 @@
     <% is_saved = saved_id > 0 && col[:id] == saved_id %>
     <div class="collection-card <%= is_saved ? 'collection-card-saved' : '' %>"
          id="col-<%= col[:id] %>">
+      <% preview = @previews[col[:id]] %>
+      <% if preview %>
+        <div class="col-preview-wrap" onclick="openLightbox('/image_file/<%= preview[:id] %>')">
+          <img src="/image_file/<%= preview[:id] %>"
+               alt="<%= preview[:filename] %>"
+               loading="lazy"
+               class="col-preview-img">
+          <span class="col-preview-count"><%= @counts[col[:id]] || 0 %> images</span>
+        </div>
+      <% end %>
+
       <form action="/collections/<%= col[:id] %>" method="post" class="col-form">
 
         <div class="col-card-header">
@@ -23,7 +34,9 @@
             <% if col[:release_month] %>
               <span class="col-month"><%= col[:release_month] %></span>
             <% end %>
-            <span class="col-count"><%= @counts[col[:id]] || 0 %> images</span>
+            <% unless @previews[col[:id]] %>
+              <span class="col-count"><%= @counts[col[:id]] || 0 %> images</span>
+            <% end %>
             <% if is_saved %>
               <span class="col-saved-badge">✓ saved</span>
             <% end %>
@@ -39,9 +52,21 @@
 
         <div class="form-group">
           <label>Collection Name</label>
-          <input type="text" name="name" value="<%= col[:name] %>"
-                 placeholder="e.g. ASH NOMADS"
-                 class="col-name-input <%= col[:name].to_s.empty? ? 'unset' : '' %>">
+          <div class="col-name-row">
+            <input type="text" name="name" value="<%= col[:name] %>"
+                   placeholder="e.g. ASH NOMADS"
+                   class="col-name-input <%= col[:name].to_s.empty? ? 'unset' : '' %>"
+                   id="col-name-<%= col[:id] %>"
+                   oninput="this.value = this.value.toUpperCase()">
+            <button type="button"
+                    class="btn-detect"
+                    onclick="detectName(<%= col[:id] %>)"
+                    title="Run OCR on this folder to detect name">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              Detect
+            </button>
+          </div>
+          <div class="col-detect-result" id="col-detect-<%= col[:id] %>"></div>
         </div>
 
         <div class="form-group">
@@ -58,6 +83,18 @@
           <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>" class="col-browse-link">
             Browse images →
           </a>
+          <% pdf = collection_pdf_path(col[:folder_path]) %>
+          <% if pdf %>
+            <a href="<%= pdf_url(col[:id]) %>" class="col-pdf-link" target="_blank" title="<%= col[:folder_path] %>.pdf">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Open PDF
+            </a>
+          <% else %>
+            <span class="col-pdf-missing" title="<%= col[:folder_path] %>.pdf">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              No PDF found
+            </span>
+          <% end %>
         </div>
       </form>
     </div>
@@ -65,6 +102,11 @@
 </div>
 
 <% end %>
+
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="Preview">
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -100,5 +142,54 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => target.classList.remove('collection-card-focused'), 3000);
     }
   }
+
+  // OCR detect name
+  window.detectName = async function(id) {
+    const btn    = document.querySelector(`#col-${id} .btn-detect`);
+    const input  = document.getElementById(`col-name-${id}`);
+    const result = document.getElementById(`col-detect-${id}`);
+    if (!btn || !input || !result) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Scanning…';
+    result.innerHTML = '';
+
+    try {
+      const res  = await fetch(`/collections/${id}/detect_name`, { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        result.innerHTML = `<span class="detect-error">✕ ${data.error}</span>`;
+        return;
+      }
+
+      const mini = data.suggested_name;
+      const col  = data.collection_name;
+
+      let html = '';
+      if (mini) html += `<span class="detect-chip detect-mini" onclick="useDetected('col-name-${id}', '${mini.replace(/'/g,"\'")}', this)">✦ ${mini}</span>`;
+      if (col)  html += `<span class="detect-chip detect-col"  onclick="useDetected('col-name-${id}', '${col.replace(/'/g,"\'")}', this)">⊕ ${col}</span>`;
+      if (!html) html = '<span class="detect-error">No text found</span>';
+
+      result.innerHTML = '<span class="detect-label">Click to use:</span> ' + html;
+
+    } catch(e) {
+      result.innerHTML = `<span class="detect-error">✕ Request failed</span>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Detect';
+    }
+  };
+
+  window.useDetected = function(inputId, value, chip) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.value = value;
+    input.classList.remove('unset');
+    input.dispatchEvent(new Event('input'));
+    // Mark all chips inactive, highlight chosen
+    chip.closest('.col-detect-result').querySelectorAll('.detect-chip').forEach(c => c.classList.remove('detect-chip-active'));
+    chip.classList.add('detect-chip-active');
+  };
 });
 </script>

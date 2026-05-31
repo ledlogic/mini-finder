@@ -41,6 +41,39 @@
   </div>
 </div>
 
+<%# ── Collection info bar (shown when filtered to one folder) ── %>
+<% if !@folder_filter.empty? %>
+  <% active_col = @collections.values.find { |c| c[:folder_path] == @folder_filter } %>
+  <div class="collection-info-bar">
+    <div class="collection-info-left">
+      <svg viewBox="0 0 24 24" class="col-info-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span class="col-info-folder"><%= File.basename(@folder_filter) %></span>
+      <% if active_col && !active_col[:name].to_s.empty? %>
+        <span class="col-info-name"><%= active_col[:name] %></span>
+      <% else %>
+        <span class="col-info-unnamed">unnamed collection</span>
+      <% end %>
+      <% if active_col && active_col[:release_month] %>
+        <span class="col-info-month"><%= active_col[:release_month] %></span>
+      <% end %>
+    </div>
+    <div class="col-info-actions">
+      <% if active_col %>
+        <a href="/collections#col-<%= active_col[:id] %>" class="col-info-edit">
+          Edit collection ✎
+        </a>
+      <% end %>
+      <% pdf = collection_pdf_path(@folder_filter) %>
+      <% if pdf && active_col %>
+        <a href="<%= pdf_url(active_col[:id]) %>" class="col-info-pdf" target="_blank" title="<%= @folder_filter %>.pdf">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Open PDF
+        </a>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
 <% if @images.empty? %>
   <div class="empty-state">
     <p>No images found. Use <strong>Scan Folder</strong> to discover images.</p>
@@ -113,6 +146,12 @@
                 onclick="openLightbox(this.src)"
               >
               <% if img[:tagged] %><span class="tag-dot" title="Tagged — metadata has been saved for this image">✓</span><% end %>
+              <% if img[:collection_id] %>
+                <button type="button"
+                        class="btn-set-cover"
+                        title="Set as collection cover image"
+                        onclick="setCover(<%= img[:collection_id] %>, <%= img[:id] %>, this)">⊙</button>
+              <% end %>
             </div>
           </td>
           <td class="cell-folder">

@@ -1,3 +1,38 @@
+// ── Set collection cover image ─────────────────────────────────────────────
+async function setCover(collectionId, imageId, btn) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const res = await fetch(`/collections/${collectionId}/set_cover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `image_id=${imageId}`
+    });
+    if (res.ok) {
+      btn.textContent = '✓';
+      btn.classList.add('btn-set-cover-done');
+      // Reset other cover buttons in same collection
+      document.querySelectorAll('.btn-set-cover-done').forEach(b => {
+        if (b !== btn) {
+          b.textContent = '⊙';
+          b.classList.remove('btn-set-cover-done');
+        }
+      });
+      setTimeout(() => {
+        btn.textContent = '⊙';
+        btn.classList.remove('btn-set-cover-done');
+        btn.disabled = false;
+      }, 2000);
+    } else {
+      btn.textContent = '✕';
+      setTimeout(() => { btn.textContent = '⊙'; btn.disabled = false; }, 1500);
+    }
+  } catch(e) {
+    btn.textContent = '✕';
+    setTimeout(() => { btn.textContent = '⊙'; btn.disabled = false; }, 1500);
+  }
+}
+
 // ── Lightbox ───────────────────────────────────────────────────────────────
 function openLightbox(src) {
   const lb  = document.getElementById('lightbox');
