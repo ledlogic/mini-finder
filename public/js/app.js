@@ -341,6 +341,21 @@ function attachAutocomplete(input) {
 // ── DOMContentLoaded ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
 
+  // Scroll to and highlight the row we just saved (from anchor in URL)
+  const hash = window.location.hash;
+  if (hash && hash.startsWith('#row-')) {
+    const target = document.querySelector(hash);
+    if (target) {
+      // Small delay so the page finishes rendering first
+      setTimeout(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.classList.add('row-just-saved');
+        setTimeout(() => target.classList.remove('row-just-saved'), 2000);
+      }, 80);
+    }
+  }
+
+
   await loadNameData();
 
   // Attach autocomplete to all mini_name inputs

@@ -132,7 +132,7 @@
         <% end %>
 
         <%# ── Image row ── %>
-        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %>" data-id="<%= img[:id] %>">
+        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
           <form action="/images/<%= img[:id] %>" method="post">
           <input type="hidden" name="folder"   value="<%= @folder_filter %>">
           <input type="hidden" name="show_all" value="<%= @show_all ? '1' : '0' %>">

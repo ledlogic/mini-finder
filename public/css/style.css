@@ -1098,3 +1098,13 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .thumb-wrap:hover .btn-set-cover { display: flex; }
 .btn-set-cover:hover { color: var(--accent); border-color: var(--accent); }
 .btn-set-cover-done { color: var(--ok) !important; border-color: var(--ok) !important; }
+
+/* ── Saved row highlight ───────────────────────────────────────────────────── */
+@keyframes row-saved-flash {
+  0%   { background: rgba(34,197,94,0.18); }
+  60%  { background: rgba(34,197,94,0.10); }
+  100% { background: transparent; }
+}
+.row-just-saved {
+  animation: row-saved-flash 2s ease-out forwards;
+}

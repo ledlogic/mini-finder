@@ -528,7 +528,10 @@ post '/images/:id' do
     tagged:      params[:mini_name].to_s.strip.length > 0,
     updated_at:  Time.now
   )
-  redirect back
+  # Build redirect back preserving folder/page params, anchor to the saved row
+  back_url = request.referer || '/catalog'
+  back_url = back_url.sub(/#.*$/, '')  # strip any existing anchor
+  redirect "#{back_url}#row-#{id}"
 end
 
 # ── Collections management ────────────────────────────────────────────────────
