@@ -106,7 +106,7 @@
         <th>Weapons</th>
         <th>Stance</th>
         <th>Size</th>
-        <th title="Number of minis in the image">#</th>
+        <th title="Minis in image / Printed / Painted">🖨</th>
         <th></th>
       </tr>
     </thead>
@@ -198,14 +198,34 @@
             </select>
           </td>
           <td class="cell-count">
-            <select name="mini_count" class="cell-select count-select" title="Number of minis in this image">
-              <% [1,2,3,'4+'].each do |n| %>
-                <% val = n.to_s %>
-                <% cur = (img[:mini_count] || 1) %>
-                <% selected = (n == '4+' ? cur >= 4 : cur == n) ? 'selected' : '' %>
-                <option value="<%= val %>" <%= selected %>><%= val %></option>
-              <% end %>
-            </select>
+            <div class="count-stack">
+              <div class="count-row" title="Minis in image">
+                <span class="count-icon">⬡</span>
+                <select name="mini_count" class="count-mini-select" title="Number of minis in this image">
+                  <% [1,2,3,'4+'].each do |n| %>
+                    <% cur = (img[:mini_count] || 1) %>
+                    <% selected = (n == '4+' ? cur >= 4 : cur == n) ? 'selected' : '' %>
+                    <option value="<%= n %>" <%= selected %>><%= n %></option>
+                  <% end %>
+                </select>
+              </div>
+              <div class="count-row" title="Printed">
+                <span class="count-icon count-printed">🖨</span>
+                <select name="printed" class="count-mini-select">
+                  <% (0..10).each do |n| %>
+                    <option value="<%= n %>" <%= (img[:printed] || 0) == n ? 'selected' : '' %>><%= n %></option>
+                  <% end %>
+                </select>
+              </div>
+              <div class="count-row" title="Painted">
+                <span class="count-icon count-painted">🎨</span>
+                <select name="painted" class="count-mini-select">
+                  <% (0..10).each do |n| %>
+                    <option value="<%= n %>" <%= (img[:painted] || 0) == n ? 'selected' : '' %>><%= n %></option>
+                  <% end %>
+                </select>
+              </div>
+            </div>
           </td>
           <td class="cell-actions">
             <button type="submit" class="btn-save" title="Save">✓</button>

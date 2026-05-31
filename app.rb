@@ -51,6 +51,8 @@ DB.create_table?(:images) do
   String   :notes
   String   :description
   Integer  :mini_count, default: 1
+  Integer  :printed,    default: 0
+  Integer  :painted,    default: 0
   Boolean  :tagged, default: false
   DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
   DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
@@ -62,6 +64,8 @@ end
   "ALTER TABLE images ADD COLUMN suggested_name TEXT",
   "ALTER TABLE images ADD COLUMN description TEXT",
   "ALTER TABLE images ADD COLUMN mini_count INTEGER DEFAULT 1",
+  "ALTER TABLE images ADD COLUMN printed INTEGER DEFAULT 0",
+  "ALTER TABLE images ADD COLUMN painted INTEGER DEFAULT 0",
   "ALTER TABLE collections ADD COLUMN release_month TEXT",
   "ALTER TABLE collections ADD COLUMN notes TEXT",
   "ALTER TABLE collections ADD COLUMN cover_image_id INTEGER",
@@ -519,6 +523,8 @@ post '/images/:id' do
     notes:       params[:notes].to_s.strip,
     description: params[:description].to_s.strip,
     mini_count:  [params[:mini_count].to_i, 1].max,
+    printed:     [params[:printed].to_i, 0].max,
+    painted:     [params[:painted].to_i, 0].max,
     tagged:      params[:mini_name].to_s.strip.length > 0,
     updated_at:  Time.now
   )
@@ -579,6 +585,8 @@ post '/edit/:id' do
     notes:       params[:notes].to_s.strip,
     description: params[:description].to_s.strip,
     mini_count:  [params[:mini_count].to_i, 1].max,
+    printed:     [params[:printed].to_i, 0].max,
+    painted:     [params[:painted].to_i, 0].max,
     tagged:      params[:mini_name].to_s.strip.length > 0,
     updated_at:  Time.now
   )

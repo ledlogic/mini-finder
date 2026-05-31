@@ -69,6 +69,22 @@
             <% end %>
           </select>
         </div>
+        <div class="form-group">
+          <label>🖨 Printed</label>
+          <select name="printed" class="cell-select">
+            <% (0..10).each do |n| %>
+              <option value="<%= n %>" <%= (@image[:printed] || 0) == n ? 'selected' : '' %>><%= n %></option>
+            <% end %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>🎨 Painted</label>
+          <select name="painted" class="cell-select">
+            <% (0..10).each do |n| %>
+              <option value="<%= n %>" <%= (@image[:painted] || 0) == n ? 'selected' : '' %>><%= n %></option>
+            <% end %>
+          </select>
+        </div>
       </div>
 
       <div class="form-row">

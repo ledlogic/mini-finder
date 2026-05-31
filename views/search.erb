@@ -115,8 +115,20 @@
               </tr>
               <% if (img[:mini_count] || 1) > 1 %>
               <tr>
-                <th># Minis</th>
+                <th>⬡ Minis</th>
                 <td><span class="count-badge"><%= img[:mini_count] %></span></td>
+              </tr>
+              <% end %>
+              <% if (img[:printed] || 0) > 0 %>
+              <tr>
+                <th>🖨</th>
+                <td><span class="count-badge"><%= img[:printed] %> printed</span></td>
+              </tr>
+              <% end %>
+              <% if (img[:painted] || 0) > 0 %>
+              <tr>
+                <th>🎨</th>
+                <td><span class="count-badge count-badge-painted"><%= img[:painted] %> painted</span></td>
               </tr>
               <% end %>
               <% if img[:description].to_s.strip.length > 0 %>
