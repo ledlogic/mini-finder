@@ -157,7 +157,7 @@
         <th>Species</th>
         <th>Gender</th>
         <th>Weapons</th>
-        <th>Stance</th>
+        <th class="cell-stance">Stance</th>
         <th>Size</th>
         <th title="Minis in image / Printed / Painted">🖨</th>
         <th></th>
@@ -247,7 +247,7 @@
             </select>
           </td>
           <td><input type="text" name="weapons"   class="cell-input" value="<%= img[:weapons] %>"></td>
-          <td><input type="text" name="stance"    class="cell-input" value="<%= img[:stance] %>"></td>
+          <td class="cell-stance"><input type="text" name="stance" class="cell-input" value="<%= img[:stance] %>"></td>
           <td>
             <select name="mini_size" class="cell-select">
               <option value="">—</option>

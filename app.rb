@@ -105,6 +105,36 @@ SUPPORTED_EXTS = %w[.png .jpg .jpeg .gif .webp .bmp].freeze
 
 MIN_OCR_WIDTH = 400  # skip images too small for reliable OCR
 
+# ─── MMF filename name extraction ─────────────────────────────────────────────
+
+# Detect if a folder is an MMF folder (ends in -mmf)
+def mmf_folder?(folder_path)
+  File.basename(folder_path).end_with?('-mmf')
+end
+
+# Extract the base month from an MMF folder name e.g. "2026-06-mmf" -> "2026-06"
+def mmf_base_month(folder_path)
+  File.basename(folder_path).sub(/-mmf$/, '')
+end
+
+# Extract mini name from MMF filename by stripping prefix/suffix and splitting CamelCase
+# e.g. "0002_June24-adv-1080-XiuYing02.jpg" -> "Xiu Ying"
+BUNDLE_WORDS    = %w[together bundle pack set group].freeze
+SKIP_NAME_WORDS = %w[adv img page].freeze
+
+def extract_mmf_name(filename)
+  name  = File.basename(filename, '.*')
+  name  = name.sub(/^\d+_/, '')
+  raw   = name.split('-').last.to_s
+  raw   = raw.sub(/\d+$/, '').strip
+  return nil if raw.empty?
+  # Map bundle/group words to "Bundle"
+  return 'Bundle' if BUNDLE_WORDS.include?(raw.downcase)
+  # Skip noise words
+  return nil if SKIP_NAME_WORDS.include?(raw.downcase)
+  # Split CamelCase into space-separated words
+  raw.gsub(/([A-Z])/, ' \\1').strip
+end
 CROP_ZONES = [
   { label: 'name-block-high',       x: 0.38, y: 0.63, w: 0.62, h: 0.20 },
   { label: 'name-block-mid',        x: 0.38, y: 0.70, w: 0.62, h: 0.20 },
@@ -277,6 +307,11 @@ def scan_folder(root)
   found = 0
   return found unless Dir.exist?(root)
 
+  # Find all MMF folders — used to skip their plain yyyy-mm counterparts
+  mmf_base_paths = Dir.glob(File.join(root, '**', '*-mmf'))
+                      .select { |p| File.directory?(p) }
+                      .map    { |p| File.join(File.dirname(p), mmf_base_month(p)) }
+
   Dir.glob(File.join(root, '**', '*')).each do |path|
     next unless File.file?(path)
     next unless SUPPORTED_EXTS.include?(File.extname(path).downcase)
@@ -285,10 +320,18 @@ def scan_folder(root)
     filename = File.basename(path)
     next if Images.where(source_folder: folder, filename: filename).any?
 
+    is_mmf = mmf_folder?(folder)
+
+    # Skip folders ending in -cd (alternate image sets we don't want)
+    next if File.basename(folder).end_with?('-cd')
+
+    # Skip plain yyyy-mm folder if an MMF version exists for that month
+    next if !is_mmf && mmf_base_paths.include?(folder)
+
     # ── Find or create collection for this folder ──
     col = Collections.where(folder_path: folder).first
     unless col
-      release_month = parse_release_month(folder)
+      release_month = is_mmf ? mmf_base_month(folder) : parse_release_month(folder)
       col_id = Collections.insert(
         folder_path:   folder,
         release_month: release_month,
@@ -298,16 +341,24 @@ def scan_folder(root)
       col = Collections.where(id: col_id).first
     end
 
-    # ── OCR for suggested name + collection name ──
-    ocr = ocr_unit9_image(path)
+    # ── Name extraction ──
+    if is_mmf
+      # MMF: extract name directly from filename — no OCR needed
+      suggested   = extract_mmf_name(filename)
+      auto_tagged = !suggested.nil?
+      is_bundle   = suggested == 'Bundle'
+    else
+      # Standard: run OCR
+      ocr         = ocr_unit9_image(path)
+      suggested   = ocr[:suggested_name]
+      auto_tagged = false
 
-    # If OCR found a collection name and the collection doesn't have one yet,
-    # save it back to the collection record
-    if ocr[:collection_name] && col[:name].to_s.empty?
-      Collections.where(id: col[:id]).update(
-        name:       ocr[:collection_name],
-        updated_at: Time.now
-      )
+      if ocr[:collection_name] && col[:name].to_s.empty?
+        Collections.where(id: col[:id]).update(
+          name:       ocr[:collection_name],
+          updated_at: Time.now
+        )
+      end
     end
 
     dim_match  = filename.match(/(\d+x\d+)/i)
@@ -318,8 +369,10 @@ def scan_folder(root)
       source_folder:  folder,
       filename:       filename,
       image_size:     image_size,
-      suggested_name: ocr[:suggested_name],
-      tagged:         false,
+      suggested_name: suggested,
+      mini_name:      auto_tagged ? suggested : nil,
+      mini_count:     is_bundle ? 4 : 1,
+      tagged:         auto_tagged,
       created_at:     Time.now,
       updated_at:     Time.now
     )
@@ -327,7 +380,6 @@ def scan_folder(root)
   end
   found
 end
-
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
 get '/' do

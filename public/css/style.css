@@ -167,7 +167,8 @@ body {
 .col-species { min-width: 100px; }
 .col-gender  { width: 90px; }
 .col-weapons { min-width: 100px; }
-.col-stance  { min-width: 160px; }
+.col-stance  { min-width: 180px; }
+.cell-stance { min-width: 180px; width: 180px; }
 .col-size    { width: 80px; }
 .col-actions { width: 72px; }
 
@@ -530,11 +531,13 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .collection-card input[type=text]:focus { outline: none; border-color: var(--accent); }
 .col-folder {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: var(--text-faint);
-  word-break: break-all;
-  line-height: 1.5;
+  word-break: break-word;
+  line-height: 1.4;
 }
+.catalog-table .col-folder  { width: 55px; }
+.catalog-table .col-file    { width: 150px; }
 .col-card-footer {
   margin-top: 14px;
   padding-top: 12px;
@@ -563,9 +566,6 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .size-btn-active { background: var(--accent) !important; color: #000 !important; }
 
 /* ── Folder column & filter ───────────────────────────────────────────────── */
-.col-folder  { width: 70px; }
-.col-file    { width: 160px; }
-
 .cell-folder { vertical-align: middle; }
 .folder-link {
   display: inline-block;
