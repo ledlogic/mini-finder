@@ -118,6 +118,13 @@
           <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>" class="col-browse-link">
             Browse images →
           </a>
+          <% mmf_url = mmf_search_url(col[:release_month]) %>
+          <% if mmf_url %>
+            <a href="<%= mmf_url %>" class="col-mmf-link" target="_blank"
+               title="Search MyMiniFactory for unit9 <%= col[:release_month] %>">
+              MMF
+            </a>
+          <% end %>
           <% pdf = collection_pdf_path(col[:folder_path]) %>
           <% if pdf %>
             <a href="<%= pdf_url(col[:id]) %>" class="col-pdf-link" target="_blank" title="<%= col[:folder_path] %>.pdf">

@@ -117,6 +117,25 @@ helpers do
     "/pdf/#{collection_id}"
   end
 
+  # Build a MyMiniFactory search URL for a collection
+  # release_month "YYYY-MM" -> "august24"
+  MONTH_NAMES = %w[january february march april may june
+                   july august september october november december].freeze
+
+  def mmf_search_url(release_month)
+    return nil unless release_month && release_month.match(/^\d{4}-\d{2}$/)
+    year, month = release_month.split("-").map(&:to_i)
+    month_name  = MONTH_NAMES[month - 1]
+    short_year  = year.to_s[-2..]
+    query       = "unit9 #{month_name}#{short_year}"
+    json        = %Q({"searchString":"#{query}","categories":[],"designType":"premium-only","sortingKey":"relevance","tags":[]})
+    encoded     = json.gsub('{', '%7B').gsub('}', '%7D')
+                      .gsub('"'  , '%22').gsub(' '  , '%20')
+                      .gsub('['  , '%5B').gsub(']'  , '%5D')
+                      .gsub(':'  , '%3A').gsub(','  , '%2C')
+    "https://www.myminifactory.com/search#/?#{encoded}"
+  end
+
   # Highlight matched terms in a comma-separated field value
   # Build a query string from a hash of params
   def q(h)

@@ -1236,3 +1236,24 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   flex: 1;
   margin-bottom: 0;
 }
+
+/* ── MMF search link ──────────────────────────────────────────────────────── */
+.col-mmf-link {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-head);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.col-mmf-link:hover {
+  background: rgba(0,212,255,0.08);
+  border-color: var(--accent);
+}
