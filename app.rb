@@ -380,6 +380,39 @@ def scan_folder(root)
   end
   found
 end
+
+# Remove collections whose folder no longer exists on disk,
+# and remove plain yyyy-mm collections when an -mmf sibling exists.
+def purge_missing_collections
+  removed = 0
+  all_folders = Collections.select_map(:folder_path)
+
+  Collections.all.each do |col|
+    folder = col[:folder_path]
+    base   = File.basename(folder)
+    parent = File.dirname(folder)
+
+    # Remove if folder is gone from disk
+    if !Dir.exist?(folder)
+      Images.where(collection_id: col[:id]).delete
+      Collections.where(id: col[:id]).delete
+      removed += 1
+      next
+    end
+
+    # Remove plain yyyy-mm if an -mmf sibling exists in the DB
+    if base.match?(/^\d{4}-\d{2}$/)
+      mmf_sibling = File.join(parent, base + '-mmf')
+      if all_folders.include?(mmf_sibling)
+        Images.where(collection_id: col[:id]).delete
+        Collections.where(id: col[:id]).delete
+        removed += 1
+      end
+    end
+  end
+  removed
+end
+
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
 get '/' do
@@ -429,10 +462,12 @@ get '/catalog' do
   if @f_unprinted
     dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
   end
   if @f_unpainted
     dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
   end
 
   # Legacy single status filter (from collections page links)
@@ -441,10 +476,12 @@ get '/catalog' do
     @f_unprinted = true
     dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
   when 'unpainted'
     @f_unpainted = true
     dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
   when 'untagged'
     @f_untagged = true
     dataset = dataset.where(tagged: false)
@@ -479,8 +516,9 @@ get '/catalog' do
 end
 
 post '/scan' do
-  count = scan_folder(settings.root_folder)
-  redirect "/catalog?scanned=#{count}"
+  purged = purge_missing_collections
+  count  = scan_folder(settings.root_folder)
+  redirect "/catalog?scanned=#{count}&purged=#{purged}"
 end
 
 # ── 2. Inline save ────────────────────────────────────────────────────────────
@@ -533,13 +571,15 @@ get '/collections' do
   # Attach print/paint stats per collection
   @stats = {}
   @collections.each do |col|
-    rows = Images.where(collection_id: col[:id]).select(:printed, :painted).all
+    rows = Images.where(collection_id: col[:id]).select(:printed, :painted, :mini_count, :mini_name).all
+    # Exclude bundles (named "Bundle" or mini_count >= 4) from print/paint tracking
+    trackable = rows.reject { |r| r[:mini_count].to_i >= 4 || r[:mini_name].to_s.downcase == 'bundle' }
     @stats[col[:id]] = {
-      total:    rows.length,
-      printed:  rows.sum { |r| r[:printed].to_i },
-      painted:  rows.sum { |r| r[:painted].to_i },
-      unprinted: rows.count { |r| r[:printed].to_i == 0 },
-      unpainted: rows.count { |r| r[:painted].to_i == 0 }
+      total:     rows.length,
+      printed:   trackable.sum { |r| r[:printed].to_i },
+      painted:   trackable.sum { |r| r[:painted].to_i },
+      unprinted: trackable.count { |r| r[:printed].to_i == 0 },
+      unpainted: trackable.count { |r| r[:painted].to_i == 0 }
     }
   end
 

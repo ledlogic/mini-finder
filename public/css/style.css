@@ -1287,17 +1287,19 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 
 /* ── Catalog info bar year link ───────────────────────────────────────────── */
 .col-info-year {
-  display: inline-flex;
-  align-items: center;
   font-family: var(--font-head);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--text-dim);
+  color: var(--accent);
   text-decoration: none;
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  padding: 4px 10px;
-  transition: all 0.15s;
+  white-space: nowrap;
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: var(--radius);
+  padding: 5px 12px;
+  transition: background 0.15s, border-color 0.15s;
 }
-.col-info-year:hover { border-color: var(--accent); color: var(--accent); }
+.col-info-year:hover {
+  background: rgba(0,212,255,0.08);
+  border-color: var(--accent);
+}

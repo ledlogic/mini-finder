@@ -41,7 +41,12 @@
 
   <main class="main-content">
     <% if params[:scanned] %>
-      <div class="toast">✓ Found <strong><%= params[:scanned] %></strong> new image<%= params[:scanned].to_i == 1 ? '' : 's' %></div>
+      <div class="toast">
+        ✓ Found <strong><%= params[:scanned] %></strong> new image<%= params[:scanned].to_i == 1 ? '' : 's' %>
+        <% if params[:purged].to_i > 0 %>
+          &nbsp;·&nbsp; removed <strong><%= params[:purged] %></strong> missing folder<%= params[:purged].to_i == 1 ? '' : 's' %>
+        <% end %>
+      </div>
     <% end %>
     <%= yield %>
   </main>
