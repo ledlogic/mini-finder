@@ -514,9 +514,16 @@ end
 # ── Collections management ────────────────────────────────────────────────────
 
 get '/collections' do
-  @filter = params[:filter].to_s.strip  # e.g. 'unprinted', 'unpainted', ''
+  @filter     = params[:filter].to_s.strip
+  @year_filter = params[:year].to_s.strip   # e.g. '2024'
 
   @collections = Collections.order(:release_month, :name).all
+
+  # Build list of available years from release_month values
+  @years = @collections
+    .map { |c| c[:release_month].to_s[0, 4] }
+    .select { |y| y.match?(/^\d{4}$/) }
+    .uniq.sort
 
   # Attach image counts
   @counts = Images.group_and_count(:collection_id).each_with_object({}) do |r, h|
@@ -536,7 +543,12 @@ get '/collections' do
     }
   end
 
-  # Apply filter
+  # Apply year filter
+  unless @year_filter.empty?
+    @collections = @collections.select { |c| c[:release_month].to_s.start_with?(@year_filter) }
+  end
+
+  # Apply status filter
   if @filter == 'unprinted'
     @collections = @collections.select { |c| (@stats[c[:id]] || {})[:printed].to_i == 0 }
   elsif @filter == 'unpainted'

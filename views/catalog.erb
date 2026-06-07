@@ -116,6 +116,12 @@
           Edit collection ✎
         </a>
       <% end %>
+      <% col_year = @folder_filter[/\d{4}/] %>
+      <% if col_year %>
+        <a href="/collections?year=<%= col_year %>" class="col-info-year">
+          <%= col_year %> collections
+        </a>
+      <% end %>
       <% pdf = collection_pdf_path(@folder_filter) %>
       <% if pdf && active_col %>
         <a href="<%= pdf_url(active_col[:id]) %>" class="col-info-pdf" target="_blank" title="<%= @folder_filter %>.pdf">

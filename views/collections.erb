@@ -5,6 +5,15 @@
   </div>
 </div>
 
+<div class="col-year-bar">
+  <a href="<%= col_url(year: '') %>"
+     class="col-year-btn <%= @year_filter.empty? ? 'col-year-active' : '' %>">All years</a>
+  <% @years.each do |yr| %>
+    <a href="<%= col_url(year: yr) %>"
+       class="col-year-btn <%= @year_filter == yr ? 'col-year-active' : '' %>"><%= yr %></a>
+  <% end %>
+</div>
+
 <div class="col-filter-bar">
   <% filters = [
     ['', 'All'],
@@ -13,7 +22,7 @@
     ['partially_printed', '🖨 Partial'],
   ] %>
   <% filters.each do |val, label| %>
-    <a href="/collections<%= val.empty? ? '' : "?filter=#{val}" %>"
+    <a href="<%= col_url(filter: val) %>"
        class="col-filter-btn <%= @filter == val ? 'col-filter-active' : '' %>">
       <%= label %>
     </a>

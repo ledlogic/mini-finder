@@ -1257,3 +1257,47 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   background: rgba(0,212,255,0.08);
   border-color: var(--accent);
 }
+
+/* ── Collections year filter bar ─────────────────────────────────────────── */
+.col-year-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.col-year-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  font-family: var(--font-head);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.col-year-btn:hover { border-color: var(--accent); color: var(--accent); }
+.col-year-active {
+  background: rgba(0,212,255,0.1);
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+/* ── Catalog info bar year link ───────────────────────────────────────────── */
+.col-info-year {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-head);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-decoration: none;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 4px 10px;
+  transition: all 0.15s;
+}
+.col-info-year:hover { border-color: var(--accent); color: var(--accent); }

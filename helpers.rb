@@ -117,6 +117,14 @@ helpers do
     "/pdf/#{collection_id}"
   end
 
+  # Build a collections page URL preserving both year and status filters
+  def col_url(filter: @filter, year: @year_filter)
+    parts = []
+    parts << "filter=#{filter}" unless filter.to_s.empty?
+    parts << "year=#{year}"     unless year.to_s.empty?
+    parts.empty? ? '/collections' : "/collections?#{parts.join('&')}"
+  end
+
   # Build a MyMiniFactory search URL for a collection
   # release_month "YYYY-MM" -> "august24"
   MONTH_NAMES = %w[january february march april may june
