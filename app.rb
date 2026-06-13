@@ -518,7 +518,7 @@ end
 post '/scan' do
   purged = purge_missing_collections
   count  = scan_folder(settings.root_folder)
-  redirect "/catalog?scanned=#{count}&purged=#{purged}"
+  redirect "/collections?scanned=#{count}&purged=#{purged}"
 end
 
 # ── 2. Inline save ────────────────────────────────────────────────────────────
