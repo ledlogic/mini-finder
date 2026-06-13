@@ -1382,3 +1382,11 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .cell-count {
   min-width: 220px;
 }
+
+.toast-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.toast-link:hover { opacity: 0.8; }

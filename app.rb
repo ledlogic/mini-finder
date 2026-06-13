@@ -307,8 +307,9 @@ require_relative 'helpers'
 # ─── Scanner ──────────────────────────────────────────────────────────────────
 
 def scan_folder(root)
-  found = 0
-  return found unless Dir.exist?(root)
+  found          = 0
+  first_new_col  = nil   # id of the first newly-created collection
+  return { found: found, first_new_col_id: nil } unless Dir.exist?(root)
 
   # Find all MMF folders — used to skip their plain yyyy-mm counterparts
   mmf_base_paths = Dir.glob(File.join(root, '**', '*-mmf'))
@@ -342,6 +343,7 @@ def scan_folder(root)
         updated_at:    Time.now
       )
       col = Collections.where(id: col_id).first
+      first_new_col ||= col_id
     end
 
     # ── Name extraction ──
@@ -381,7 +383,7 @@ def scan_folder(root)
     )
     found += 1
   end
-  found
+  { found: found, first_new_col_id: first_new_col }
 end
 
 # Remove collections whose folder no longer exists on disk,
@@ -586,10 +588,14 @@ get '/catalog' do
 end
 
 post '/scan' do
-  result = purge_missing_collections
-  purged = result[:removed]
-  count  = scan_folder(settings.root_folder)
-  redirect "/collections?scanned=#{count}&purged=#{purged}"
+  purge_result = purge_missing_collections
+  purged       = purge_result[:removed]
+  scan_result  = scan_folder(settings.root_folder)
+  count        = scan_result[:found]
+  new_col_id   = scan_result[:first_new_col_id]
+  params_str   = "scanned=#{count}&purged=#{purged}"
+  params_str  += "&new_col=#{new_col_id}" if new_col_id
+  redirect "/collections?#{params_str}"
 end
 
 # ── 2. Inline save ────────────────────────────────────────────────────────────

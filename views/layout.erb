@@ -14,6 +14,12 @@
       <span class="brand-unit">UNIT</span><span class="brand-9">9</span>
       <span class="brand-sub">CATALOG</span>
     </div>
+    <form action="/scan" method="post" class="scan-form">
+      <button type="submit" class="btn-scan">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Scan Folder
+      </button>
+    </form>
     <ul class="nav-links">
       <li><a href="/catalog" class="<%= request.path_info.start_with?('/catalog') || request.path_info == '/' ? 'active' : '' %>">
         <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10"/></svg>
@@ -32,12 +38,6 @@
         Random
       </a></li>
     </ul>
-    <form action="/scan" method="post" class="scan-form">
-      <button type="submit" class="btn-scan">
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Scan Folder
-      </button>
-    </form>
     <div class="sidenav-footer">
       <code class="root-path"><%= settings.root_folder %></code>
     </div>
@@ -49,6 +49,9 @@
         ✓ Found <strong><%= params[:scanned] %></strong> new image<%= params[:scanned].to_i == 1 ? '' : 's' %>
         <% if params[:purged].to_i > 0 %>
           &nbsp;·&nbsp; removed <strong><%= params[:purged] %></strong> missing folder<%= params[:purged].to_i == 1 ? '' : 's' %>
+        <% end %>
+        <% if params[:new_col].to_i > 0 %>
+          &nbsp;·&nbsp; <a href="/collections#col-<%= params[:new_col] %>" class="toast-link">View new collection →</a>
         <% end %>
       </div>
     <% end %>
