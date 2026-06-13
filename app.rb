@@ -5,6 +5,8 @@ require 'sequel'
 require 'json'
 require 'pathname'
 require 'cgi'
+require 'date'
+require 'fileutils'
 require 'rtesseract'
 require 'mini_magick'
 
@@ -16,7 +18,29 @@ configure do
   set :views, File.join(File.dirname(__FILE__), 'views')
   set :public_folder, File.join(File.dirname(__FILE__), 'public')
   set :root_folder, ENV.fetch('ROOT_FOLDER', 'G:/My Drive/STL/UNIT9')
+  enable :sessions
+  set :session_secret, ENV.fetch('SESSION_SECRET', 'mini-finder-secret-key-please-change-this-in-production-it-must-be-64-bytes-long!!')
 end
+
+# ─── Backup helpers ───────────────────────────────────────────────────────────
+DB_PATH      = File.join(File.dirname(__FILE__), 'db', 'catalog.db')
+BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
+BACKUP_KEEP  = 20   # how many backups to retain
+
+def make_backup(label = 'manual')
+  FileUtils.mkdir_p(BACKUP_DIR)
+  ts   = Time.now.strftime('%Y%m%d-%H%M%S')
+  dest = File.join(BACKUP_DIR, "catalog-#{ts}-#{label}.db")
+  FileUtils.cp(DB_PATH, dest)
+  # Prune old backups, keeping the most recent BACKUP_KEEP
+  backups = Dir.glob(File.join(BACKUP_DIR, 'catalog-*.db')).sort
+  if backups.length > BACKUP_KEEP
+    backups[0..-(BACKUP_KEEP + 1)].each { |f| File.delete(f) }
+  end
+  dest
+end
+
+CHANGES_BEFORE_REMINDER = 25
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -588,6 +612,12 @@ get '/catalog' do
 end
 
 post '/scan' do
+  # Auto-backup on first scan of each browser session
+  unless session[:scanned_this_session]
+    make_backup('scan')
+    session[:scanned_this_session] = true
+    session[:changes_since_backup] = 0
+  end
   purge_result = purge_missing_collections
   purged       = purge_result[:removed]
   scan_result  = scan_folder(settings.root_folder)
@@ -596,6 +626,14 @@ post '/scan' do
   params_str   = "scanned=#{count}&purged=#{purged}"
   params_str  += "&new_col=#{new_col_id}" if new_col_id
   redirect "/collections?#{params_str}"
+end
+
+# Manual backup endpoint
+post '/backup' do
+  dest = make_backup('manual')
+  session[:changes_since_backup] = 0
+  filename = File.basename(dest)
+  redirect back + (back.include?('?') ? '&' : '?') + "backed_up=#{CGI.escape(filename)}"
 end
 
 # ── 2. Inline save ────────────────────────────────────────────────────────────
@@ -658,6 +696,7 @@ post '/images/:id' do
   end
 
   Images.where(id: id).update(update_fields)
+  session[:changes_since_backup] = (session[:changes_since_backup].to_i + 1)
   # Build redirect back preserving folder/page params, anchor to the saved row
   back_url = request.referer || '/catalog'
   back_url = back_url.sub(/#.*$/, '')  # strip any existing anchor
@@ -722,6 +761,23 @@ get '/collections' do
     img ||= Images.where(collection_id: col[:id]).order(:filename).first
     @previews[col[:id]] = img if img
   end
+  # ── Build stubs for months since 2022-01 with no collection yet ─────────
+  # Only show stubs when no year/status filter is active (they'd just clutter)
+  @stubs = []
+  if @filter.empty?
+    existing_months = Collections.select_map(:release_month).compact.to_set
+    stub_start = @year_filter.empty? ? Date.new(2022, 1, 1) : Date.new(@year_filter.to_i, 1, 1)
+    stub_end   = @year_filter.empty? ? Date.today.prev_month : [Date.new(@year_filter.to_i, 12, 1), Date.today.prev_month].min
+    d = stub_start
+    while d <= stub_end
+      ym = d.strftime('%Y-%m')
+      unless existing_months.include?(ym)
+        @stubs << ym
+      end
+      d = d >> 1
+    end
+  end
+
   erb :collections
 end
 
@@ -802,6 +858,7 @@ post '/edit/:id' do
   end
 
   Images.where(id: id).update(update_fields)
+  session[:changes_since_backup] = (session[:changes_since_backup].to_i + 1)
   redirect "/catalog#row-#{id}"
 end
 

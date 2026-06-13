@@ -72,3 +72,4 @@ puma.state
 .yardoc/
 *.jpg
 test_*.rb
+/db/

@@ -96,6 +96,20 @@ body {
 
 .sidenav-footer { padding: 12px 16px; border-top: 1px solid var(--border); margin-top: auto; }
 .root-path { display: block; font-size: 0.65rem; color: var(--text-faint); word-break: break-all; line-height: 1.4; }
+.db-size {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
+.db-size svg {
+  width: 11px; height: 11px; flex-shrink: 0;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
 
 /* ── Main ─────────────────────────────────────────────────────────────────── */
 .main-content {
@@ -1390,3 +1404,105 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   text-underline-offset: 2px;
 }
 .toast-link:hover { opacity: 0.8; }
+
+/* ── Collection stub cards (missing months) ───────────────────────────────── */
+.col-stub {
+  border: 1px dashed var(--border2) !important;
+  background: transparent !important;
+  opacity: 0.6;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 90px;
+  padding: 14px 16px;
+}
+.col-stub:hover { opacity: 1; border-color: var(--accent) !important; }
+.col-stub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.col-stub-month {
+  font-family: var(--font-head);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+.col-stub-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-faint);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 1px 7px;
+}
+.col-stub-actions {
+  margin-top: 10px;
+}
+.col-stub-mmf {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-head);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.col-stub-mmf svg {
+  width: 12px; height: 12px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.col-stub-mmf:hover { background: rgba(0,212,255,0.08); border-color: var(--accent); }
+
+/* ── Backup button ────────────────────────────────────────────────────────── */
+.backup-form { margin-top: 8px; }
+.btn-backup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-family: var(--font-head);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-backup svg {
+  width: 13px; height: 13px; flex-shrink: 0;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.btn-backup:hover { border-color: var(--accent); color: var(--accent); }
+.btn-backup-warn {
+  border-color: var(--warn, #f59e0b) !important;
+  color: var(--warn, #f59e0b) !important;
+  animation: backup-pulse 2s ease-in-out infinite;
+}
+@keyframes backup-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+.toast-backup {
+  background: rgba(34,197,94,0.08);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.toast-backup code {
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+  margin-left: 4px;
+}

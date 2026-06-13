@@ -151,6 +151,24 @@
       </form>
     </div>
   <% end %>
+
+  <%# ── Stub cards for months with no collection yet ── %>
+  <% (@stubs || []).each do |ym| %>
+    <% year, mon = ym.split('-').map(&:to_i) %>
+    <% mon_name = MONTH_NAMES[mon - 1].capitalize rescue ym %>
+    <div class="collection-card col-stub">
+      <div class="col-stub-header">
+        <span class="col-stub-month"><%= mon_name %> <%= year %></span>
+        <span class="col-stub-badge">not scanned</span>
+      </div>
+      <div class="col-stub-actions">
+        <a href="<%= mmf_search_url(ym) %>" class="col-stub-mmf" target="_blank" title="Search MMF for <%= mon_name %> <%= year %>">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          MMF →
+        </a>
+      </div>
+    </div>
+  <% end %>
 </div>
 
 <% end %>

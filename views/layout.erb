@@ -40,10 +40,41 @@
     </ul>
     <div class="sidenav-footer">
       <code class="root-path"><%= settings.root_folder %></code>
+      <% db_path = File.join(settings.root, 'db', 'catalog.db') %>
+      <% db_size = File.exist?(db_path) ? File.size(db_path) : 0 %>
+      <% db_human = if db_size > 1_048_576
+           "%.1f MB" % (db_size / 1_048_576.0)
+         elsif db_size > 1_024
+           "%.1f KB" % (db_size / 1_024.0)
+         else
+           "#{db_size} B"
+         end %>
+      <span class="db-size" title="<%= db_path %>">
+        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        <%= db_human %>
+      </span>
+      <% changes = session[:changes_since_backup].to_i %>
+      <% remind  = changes >= 25 %>
+      <form action="/backup" method="post" class="backup-form">
+        <button type="submit" class="btn-backup <%= remind ? 'btn-backup-warn' : '' %>"
+                title="<%= remind ? "#{changes} changes since last backup — back up now!" : "Back up database (#{changes} changes since last backup)" %>">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <% if remind %>
+            Backup (<%= changes %>!)
+          <% else %>
+            Backup
+          <% end %>
+        </button>
+      </form>
     </div>
   </nav>
 
   <main class="main-content">
+    <% if params[:backed_up] %>
+      <div class="toast toast-backup">
+        💾 Backup saved: <code><%= params[:backed_up] %></code>
+      </div>
+    <% end %>
     <% if params[:scanned] %>
       <div class="toast">
         ✓ Found <strong><%= params[:scanned] %></strong> new image<%= params[:scanned].to_i == 1 ? '' : 's' %>
