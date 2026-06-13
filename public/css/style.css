@@ -1506,3 +1506,50 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   font-size: 0.75em;
   margin-left: 4px;
 }
+
+/* ── Inline collection name edit in catalog info bar ─────────────────────── */
+.col-info-name-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.col-info-name-input {
+  text-transform: uppercase;
+  background: var(--bg) !important;
+  border: none;
+  border-bottom: 1px dashed var(--border2);
+  color: var(--text);
+  font-family: var(--font-head);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 4px;
+  min-width: 120px;
+  width: auto;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-text-fill-color: var(--text);
+}
+.col-info-name-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+  background: rgba(0,212,255,0.04) !important;
+  border-radius: 3px 3px 0 0;
+}
+.col-info-name-input::placeholder { color: var(--text-faint); font-weight: 400; -webkit-text-fill-color: var(--text-faint); }
+
+.col-info-name-save {
+  background: var(--accent);
+  border: none;
+  color: #000;
+  font-weight: 700;
+  font-size: 0.8rem;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+.col-info-name-save:hover { opacity: 0.8; }

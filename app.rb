@@ -556,10 +556,16 @@ get '/catalog' do
     @total_context    = 'total'
   end
 
-  # ── Group secondary images directly after their primary ──────────────────
+  # ── Group secondary images directly after their primary, cover image first ─
   # Fetch all matching rows (unpaginated), reorder so each secondary follows
   # its primary, then paginate the reordered list in Ruby.
   all_rows = dataset.all
+
+  # Build a set of cover_image_ids across all collections in this result set
+  col_ids_in_view = all_rows.map { |img| img[:collection_id] }.uniq
+  cover_ids = Collections.where(id: col_ids_in_view)
+                          .select_hash(:id, :cover_image_id)
+                          .values.compact.to_set
 
   # Build lookup: primary_id => [secondary rows...]
   by_primary = Hash.new { |h, k| h[k] = [] }
@@ -571,6 +577,11 @@ get '/catalog' do
       primaries_and_unlinked << img
     end
   end
+
+  # Pin cover images to the front of primaries_and_unlinked, preserving order
+  # for all other images
+  covers, rest = primaries_and_unlinked.partition { |img| cover_ids.include?(img[:id]) }
+  primaries_and_unlinked = covers + rest
 
   ordered = []
   primaries_and_unlinked.each do |img|
@@ -1012,6 +1023,14 @@ get '/images/:id/detect_name' do
 end
 
 # Set cover image for a collection
+post '/collections/:id/rename' do
+  id   = params[:id].to_i
+  name = params[:name].to_s.strip.upcase
+  Collections.where(id: id).update(name: name, updated_at: Time.now)
+  session[:changes_since_backup] = (session[:changes_since_backup].to_i + 1)
+  redirect params[:redirect_to].to_s.empty? ? '/collections' : params[:redirect_to]
+end
+
 post '/collections/:id/set_cover' do
   col_id = params[:id].to_i
   img_id = params[:image_id].to_i

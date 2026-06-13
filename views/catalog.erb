@@ -101,10 +101,16 @@
     <div class="collection-info-left">
       <svg viewBox="0 0 24 24" class="col-info-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
       <span class="col-info-folder"><%= File.basename(@folder_filter) %></span>
-      <% if active_col && !active_col[:name].to_s.empty? %>
-        <span class="col-info-name"><%= active_col[:name] %></span>
-      <% else %>
-        <span class="col-info-unnamed">unnamed collection</span>
+      <% if active_col %>
+        <form action="/collections/<%= active_col[:id] %>/rename" method="post" class="col-info-name-form" id="col-name-form">
+          <input type="hidden" name="redirect_to" value="<%= request.url %>">
+          <input type="text" name="name" value="<%= active_col[:name] %>"
+                 class="col-info-name-input"
+                 placeholder="collection name…"
+                 id="col-name-input"
+                 title="Click to edit collection name">
+          <button type="submit" class="col-info-name-save" id="col-name-save" style="display:none" title="Save name">✓</button>
+        </form>
       <% end %>
       <% if active_col && active_col[:release_month] %>
         <span class="col-info-month"><%= active_col[:release_month] %></span>

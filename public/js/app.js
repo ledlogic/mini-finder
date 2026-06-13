@@ -1,3 +1,18 @@
+// ── Inline collection name edit ──────────────────────────────────────────────
+(function() {
+  const input  = document.getElementById('col-name-input');
+  const save   = document.getElementById('col-name-save');
+  if (!input || !save) return;
+  const orig = input.value;
+  input.addEventListener('input', () => {
+    save.style.display = input.value !== orig ? '' : 'none';
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.closest('form').submit(); }
+    if (e.key === 'Escape') { input.value = orig; save.style.display = 'none'; input.blur(); }
+  });
+})();
+
 // ── Toggle the cross-reference (secondary image) select ─────────────────────
 function toggleXrefSelect(imageId, checked) {
   const select = document.getElementById(`xref-select-${imageId}`);
