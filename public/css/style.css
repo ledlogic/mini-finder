@@ -328,7 +328,7 @@ body {
 }
 .result-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
 
-.result-image-wrap { position: relative; cursor: pointer; overflow: hidden; aspect-ratio: 1; background: var(--bg3); }
+.result-image-wrap { display: block; position: relative; cursor: pointer; overflow: hidden; aspect-ratio: 1; background: var(--bg3); text-decoration: none; }
 .result-image { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; }
 .result-image-wrap:hover .result-image { transform: scale(1.04); }
 .score-badge {

@@ -1,0 +1,74 @@
+<div class="page-header">
+  <div>
+    <h1>Random</h1>
+    <p class="page-sub"><%= @images.length %> of <%= @count %> images</p>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div class="thumb-sizer" title="Card size">
+      <button class="size-btn" onclick="setRandomSize(220)" data-size="220">S</button>
+      <button class="size-btn" onclick="setRandomSize(340)" data-size="340">M</button>
+      <button class="size-btn" onclick="setRandomSize(480)" data-size="480">L</button>
+      <button class="size-btn" onclick="setRandomSize(640)" data-size="640">XL</button>
+    </div>
+    <a href="/random" class="btn-scan" style="text-decoration:none;">
+      <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.5"/><circle cx="18" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="6" cy="18" r="1.5"/><circle cx="18" cy="18" r="1.5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      Shuffle
+    </a>
+  </div>
+</div>
+
+<% if @images.empty? %>
+  <div class="empty-state">No images in the catalog yet. Scan a folder first.</div>
+<% else %>
+  <div class="results-grid" id="random-grid">
+    <% @images.each do |img| %>
+      <% col_link = img[:folder_path] ?
+           "/catalog?show_all=1&folder=#{CGI.escape(img[:folder_path])}&page=#{img[:target_page]}#row-#{img[:id]}" :
+           nil %>
+      <div class="result-card">
+        <% if col_link %>
+          <a href="<%= col_link %>" class="result-image-wrap">
+            <img src="/image_file/<%= img[:id] %>" alt="<%= img[:filename] %>" loading="lazy" class="result-image">
+          </a>
+        <% else %>
+          <div class="result-image-wrap" onclick="openLightbox('/image_file/<%= img[:id] %>')">
+            <img src="/image_file/<%= img[:id] %>" alt="<%= img[:filename] %>" loading="lazy" class="result-image">
+          </div>
+        <% end %>
+        <div class="result-body">
+          <div class="result-file">
+            <span class="file-name"><%= img[:mini_name].to_s.empty? ? img[:filename] : img[:mini_name] %></span>
+          </div>
+          <% if col_link %>
+            <a href="<%= col_link %>" class="col-info-edit" style="display:inline-block; margin-top:6px;">
+              View collection ✎
+            </a>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<script>
+(function() {
+  const saved = localStorage.getItem('randomCardSize');
+  if (saved) applyRandomSize(parseInt(saved), false);
+})();
+
+function setRandomSize(px) {
+  localStorage.setItem('randomCardSize', px);
+  applyRandomSize(px, true);
+}
+
+function applyRandomSize(px, animate) {
+  const grid = document.getElementById('random-grid');
+  if (grid) {
+    if (animate) grid.style.transition = 'grid-template-columns 0.2s';
+    grid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${px}px, 1fr))`;
+  }
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.classList.toggle('size-btn-active', parseInt(btn.dataset.size) === px);
+  });
+}
+</script>

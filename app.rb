@@ -426,6 +426,10 @@ get '/image_file/:id' do
   halt 404, "File not on disk: #{path}" unless File.exist?(path)
   ext = File.extname(row[:filename]).downcase.delete('.')
   content_type "image/#{ext == 'jpg' ? 'jpeg' : ext}"
+  # Long-lived cache: images don't change in place; if they do, the
+  # row id stays the same but mtime changes, so use mtime-based ETag.
+  cache_control :public, max_age: 31536000, immutable: true
+  last_modified File.mtime(path)
   send_file path
 end
 
@@ -649,6 +653,41 @@ post '/edit/:id' do
     updated_at:  Time.now
   )
   redirect '/catalog'
+end
+
+# ── 2b. Random images ───────────────────────────────────────────────────────
+
+get '/random' do
+  count = Images.count
+  @count = count
+  per_page = 25
+  if count == 0
+    @images = []
+  else
+    # Pick a screen's worth of random ids efficiently
+    n = 60
+    ids = Images.select_map(:id)
+    sample_ids = ids.sample([n, ids.length].min)
+    rows = Images.where(id: sample_ids).all
+    col_map = Collections.select_hash(:id, :folder_path)
+    @images = rows.map do |img|
+      # Compute this image's position within its folder (ordered by filename,
+      # matching the catalog page's ordering), so we can link directly to the
+      # catalog page containing this row.
+      position = Images.where(source_folder: img[:source_folder])
+                        .where { filename < img[:filename] }
+                        .count
+      target_page = (position / per_page) + 1
+      {
+        id:           img[:id],
+        filename:     img[:filename],
+        mini_name:    img[:mini_name],
+        folder_path:  col_map[img[:collection_id]],
+        target_page:  target_page
+      }
+    end.shuffle
+  end
+  erb :random
 end
 
 # ── 3. Search ─────────────────────────────────────────────────────────────────
