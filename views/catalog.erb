@@ -191,8 +191,9 @@
         <% end %>
 
         <%# ── Image row ── %>
-        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
-          <form action="/images/<%= img[:id] %>" method="post">
+        <% is_secondary = !img[:primary_image_id].nil? %>
+        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %> <%= is_secondary ? 'row-is-secondary' : '' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
+          <form action="/images/<%= img[:id] %>" method="post" onsubmit="console.log('[xref-client-debug] is_secondary checkbox:', this.querySelector('input[name=is_secondary]')?.checked, 'primary_image_id:', this.querySelector('select[name=primary_image_id]')?.value)">
           <input type="hidden" name="folder"      value="<%= @folder_filter %>">
           <input type="hidden" name="show_all"    value="<%= @show_all ? '1' : '0' %>">
           <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
@@ -235,17 +236,23 @@
           <td class="cell-name-td">
             <input type="text" name="mini_name" class="cell-input"
                    value="<%= img[:mini_name] %>"
-                   id="name-input-<%= img[:id] %>">
+                   id="name-input-<%= img[:id] %>"
+                   style="<%= is_secondary ? 'display:none;' : '' %>">
             <% if img[:suggested_name].to_s.strip.length > 0 && img[:mini_name].to_s.strip.empty? %>
               <button type="button" class="btn-suggestion"
+                      style="<%= is_secondary ? 'display:none;' : '' %>"
                       onclick="useSuggestion(<%= img[:id] %>, '<%= img[:suggested_name].gsub("'", "\\'") %>')">
                 ✦ <%= img[:suggested_name] %>
               </button>
             <% end %>
+            <span class="secondary-name-hidden" title="Linked images don't need their own name" style="<%= is_secondary ? '' : 'display:none;' %>">—</span>
           </td>
-          <td><input type="text" name="species"   class="cell-input" value="<%= img[:species] %>"></td>
           <td>
-            <select name="gender" class="cell-select">
+            <input type="text" name="species" class="cell-input" value="<%= img[:species] %>"
+                   style="<%= is_secondary ? 'display:none;' : '' %>">
+          </td>
+          <td>
+            <select name="gender" class="cell-select" style="<%= is_secondary ? 'display:none;' : '' %>">
               <option value="">—</option>
               <% ['M','F','NA','M,F','M,NA','F,NA','M,F,NA'].each do |g| %>
                 <option value="<%= g %>" <%= img[:gender] == g ? 'selected' : '' %>><%= g %></option>
@@ -274,7 +281,7 @@
                   <% end %>
                 </select>
               </div>
-              <div class="count-row" title="Printed">
+              <div class="count-row" title="Printed" style="<%= is_secondary ? 'display:none;' : '' %>">
                 <span class="count-icon count-printed">🖨</span>
                 <select name="printed" class="count-mini-select">
                   <% (0..10).each do |n| %>
@@ -282,11 +289,36 @@
                   <% end %>
                 </select>
               </div>
-              <div class="count-row" title="Painted">
+              <div class="count-row" title="Painted" style="<%= is_secondary ? 'display:none;' : '' %>">
                 <span class="count-icon count-painted">🎨</span>
                 <select name="painted" class="count-mini-select">
                   <% (0..10).each do |n| %>
                     <option value="<%= n %>" <%= (img[:painted] || 0) == n ? 'selected' : '' %>><%= n %></option>
+                  <% end %>
+                </select>
+              </div>
+              <div class="secondary-of" title="This image is a secondary view linked to a primary image" style="<%= is_secondary ? '' : 'display:none;' %>">
+                ↳ <%= @primary_lookup[img[:primary_image_id]].to_s.empty? ? "(primary ##{img[:primary_image_id]})" : @primary_lookup[img[:primary_image_id]] %>
+              </div>
+
+              <%# ── Cross-reference: link this image as a secondary view ── %>
+              <div class="count-row xref-row">
+                <label class="xref-label" title="Mark this image as an alternate view of another image in this collection">
+                  <input type="checkbox" name="is_secondary" value="1"
+                         class="xref-checkbox"
+                         <%= is_secondary ? 'checked' : '' %>
+                         onchange="toggleXrefSelect(<%= img[:id] %>, this.checked)">
+                  <span class="xref-icon">🔗</span>
+                </label>
+                <select name="primary_image_id" id="xref-select-<%= img[:id] %>"
+                        class="count-mini-select xref-select">
+                  <option value="">— pick image —</option>
+                  <% (@collection_images[img[:collection_id]] || []).each do |other| %>
+                    <% next if other[:id] == img[:id] %>
+                    <% label = other[:mini_name].to_s.empty? ? other[:filename] : other[:mini_name] %>
+                    <option value="<%= other[:id] %>" <%= img[:primary_image_id] == other[:id] ? 'selected' : '' %>>
+                      <%= label %>
+                    </option>
                   <% end %>
                 </select>
               </div>

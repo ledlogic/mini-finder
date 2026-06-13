@@ -54,6 +54,8 @@ DB.create_table?(:images) do
   Integer  :printed,    default: 0
   Integer  :painted,    default: 0
   Boolean  :tagged, default: false
+  Integer  :primary_image_id              # if set, this image is a secondary
+                                           # (alt view) of another image
   DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
   DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
 end
@@ -69,6 +71,7 @@ end
   "ALTER TABLE collections ADD COLUMN release_month TEXT",
   "ALTER TABLE collections ADD COLUMN notes TEXT",
   "ALTER TABLE collections ADD COLUMN cover_image_id INTEGER",
+  "ALTER TABLE images ADD COLUMN primary_image_id INTEGER",
 ].each do |sql|
   begin; DB.run(sql); rescue Sequel::DatabaseError; end
 end
@@ -382,10 +385,12 @@ def scan_folder(root)
 end
 
 # Remove collections whose folder no longer exists on disk,
-# and remove plain yyyy-mm collections when an -mmf sibling exists.
+# and remove plain yyyy-mm collections when an -mmf sibling exists in the DB or on disk.
+# Returns { removed: N, cleanup_script_output: "..." }
 def purge_missing_collections
-  removed = 0
-  all_folders = Collections.select_map(:folder_path)
+  removed      = 0
+  script_lines = []
+  all_folders  = Collections.select_map(:folder_path)
 
   Collections.all.each do |col|
     folder = col[:folder_path]
@@ -400,17 +405,28 @@ def purge_missing_collections
       next
     end
 
-    # Remove plain yyyy-mm if an -mmf sibling exists in the DB
+    # Remove -cd folders
+    if base.end_with?('-cd')
+      Images.where(collection_id: col[:id]).delete
+      Collections.where(id: col[:id]).delete
+      removed += 1
+      script_lines << "Removed -cd folder: #{base}"
+      next
+    end
+
+    # Remove plain yyyy-mm if an -mmf sibling exists in the DB or on disk
     if base.match?(/^\d{4}-\d{2}$/)
-      mmf_sibling = File.join(parent, base + '-mmf')
-      if all_folders.include?(mmf_sibling)
+      mmf_sibling_path = File.join(parent, base + '-mmf')
+      if all_folders.include?(mmf_sibling_path) || Dir.exist?(mmf_sibling_path)
         Images.where(collection_id: col[:id]).delete
         Collections.where(id: col[:id]).delete
         removed += 1
+        script_lines << "Removed plain #{base} (MMF sibling exists)"
       end
     end
   end
-  removed
+
+  { removed: removed, log: script_lines }
 end
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
@@ -467,11 +483,13 @@ get '/catalog' do
     dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
     dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
+    dataset = dataset.where(primary_image_id: nil)
   end
   if @f_unpainted
     dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
     dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
+    dataset = dataset.where(primary_image_id: nil)
   end
 
   # Legacy single status filter (from collections page links)
@@ -481,11 +499,13 @@ get '/catalog' do
     dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
     dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
+    dataset = dataset.where(primary_image_id: nil)
   when 'unpainted'
     @f_unpainted = true
     dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
     dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
+    dataset = dataset.where(primary_image_id: nil)
   when 'untagged'
     @f_untagged = true
     dataset = dataset.where(tagged: false)
@@ -510,17 +530,64 @@ get '/catalog' do
     @total_context    = 'total'
   end
 
-  @images = dataset.limit(@per_page, (@page - 1) * @per_page).all
+  # ── Group secondary images directly after their primary ──────────────────
+  # Fetch all matching rows (unpaginated), reorder so each secondary follows
+  # its primary, then paginate the reordered list in Ruby.
+  all_rows = dataset.all
+
+  # Build lookup: primary_id => [secondary rows...]
+  by_primary = Hash.new { |h, k| h[k] = [] }
+  primaries_and_unlinked = []
+  all_rows.each do |img|
+    if img[:primary_image_id]
+      by_primary[img[:primary_image_id]] << img
+    else
+      primaries_and_unlinked << img
+    end
+  end
+
+  ordered = []
+  primaries_and_unlinked.each do |img|
+    ordered << img
+    # Append this image's secondaries (already in source_folder/filename order)
+    ordered.concat(by_primary[img[:id]]) if by_primary.key?(img[:id])
+  end
+
+  # Any "orphaned" secondaries whose primary isn't in this result set
+  # (e.g. primary is on a different tagged/filter state) — append at the end
+  linked_ids = primaries_and_unlinked.map { |img| img[:id] }
+  by_primary.each do |primary_id, secs|
+    next if linked_ids.include?(primary_id)
+    ordered.concat(secs)
+  end
+
+  @images = ordered[(@page - 1) * @per_page, @per_page] || []
   @pages  = (@total.to_f / @per_page).ceil
 
   # Pre-load collections so views can look them up by id
   @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
 
+  # For each image's collection, build a list of "candidate primary" images
+  # (other images in the same collection) for the secondary-link dropdown,
+  # and resolve each image's primary's display name if it's a secondary.
+  collection_ids = @images.map { |img| img[:collection_id] }.compact.uniq
+  @collection_images = {}
+  collection_ids.each do |cid|
+    @collection_images[cid] = Images.where(collection_id: cid)
+                                     .select(:id, :mini_name, :filename)
+                                     .order(:filename).all
+  end
+
+  primary_ids = @images.map { |img| img[:primary_image_id] }.compact.uniq
+  @primary_lookup = primary_ids.empty? ? {} :
+    Images.where(id: primary_ids).select_hash(:id, :mini_name)
+
   erb :catalog
 end
 
 post '/scan' do
-  purged = purge_missing_collections
+  result = purge_missing_collections
+  purged = result[:removed]
   count  = scan_folder(settings.root_folder)
   redirect "/collections?scanned=#{count}&purged=#{purged}"
 end
@@ -532,21 +599,59 @@ post '/images/:id' do
   row = Images.where(id: id).first
   halt 404 unless row
 
-  Images.where(id: id).update(
-    mini_name:   params[:mini_name].to_s.strip,
-    species:     params[:species].to_s.strip,
-    gender:      params[:gender].to_s.strip,
-    weapons:     params[:weapons].to_s.strip,
-    stance:      params[:stance].to_s.strip,
-    mini_size:   params[:mini_size].to_s.strip,
-    notes:       params[:notes].to_s.strip,
-    description: params[:description].to_s.strip,
-    mini_count:  [params[:mini_count].to_i, 1].max,
-    printed:     [params[:printed].to_i, 0].max,
-    painted:     [params[:painted].to_i, 0].max,
-    tagged:      params[:mini_name].to_s.strip.length > 0,
-    updated_at:  Time.now
-  )
+  # ── DEBUG: log incoming xref-related params ──────────────────────────────
+  puts "[xref-debug] image_id=#{id} collection_id=#{row[:collection_id]} " \
+       "is_secondary=#{params[:is_secondary].inspect} " \
+       "primary_image_id=#{params[:primary_image_id].inspect}"
+
+  # Secondary image linkage: if "is_secondary" checked and a primary was
+  # chosen, store the link; otherwise clear it.
+  primary_id = nil
+  if params[:is_secondary] == '1' && params[:primary_image_id].to_s.strip != ''
+    candidate = params[:primary_image_id].to_i
+    # Guard against self-reference and cross-collection links
+    if candidate != id
+      cand_row = Images.where(id: candidate).first
+      if cand_row.nil?
+        puts "[xref-debug]   -> REJECTED: candidate id=#{candidate} not found in images table"
+      elsif cand_row[:collection_id] != row[:collection_id]
+        puts "[xref-debug]   -> REJECTED: candidate collection_id=#{cand_row[:collection_id]} != row collection_id=#{row[:collection_id]}"
+      else
+        primary_id = candidate
+        puts "[xref-debug]   -> ACCEPTED: primary_id=#{primary_id}"
+      end
+    else
+      puts "[xref-debug]   -> REJECTED: candidate == self (id=#{id})"
+    end
+  else
+    puts "[xref-debug]   -> not linking (checkbox unchecked or empty selection)"
+  end
+
+  update_fields = {
+    mini_name:        params[:mini_name].to_s.strip,
+    species:          params[:species].to_s.strip,
+    gender:           params[:gender].to_s.strip,
+    weapons:          params[:weapons].to_s.strip,
+    stance:           params[:stance].to_s.strip,
+    mini_size:        params[:mini_size].to_s.strip,
+    notes:            params[:notes].to_s.strip,
+    description:      params[:description].to_s.strip,
+    mini_count:       [params[:mini_count].to_i, 1].max,
+    tagged:           params[:mini_name].to_s.strip.length > 0,
+    primary_image_id: primary_id,
+    updated_at:       Time.now
+  }
+
+  # Secondary images don't track printed/painted counts
+  if primary_id.nil?
+    update_fields[:printed] = [params[:printed].to_i, 0].max
+    update_fields[:painted] = [params[:painted].to_i, 0].max
+  else
+    update_fields[:printed] = 0
+    update_fields[:painted] = 0
+  end
+
+  Images.where(id: id).update(update_fields)
   # Build redirect back preserving folder/page params, anchor to the saved row
   back_url = request.referer || '/catalog'
   back_url = back_url.sub(/#.*$/, '')  # strip any existing anchor
@@ -575,9 +680,10 @@ get '/collections' do
   # Attach print/paint stats per collection
   @stats = {}
   @collections.each do |col|
-    rows = Images.where(collection_id: col[:id]).select(:printed, :painted, :mini_count, :mini_name).all
-    # Exclude bundles (named "Bundle" or mini_count >= 4) from print/paint tracking
-    trackable = rows.reject { |r| r[:mini_count].to_i >= 4 || r[:mini_name].to_s.downcase == 'bundle' }
+    rows = Images.where(collection_id: col[:id]).select(:printed, :painted, :mini_count, :mini_name, :primary_image_id).all
+    # Exclude bundles (named "Bundle" or mini_count >= 4) and secondary images
+    # (alt views linked to a primary) from print/paint tracking
+    trackable = rows.reject { |r| r[:mini_count].to_i >= 4 || r[:mini_name].to_s.downcase == 'bundle' || !r[:primary_image_id].nil? }
     @stats[col[:id]] = {
       total:     rows.length,
       printed:   trackable.sum { |r| r[:printed].to_i },
@@ -630,29 +736,67 @@ get '/edit/:id' do
   @image      = Images.where(id: params[:id].to_i).first
   halt 404, 'Not found' unless @image
   @collection = Collections.where(id: @image[:collection_id]).first
+
+  # Other images in the same collection, for the cross-reference dropdown
+  @collection_images = Images.where(collection_id: @image[:collection_id])
+                              .select(:id, :mini_name, :filename)
+                              .order(:filename).all
+
+  # Resolve primary image's display name, if this image is a secondary
+  @primary_name = nil
+  if @image[:primary_image_id]
+    p_row = Images.where(id: @image[:primary_image_id]).first
+    @primary_name = p_row ? (p_row[:mini_name].to_s.empty? ? p_row[:filename] : p_row[:mini_name]) : nil
+  end
+
   erb :edit
 end
 
 post '/edit/:id' do
-  id = params[:id].to_i
-  halt 404 unless Images.where(id: id).first
+  id  = params[:id].to_i
+  row = Images.where(id: id).first
+  halt 404 unless row
 
-  Images.where(id: id).update(
-    mini_name:   params[:mini_name].to_s.strip,
-    species:     params[:species].to_s.strip,
-    gender:      params[:gender].to_s.strip,
-    weapons:     params[:weapons].to_s.strip,
-    stance:      params[:stance].to_s.strip,
-    mini_size:   params[:mini_size].to_s.strip,
-    notes:       params[:notes].to_s.strip,
-    description: params[:description].to_s.strip,
-    mini_count:  [params[:mini_count].to_i, 1].max,
-    printed:     [params[:printed].to_i, 0].max,
-    painted:     [params[:painted].to_i, 0].max,
-    tagged:      params[:mini_name].to_s.strip.length > 0,
-    updated_at:  Time.now
-  )
-  redirect '/catalog'
+  # Secondary image linkage: if "is_secondary" checked and a primary was
+  # chosen, store the link; otherwise clear it.
+  primary_id = nil
+  if params[:is_secondary] == '1' && params[:primary_image_id].to_s.strip != ''
+    candidate = params[:primary_image_id].to_i
+    # Guard against self-reference and cross-collection links
+    if candidate != id
+      cand_row = Images.where(id: candidate).first
+      if cand_row && cand_row[:collection_id] == row[:collection_id]
+        primary_id = candidate
+      end
+    end
+  end
+
+  update_fields = {
+    mini_name:        params[:mini_name].to_s.strip,
+    species:          params[:species].to_s.strip,
+    gender:           params[:gender].to_s.strip,
+    weapons:          params[:weapons].to_s.strip,
+    stance:           params[:stance].to_s.strip,
+    mini_size:        params[:mini_size].to_s.strip,
+    notes:            params[:notes].to_s.strip,
+    description:      params[:description].to_s.strip,
+    mini_count:       [params[:mini_count].to_i, 1].max,
+    tagged:           params[:mini_name].to_s.strip.length > 0,
+    primary_image_id: primary_id,
+    updated_at:       Time.now
+  }
+
+  # Secondary images don't track printed/painted counts
+  if primary_id.nil?
+    update_fields[:printed] = [params[:printed].to_i, 0].max
+    update_fields[:painted] = [params[:painted].to_i, 0].max
+  else
+    update_fields[:printed] = 0
+    update_fields[:painted] = 0
+  end
+
+  Images.where(id: id).update(update_fields)
+  redirect "/catalog#row-#{id}"
 end
 
 # ── 2b. Random images ───────────────────────────────────────────────────────
