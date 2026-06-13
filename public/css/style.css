@@ -721,7 +721,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .desc-cell { font-size: 0.78rem; color: var(--text-dim); line-height: 1.4; max-width: 260px; }
 
 /* ── Mini count / printed / painted column ────────────────────────────────── */
-.col-count   { width: 58px; }
+.col-count   { width: 90px; }
 
 .count-stack {
   display: flex;
@@ -744,7 +744,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .count-painted { opacity: 0.8; }
 .count-mini-select {
   flex: 1;
-  min-width: 0;
+  min-width: 50px;
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -752,7 +752,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   color: var(--text-dim);
   font-family: var(--font-mono);
   font-size: 0.72rem;
-  padding: 1px 1px;
+  padding: 1px 4px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 }
@@ -1045,6 +1045,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 /* ── Collection preview thumbnail ─────────────────────────────────────────── */
 .col-preview-wrap {
   position: relative;
+  display: block;
   width: calc(100% + 36px);
   max-height: 220px;
   overflow: hidden;
@@ -1052,6 +1053,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   cursor: pointer;
   background: var(--bg3);
   margin: -18px -18px 14px -18px;
+  text-decoration: none;
 }
 .col-preview-img {
   width: 100%;
@@ -1063,6 +1065,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 }
 .col-preview-wrap:hover .col-preview-img { transform: scale(1.04); }
 .col-preview-count {
+  display: block;
   position: absolute;
   bottom: 8px;
   right: 8px;

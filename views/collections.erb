@@ -42,14 +42,15 @@
     <div class="collection-card <%= is_saved ? 'collection-card-saved' : '' %>"
          id="col-<%= col[:id] %>">
       <% preview = @previews[col[:id]] %>
+      <% col_link = "/catalog?show_all=1&folder=#{CGI.escape(col[:folder_path])}" %>
       <% if preview %>
-        <div class="col-preview-wrap" onclick="openLightbox('/image_file/<%= preview[:id] %>')">
+        <a href="<%= col_link %>" class="col-preview-wrap">
           <img src="/image_file/<%= preview[:id] %>"
                alt="<%= preview[:filename] %>"
                loading="lazy"
                class="col-preview-img">
           <span class="col-preview-count"><%= @counts[col[:id]] || 0 %> images</span>
-        </div>
+        </a>
       <% end %>
 
       <form action="/collections/<%= col[:id] %>" method="post" class="col-form">
