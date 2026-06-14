@@ -1,3 +1,42 @@
+// ── Quick colorized set on search results ────────────────────────────────────
+async function setColorized(imageId, value, btn) {
+  await fetch(`/images/${imageId}/colorized`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `value=${value}`
+  });
+  // Update active state on all three buttons in this card
+  btn.closest('.colorized-btns').querySelectorAll('.btn-col-set').forEach(b => {
+    b.classList.remove('btn-col-active');
+  });
+  btn.classList.add('btn-col-active');
+}
+
+// ── Colorized toggle ─────────────────────────────────────────────────────────
+async function cycleColorized(imageId, currentState, btn) {
+  // Cycle: unknown -> color -> grey -> unknown
+  const next = { unknown: 'color', color: 'grey', grey: 'unknown' };
+  const icons  = { color: '🎨', grey: '⬜', unknown: '◌' };
+  const titles = {
+    color:   'Colorized render (click to mark grey)',
+    grey:    'Grey/uncolored (click to mark unknown)',
+    unknown: 'Colorized? (unknown — click to set)'
+  };
+  const values = { color: 'true', grey: 'false', unknown: 'null' };
+
+  const newState = next[currentState];
+  btn.textContent = icons[newState];
+  btn.title = titles[newState];
+  btn.className = `btn-colorized btn-colorized-${newState}`;
+  btn.onclick = () => cycleColorized(imageId, newState, btn);
+
+  await fetch(`/images/${imageId}/colorized`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `value=${values[newState]}`
+  });
+}
+
 // ── Inline collection name edit ──────────────────────────────────────────────
 (function() {
   const input  = document.getElementById('col-name-input');
@@ -26,28 +65,29 @@ function toggleXrefSelect(imageId, checked) {
   if (!row) return;
   row.classList.toggle('row-is-secondary', checked);
 
-  const nameInput   = row.querySelector(`#name-input-${imageId}`);
-  const nameCell    = nameInput ? nameInput.closest('td') : null;
-  const speciesCell = nameCell ? nameCell.nextElementSibling : null;
-  const genderCell  = speciesCell ? speciesCell.nextElementSibling : null;
-  const printedRow  = row.querySelector('select[name="printed"]')?.closest('.count-row');
-  const paintedRow  = row.querySelector('select[name="painted"]')?.closest('.count-row');
-  const secondaryOf = row.querySelector('.secondary-of');
-  const suggestion  = row.querySelector('.btn-suggestion');
+  // Name/species/gender are now all in one .cell-name-td cell
+  const nameCell = row.querySelector('.cell-name-td');
+  if (nameCell) {
+    nameCell.querySelectorAll('input, select, button:not(.btn-suggestion)').forEach(el => {
+      el.style.display = checked ? 'none' : '';
+    });
+    const suggestion = nameCell.querySelector('.btn-suggestion');
+    if (suggestion) suggestion.style.display = checked ? 'none' : '';
+  }
 
-  if (nameInput)  nameInput.style.display  = checked ? 'none' : '';
-  if (suggestion) suggestion.style.display = checked ? 'none' : '';
+  // secondary-of indicator is now in the folder/file cell
+  const secondaryOf = row.querySelector('.secondary-of');
   if (secondaryOf) secondaryOf.style.display = checked ? '' : 'none';
+
+  // xref-row border/wrapper
+  const xrefRow = row.querySelector('.xref-row');
+  if (xrefRow) xrefRow.style.display = checked ? '' : '';  // always visible
 
   const dash = row.querySelector('.secondary-name-hidden');
   if (dash) dash.style.display = checked ? '' : 'none';
 
-  [speciesCell, genderCell].forEach(cell => {
-    if (!cell) return;
-    const field = cell.querySelector('input, select');
-    if (field) field.style.display = checked ? 'none' : '';
-  });
-
+  const printedRow = row.querySelector('select[name="printed"]')?.closest('.count-row');
+  const paintedRow = row.querySelector('select[name="painted"]')?.closest('.count-row');
   [printedRow, paintedRow].forEach(r => {
     if (r) r.style.display = checked ? 'none' : '';
   });

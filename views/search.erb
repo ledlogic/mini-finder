@@ -12,7 +12,7 @@
     <button type="submit" class="btn-primary">Search</button>
   </div>
 
-  <details class="field-filters" <%= @params.any? { |k,v| %w[mini_name species gender weapons stance mini_size].include?(k) && v.to_s.strip.length > 0 } ? 'open' : '' %>>
+  <details class="field-filters" <%= (@params.any? { |k,v| %w[mini_name species gender weapons stance mini_size colorized].include?(k) && v.to_s.strip.length > 0 }) ? 'open' : '' %>>
     <summary>Field Filters</summary>
     <div class="filter-grid">
       <div class="form-group">
@@ -56,6 +56,15 @@
           <% ['1','2','3','4+'].each do |n| %>
             <option value="<%= n %>" <%= @params['mini_count'] == n ? 'selected' : '' %>><%= n %></option>
           <% end %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Colorized</label>
+        <select name="colorized">
+          <option value=""       <%= @params['colorized'].to_s.empty?        ? 'selected' : '' %>>Any</option>
+          <option value="true"   <%= @params['colorized'] == 'true'          ? 'selected' : '' %>>🎨 Colorized</option>
+          <option value="false"  <%= @params['colorized'] == 'false'         ? 'selected' : '' %>>⬜ Grey</option>
+          <option value="unknown"<%= @params['colorized'] == 'unknown'       ? 'selected' : '' %>>◌ Unknown</option>
         </select>
       </div>
     </div>
@@ -159,6 +168,18 @@
 
             <div class="result-actions">
               <a href="/edit/<%= img[:id] %>" class="btn-edit-sm">Edit ✎</a>
+              <div class="colorized-btns" id="colorized-<%= img[:id] %>">
+                <% col = img[:colorized] %>
+                <button onclick="setColorized(<%= img[:id] %>, 'true',  this)"
+                        class="btn-col-set <%= col == true  ? 'btn-col-active' : '' %>"
+                        title="Mark as colorized render">🎨</button>
+                <button onclick="setColorized(<%= img[:id] %>, 'false', this)"
+                        class="btn-col-set <%= col == false ? 'btn-col-active' : '' %>"
+                        title="Mark as grey/uncolored">⬜</button>
+                <button onclick="setColorized(<%= img[:id] %>, 'null',  this)"
+                        class="btn-col-set <%= col.nil?     ? 'btn-col-active' : '' %>"
+                        title="Mark as unknown">◌</button>
+              </div>
             </div>
           </div>
         </div>

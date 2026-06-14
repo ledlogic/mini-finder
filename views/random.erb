@@ -10,11 +10,20 @@
       <button class="size-btn" onclick="setRandomSize(480)" data-size="480">L</button>
       <button class="size-btn" onclick="setRandomSize(640)" data-size="640">XL</button>
     </div>
-    <a href="/random" class="btn-scan" style="text-decoration:none;">
+    <a href="/random<%= @colorized_filter.to_s.empty? ? '' : "?colorized=#{@colorized_filter}" %>" class="btn-scan" style="text-decoration:none;">
       <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.5"/><circle cx="18" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="6" cy="18" r="1.5"/><circle cx="18" cy="18" r="1.5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
       Shuffle
     </a>
   </div>
+</div>
+
+<div class="col-year-bar" style="margin-bottom:18px;">
+  <% [['', 'All'], ['true', '🎨 Colorized'], ['false', '⬜ Grey'], ['unknown', '◌ Unknown']].each do |val, label| %>
+    <a href="/random<%= val.empty? ? '' : "?colorized=#{val}" %>"
+       class="col-year-btn <%= @colorized_filter == val ? 'col-year-active' : '' %>">
+      <%= label %>
+    </a>
+  <% end %>
 </div>
 
 <% if @images.empty? %>

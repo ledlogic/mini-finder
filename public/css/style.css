@@ -177,13 +177,14 @@ body {
 
 .col-thumb   { width: 72px; }
 .col-path    { width: 160px; }
-.col-name    { min-width: 120px; }
-.col-species { min-width: 100px; }
-.col-gender  { width: 90px; }
-.col-weapons { min-width: 100px; }
-.col-stance  { min-width: 180px; }
-.cell-stance { min-width: 180px; width: 180px; }
-.col-size    { width: 80px; }
+.col-name-stack   { min-width: 160px; }
+.col-stance-stack { min-width: 160px; }
+
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .col-actions { width: 72px; }
 
 .thumb-wrap { position: relative; display: inline-block; }
@@ -550,8 +551,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   word-break: break-word;
   line-height: 1.4;
 }
-.catalog-table .col-folder  { width: 55px; }
-.catalog-table .col-file    { width: 150px; }
+.catalog-table .col-folder-file { width: 180px; }
 .col-card-footer {
   margin-top: 14px;
   padding-top: 12px;
@@ -580,7 +580,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .size-btn-active { background: var(--accent) !important; color: #000 !important; }
 
 /* ── Folder column & filter ───────────────────────────────────────────────── */
-.cell-folder { vertical-align: middle; }
+.cell-folder-file { vertical-align: top; }
 .folder-link {
   display: inline-block;
   color: var(--accent);
@@ -599,7 +599,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   border-color: var(--accent);
 }
 
-.cell-file { vertical-align: middle; }
+
 
 .folder-filter-form {
   display: flex;
@@ -1333,9 +1333,9 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   opacity: 0.85;
 }
 .xref-row {
+  margin-top: 4px;
+  padding-top: 4px;
   border-top: 1px dashed var(--border2);
-  padding-top: 3px;
-  margin-top: 2px;
 }
 .xref-label {
   display: flex;
@@ -1553,3 +1553,56 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   transition: opacity 0.15s;
 }
 .col-info-name-save:hover { opacity: 0.8; }
+
+/* ── Colorized toggle button on thumbnail ─────────────────────────────────── */
+.btn-colorized {
+  position: absolute;
+  bottom: 24px;
+  right: 4px;
+  background: rgba(0,0,0,0.55);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.thumb-wrap:hover .btn-colorized { opacity: 1; }
+.btn-colorized-color  { opacity: 1; }
+.btn-colorized-grey   { opacity: 0.7; }
+.btn-colorized-unknown { opacity: 0; }
+.thumb-wrap:hover .btn-colorized-unknown { opacity: 0.4; }
+
+/* ── Colorized quick-set buttons on search results ───────────────────────── */
+.colorized-btns {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.btn-col-set {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 2px 7px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.15s, border-color 0.15s;
+  line-height: 1.4;
+}
+.btn-col-set:hover  { opacity: 1; border-color: var(--accent); }
+.btn-col-active     { opacity: 1; border-color: var(--accent) !important; background: rgba(0,212,255,0.08); }
+
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}

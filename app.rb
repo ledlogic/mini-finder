@@ -77,7 +77,8 @@ DB.create_table?(:images) do
   Integer  :mini_count, default: 1
   Integer  :printed,    default: 0
   Integer  :painted,    default: 0
-  Boolean  :tagged, default: false
+  Boolean  :tagged,     default: false
+  Boolean  :colorized,  default: nil   # nil=unknown, true=rendered, false=3d grey
   Integer  :primary_image_id              # if set, this image is a secondary
                                            # (alt view) of another image
   DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
@@ -96,6 +97,7 @@ end
   "ALTER TABLE collections ADD COLUMN notes TEXT",
   "ALTER TABLE collections ADD COLUMN cover_image_id INTEGER",
   "ALTER TABLE images ADD COLUMN primary_image_id INTEGER",
+  "ALTER TABLE images ADD COLUMN colorized BOOLEAN DEFAULT NULL",
 ].each do |sql|
   begin; DB.run(sql); rescue Sequel::DatabaseError; end
 end
@@ -694,6 +696,7 @@ post '/images/:id' do
     mini_count:       [params[:mini_count].to_i, 1].max,
     tagged:           params[:mini_name].to_s.strip.length > 0,
     primary_image_id: primary_id,
+    colorized:        params[:colorized] == 'true' ? true : (params[:colorized] == 'false' ? false : nil),
     updated_at:       Time.now
   }
 
@@ -856,6 +859,7 @@ post '/edit/:id' do
     mini_count:       [params[:mini_count].to_i, 1].max,
     tagged:           params[:mini_name].to_s.strip.length > 0,
     primary_image_id: primary_id,
+    colorized:        params[:colorized] == 'true' ? true : (params[:colorized] == 'false' ? false : nil),
     updated_at:       Time.now
   }
 
@@ -876,7 +880,12 @@ end
 # ── 2b. Random images ───────────────────────────────────────────────────────
 
 get '/random' do
-  count = Images.count
+  @colorized_filter = params[:colorized].to_s  # 'true', 'false', or ''
+  base = Images
+  base = base.where(colorized: true)  if @colorized_filter == 'true'
+  base = base.where(colorized: false) if @colorized_filter == 'false'
+  base = base.where(colorized: nil)   if @colorized_filter == 'unknown'
+  count = base.count
   @count = count
   per_page = 25
   if count == 0
@@ -884,7 +893,7 @@ get '/random' do
   else
     # Pick a screen's worth of random ids efficiently
     n = 60
-    ids = Images.select_map(:id)
+    ids = base.select_map(:id)
     sample_ids = ids.sample([n, ids.length].min)
     rows = Images.where(id: sample_ids).all
     col_map = Collections.select_hash(:id, :folder_path)
@@ -916,21 +925,32 @@ get '/search' do
   @query_made = false
   @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
 
+  @colorized_filter = params[:colorized].to_s
   has_query = %i[q mini_name species gender weapons stance mini_size mini_count collection].any? do |k|
     params[k.to_s].to_s.strip.length > 0
   end
+  has_query ||= !@colorized_filter.empty?
 
   if has_query
     @query_made = true
 
+    # Start with a Sequel dataset (not .all — keeps it chainable)
+    dataset = Images
+
     # Filter by collection name if provided
-    dataset = Images.all
     col_filter = params['collection'].to_s.strip.downcase
     if col_filter.length > 0
       matching_col_ids = Collections.all.select { |c|
         c[:name].to_s.downcase.include?(col_filter)
       }.map { |c| c[:id] }
-      dataset = Images.where(collection_id: matching_col_ids)
+      dataset = dataset.where(collection_id: matching_col_ids)
+    end
+
+    # Filter by colorized status
+    case @colorized_filter
+    when 'true'    then dataset = dataset.where(colorized: true)
+    when 'false'   then dataset = dataset.where(colorized: false)
+    when 'unknown' then dataset = dataset.where(colorized: nil)
     end
 
     # Filter by mini count if set
@@ -943,9 +963,19 @@ get '/search' do
       end
     end
 
-    scored = dataset.map do |row|
-      result = score_row(row, params.transform_keys(&:to_sym))
-      result[:score] > 0 ? result.merge(row: row) : nil
+    # If only colorized filter is set (no text/field query), skip scoring
+    # and just return all matching rows with a flat score of 1
+    text_query = %i[q mini_name species gender weapons stance mini_size mini_count collection].any? do |k|
+      params[k.to_s].to_s.strip.length > 0
+    end
+
+    scored = dataset.all.map do |row|
+      if text_query
+        result = score_row(row, params.transform_keys(&:to_sym))
+        result[:score] > 0 ? result.merge(row: row) : nil
+      else
+        { score: 1, highlights: {}, row: row }
+      end
     end.compact.sort_by { |r| -r[:score] }
     @results = scored
   end
@@ -1023,6 +1053,20 @@ get '/images/:id/detect_name' do
 end
 
 # Set cover image for a collection
+# Quick colorized toggle — called via fetch from JS
+post '/images/:id/colorized' do
+  id    = params[:id].to_i
+  value = case params[:value]
+          when 'true'  then true
+          when 'false' then false
+          else nil
+          end
+  Images.where(id: id).update(colorized: value, updated_at: Time.now)
+  session[:changes_since_backup] = (session[:changes_since_backup].to_i + 1)
+  content_type :json
+  { ok: true, value: value }.to_json
+end
+
 post '/collections/:id/rename' do
   id   = params[:id].to_i
   name = params[:name].to_s.strip.upcase
