@@ -261,6 +261,7 @@
             <% unless is_secondary %>
               <input type="text" name="mini_name" class="cell-input"
                      value="<%= img[:mini_name] %>"
+                     placeholder="name…"
                      id="name-input-<%= img[:id] %>">
               <% if img[:suggested_name].to_s.strip.length > 0 && img[:mini_name].to_s.strip.empty? %>
                 <button type="button" class="btn-suggestion"

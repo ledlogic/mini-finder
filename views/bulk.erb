@@ -1,0 +1,167 @@
+<div class="page-header">
+  <div>
+    <h1>Bulk Tag</h1>
+    <p class="page-sub"><%= @images.length %> image<%= @images.length == 1 ? '' : 's' %> missing <%= @field %></p>
+  </div>
+</div>
+
+<%# ── Field selector ── %>
+<div class="bulk-controls">
+  <div class="bulk-field-bar">
+    <span class="bulk-label">Field:</span>
+    <% [
+      ['stance',    'Stance'],
+      ['weapons',   'Weapons'],
+      ['gender',    'Gender'],
+      ['species',   'Species'],
+      ['mini_size', 'Size'],
+      ['colorized', 'Colorized'],
+    ].each do |val, label| %>
+      <a href="/bulk?field=<%= val %><%= @folder.empty? ? '' : "&folder=#{CGI.escape(@folder)}" %>"
+         class="col-year-btn <%= @field == val ? 'col-year-active' : '' %>">
+        <%= label %>
+      </a>
+    <% end %>
+  </div>
+
+  <div class="bulk-folder-bar">
+    <span class="bulk-label">Collection:</span>
+    <select onchange="window.location='/bulk?field=<%= @field %>' + (this.value ? '&folder=' + encodeURIComponent(this.value) : '')"
+            class="cell-select bulk-folder-select">
+      <option value="">All collections</option>
+      <% @collections.each do |col| %>
+        <option value="<%= col[:folder_path] %>" <%= @folder == col[:folder_path] ? 'selected' : '' %>>
+          <%= col[:name].to_s.empty? ? File.basename(col[:folder_path]) : col[:name] %>
+        </option>
+      <% end %>
+    </select>
+  </div>
+</div>
+
+<%# ── Value picker ── %>
+<div class="bulk-value-bar">
+  <span class="bulk-label">Set to:</span>
+  <% if @field == 'gender' %>
+    <% ['M','F','NA','M,F'].each do |v| %>
+      <button class="bulk-val-btn" data-value="<%= v %>"><%= v %></button>
+    <% end %>
+  <% elsif @field == 'mini_size' %>
+    <% ['S','M','L','S,M','M,L'].each do |v| %>
+      <button class="bulk-val-btn" data-value="<%= v %>"><%= v %></button>
+    <% end %>
+  <% elsif @field == 'colorized' %>
+    <button class="bulk-val-btn" data-value="true">🎨 Colorized</button>
+    <button class="bulk-val-btn" data-value="false">⬜ Grey</button>
+  <% else %>
+    <input type="text" id="bulk-text-value" class="cell-input bulk-text-input"
+           placeholder="e.g. Standing, Combat, Running…">
+    <button class="bulk-val-btn bulk-text-submit" data-value="">Apply text</button>
+  <% end %>
+  <span class="bulk-sep">|</span>
+  <button class="bulk-select-all" onclick="toggleAll(true)">Select all</button>
+  <button class="bulk-select-all" onclick="toggleAll(false)">Deselect all</button>
+  <span class="bulk-status" id="bulk-status"></span>
+</div>
+
+<%# ── Image grid ── %>
+<% if @images.empty? %>
+  <div class="empty-state">
+    All images in <%= @folder.empty? ? 'the catalog' : File.basename(@folder) %> already have a <%= @field %> set. 🎉
+  </div>
+<% else %>
+  <div class="bulk-grid" id="bulk-grid">
+    <% @images.each do |img| %>
+      <div class="bulk-card" id="bcard-<%= img[:id] %>">
+        <label class="bulk-card-label">
+          <input type="checkbox" class="bulk-check" value="<%= img[:id] %>" checked>
+          <img src="/image_file/<%= img[:id] %>" alt="<%= img[:filename] %>"
+               loading="lazy" class="bulk-img"
+               onclick="openLightbox(this.src)">
+          <div class="bulk-card-info">
+            <span class="bulk-card-name"><%= img[:mini_name].to_s.empty? ? img[:filename] : img[:mini_name] %></span>
+            <span class="bulk-card-folder"><%= File.basename(img[:source_folder]) %></span>
+            <% if @field == 'colorized' %>
+              <span class="bulk-card-current">◌ unknown</span>
+            <% else %>
+              <% cur = img[@field.to_sym].to_s %>
+              <span class="bulk-card-current <%= cur.empty? ? 'bulk-empty' : '' %>">
+                <%= cur.empty? ? '(none)' : cur %>
+              </span>
+            <% end %>
+          </div>
+        </label>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<script>
+// ── Value buttons ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.bulk-val-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    let value = btn.dataset.value;
+
+    // For text fields, read from input
+    if (btn.classList.contains('bulk-text-submit')) {
+      value = document.getElementById('bulk-text-value')?.value.trim() || '';
+      if (!value) { alert('Enter a value first.'); return; }
+    }
+
+    const checked = [...document.querySelectorAll('.bulk-check:checked')].map(c => c.value);
+    if (!checked.length) { alert('Select at least one image.'); return; }
+
+    applyBulk(value, checked, btn);
+  });
+});
+
+async function applyBulk(value, ids, btn) {
+  const status = document.getElementById('bulk-status');
+  status.textContent = `Saving ${ids.length}…`;
+  btn.disabled = true;
+
+  const body = ids.map(id => `ids[]=${id}`).join('&')
+             + `&field=<%= @field %>&value=${encodeURIComponent(value)}`;
+
+  try {
+    const res = await fetch('/bulk/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const data = await res.json();
+    status.textContent = `✓ Set ${data.updated} image${data.updated === 1 ? '' : 's'}`;
+    status.style.color = 'var(--ok)';
+
+    // Fade out saved cards
+    ids.forEach(id => {
+      const card = document.getElementById(`bcard-${id}`);
+      if (card) {
+        card.style.transition = 'opacity 0.4s';
+        card.style.opacity = '0.25';
+        card.querySelector('.bulk-card-current').textContent = value || '(cleared)';
+        card.querySelector('.bulk-card-current').classList.remove('bulk-empty');
+      }
+    });
+  } catch(e) {
+    status.textContent = '✕ Error saving';
+    status.style.color = 'var(--err, #ef4444)';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Select all/none ───────────────────────────────────────────────────────────
+function toggleAll(checked) {
+  document.querySelectorAll('.bulk-check').forEach(c => c.checked = checked);
+}
+
+// Click image = toggle its checkbox (without triggering lightbox)
+document.querySelectorAll('.bulk-img').forEach(img => {
+  img.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const cb = img.closest('.bulk-card-label').querySelector('.bulk-check');
+    cb.checked = !cb.checked;
+  });
+});
+</script>

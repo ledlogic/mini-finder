@@ -685,7 +685,7 @@ post '/images/:id' do
   end
 
   update_fields = {
-    mini_name:        params[:mini_name].to_s.strip,
+    mini_name:        params[:mini_name].to_s.strip.split.map(&:capitalize).join(' '),
     species:          params[:species].to_s.strip,
     gender:           params[:gender].to_s.strip,
     weapons:          params[:weapons].to_s.strip,
@@ -848,7 +848,7 @@ post '/edit/:id' do
   end
 
   update_fields = {
-    mini_name:        params[:mini_name].to_s.strip,
+    mini_name:        params[:mini_name].to_s.strip.split.map(&:capitalize).join(' '),
     species:          params[:species].to_s.strip,
     gender:           params[:gender].to_s.strip,
     weapons:          params[:weapons].to_s.strip,
@@ -918,6 +918,57 @@ get '/random' do
 end
 
 # ── 3. Search ─────────────────────────────────────────────────────────────────
+
+# ── Bulk tagger ──────────────────────────────────────────────────────────────
+
+get '/bulk' do
+  @field  = params[:field].to_s.strip   # stance, weapons, gender, species, mini_size
+  @field  = 'stance' if @field.empty? || !%w[stance weapons gender species mini_size colorized].include?(@field)
+  @folder = params[:folder].to_s.strip
+
+  # Images missing the chosen field (NULL or empty string), excluding secondaries/bundles
+  dataset = Images.where(primary_image_id: nil)
+                  .exclude(Sequel.ilike(:mini_name, 'bundle'))
+  dataset = dataset.where(source_folder: @folder) unless @folder.empty?
+
+  @images = case @field
+  when 'stance'    then dataset.where(Sequel::SQL::BooleanExpression.new(:OR, Sequel.expr(stance: nil),    { stance: '' }))
+  when 'weapons'   then dataset.where(Sequel::SQL::BooleanExpression.new(:OR, Sequel.expr(weapons: nil),   { weapons: '' }))
+  when 'species'   then dataset.where(Sequel::SQL::BooleanExpression.new(:OR, Sequel.expr(species: nil),   { species: '' }))
+  when 'mini_size' then dataset.where(Sequel::SQL::BooleanExpression.new(:OR, Sequel.expr(mini_size: nil), { mini_size: '' }))
+  when 'gender'    then dataset.where(gender: nil).or(gender: '')
+  when 'colorized' then dataset.where(colorized: nil)
+  end.order(:source_folder, :filename).limit(120).all
+
+  # Collection names for folder filter dropdown
+  @collections = Collections.order(:release_month).all
+
+  erb :bulk
+end
+
+post '/bulk/set' do
+  ids   = Array(params[:ids]).map(&:to_i).select { |i| i > 0 }
+  field = params[:field].to_s.strip
+  value = params[:value].to_s.strip
+
+  allowed = %w[stance weapons gender species mini_size colorized]
+  halt 400, "Invalid field" unless allowed.include?(field)
+  halt 400, "No images selected" if ids.empty?
+
+  update = {}
+  if field == 'colorized'
+    update[:colorized] = value == 'true' ? true : (value == 'false' ? false : nil)
+  else
+    update[field.to_sym] = value.empty? ? nil : value
+  end
+  update[:updated_at] = Time.now
+
+  Images.where(id: ids).update(update)
+  session[:changes_since_backup] = (session[:changes_since_backup].to_i + ids.length)
+
+  content_type :json
+  { ok: true, updated: ids.length }.to_json
+end
 
 get '/search' do
   @params     = params
