@@ -5,6 +5,7 @@
   base_params[:f_untagged]  = '1'             if @f_untagged
   base_params[:f_unprinted] = '1'             if @f_unprinted
   base_params[:f_unpainted] = '1'             if @f_unpainted
+  base_params[:colorized]   = @colorized_catalog if @colorized_catalog && !@colorized_catalog.empty?
 %>
 <div class="page-header">
   <div>
@@ -17,8 +18,8 @@
       <% else %>
         <%= @total %> image<%= @total == 1 ? '' : 's' %>
       <% end %>
-      <% if @f_untagged || @f_unprinted || @f_unpainted %>
-        &nbsp;·&nbsp; <a href="/catalog?<%= q(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted].include?(k)}) %>">Clear filters</a>
+      <% if @f_untagged || @f_unprinted || @f_unpainted || !@colorized_catalog.to_s.empty? %>
+        &nbsp;·&nbsp; <a href="/catalog?<%= q(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted,:colorized].include?(k)}) %>">Clear filters</a>
       <% end %>
       <% unless @folder_filter.empty? %>
         &nbsp;·&nbsp; <a href="/catalog?<%= q(base_params.reject{|k,_| k == :folder}) %>">All folders</a>
@@ -40,13 +41,22 @@
           [:f_untagged,  '○ Untagged',  @f_untagged],
           [:f_unprinted, '🖨 Unprinted', @f_unprinted],
           [:f_unpainted, '🎨 Unpainted', @f_unpainted],
+          [:colorized_color,   '🎨 Color',   @colorized_catalog == 'true'],
+          [:colorized_grey,    '⬜ Grey',    @colorized_catalog == 'false'],
+          [:colorized_unknown, '◌ Unknown',  @colorized_catalog == 'unknown'],
         ]
         flags.each do |key, label, active|
           toggled = base_params.dup
-          if active
-            toggled.delete(key)  # toggle off
+          col_val = { colorized_color: 'true', colorized_grey: 'false', colorized_unknown: 'unknown' }[key]
+          if col_val
+            # colorized flags: set colorized=value or clear it if already active
+            toggled.delete(:colorized)
+            toggled.delete(:colorized_color); toggled.delete(:colorized_grey); toggled.delete(:colorized_unknown)
+            toggled[:colorized] = col_val unless active
+          elsif active
+            toggled.delete(key)
           else
-            toggled[key] = '1'   # toggle on
+            toggled[key] = '1'
           end
       %>
         <a href="/catalog?<%= q(toggled) %>"
@@ -54,8 +64,8 @@
           <%= label %>
         </a>
       <% end %>
-      <% if @f_untagged || @f_unprinted || @f_unpainted %>
-        <a href="/catalog?<%= q(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted].include?(k)}) %>"
+      <% if @f_untagged || @f_unprinted || @f_unpainted || !@colorized_catalog.to_s.empty? %>
+        <a href="/catalog?<%= q(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted,:colorized].include?(k)}) %>"
            class="status-pill-clear">✕ clear</a>
       <% end %>
     </div>
@@ -195,7 +205,7 @@
           <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
           <input type="hidden" name="f_unprinted" value="<%= @f_unprinted ? '1' : '' %>">
           <input type="hidden" name="f_unpainted" value="<%= @f_unpainted ? '1' : '' %>">
-          <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
+          <input type="hidden" name="colorized"   value="<%= @colorized_catalog %>">
       <input type="hidden" name="f_unprinted" value="<%= @f_unprinted ? '1' : '' %>">
       <input type="hidden" name="f_unpainted" value="<%= @f_unpainted ? '1' : '' %>">
           <td class="cell-thumb">
@@ -242,7 +252,7 @@
                     <span class="xref-icon">🔗</span>
                   </label>
                   <select name="primary_image_id" id="xref-select-<%= img[:id] %>"
-                          class="cell-input xref-select" style="flex:1; font-size:0.72rem; padding:1px 4px;">
+                          class="count-mini-select xref-select">
                     <option value="">— pick image —</option>
                     <% (@collection_images[img[:collection_id]] || []).each do |other| %>
                       <% next if other[:id] == img[:id] %>
