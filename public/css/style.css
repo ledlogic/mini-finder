@@ -198,7 +198,8 @@ body {
   cursor: help;
 }
 
-.folder-name { display: block; color: var(--accent); font-size: 0.72rem; font-family: var(--font-mono); }
+.folder-name { display: block; color: var(--accent); font-size: 0.72rem; font-family: var(--font-mono); text-decoration: none; }
+.folder-name:hover { text-decoration: underline; }
 .file-name   { display: block; color: var(--text-dim); font-size: 0.7rem; font-family: var(--font-mono); word-break: break-all; }
 .img-size-badge { display: inline-block; background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; font-size: 0.62rem; color: var(--text-faint); padding: 1px 5px; margin-top: 2px; }
 
