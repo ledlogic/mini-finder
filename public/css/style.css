@@ -1732,3 +1732,94 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   color: var(--accent2);
 }
 .bulk-empty { color: var(--text-faint); font-style: italic; }
+
+/* ── Copy sibling button ──────────────────────────────────────────────────── */
+.btn-copy-sibling {
+  background: transparent;
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 2px;
+  align-self: flex-start;
+}
+.btn-copy-sibling:hover { border-color: var(--accent); color: var(--accent); }
+.btn-copy-sibling:disabled { opacity: 0.4; cursor: wait; }
+
+/* Flash copied fields */
+@keyframes cell-copied-flash {
+  0%   { background: rgba(0,212,255,0.18); }
+  100% { background: transparent; }
+}
+.cell-copied { animation: cell-copied-flash 2s ease-out forwards; }
+
+/* ── Sibling picker modal ─────────────────────────────────────────────────── */
+.sibling-picker {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sibling-picker-inner {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  min-width: 280px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sibling-picker-title {
+  font-family: var(--font-head);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.sibling-picker-btn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s;
+}
+.sibling-picker-btn strong {
+  font-family: var(--font-head);
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.sibling-picker-btn span {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.sibling-picker-btn:hover { border-color: var(--accent); }
+.sibling-picker-cancel {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  text-decoration: underline;
+}
+.sibling-picker-cancel:hover { color: var(--text-dim); }

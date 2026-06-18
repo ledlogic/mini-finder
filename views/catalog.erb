@@ -256,7 +256,9 @@
                     <option value="">— pick image —</option>
                     <% (@collection_images[img[:collection_id]] || []).each do |other| %>
                       <% next if other[:id] == img[:id] %>
-                      <% label = other[:mini_name].to_s.empty? ? other[:filename] : other[:mini_name] %>
+                      <% base  = other[:mini_name].to_s.empty? ? other[:filename] : other[:mini_name] %>
+                      <% extra = [other[:stance], other[:weapons]].map(&:to_s).reject(&:empty?).join(', ') %>
+                      <% label = extra.empty? ? base : "#{base} (#{extra})" %>
                       <option value="<%= other[:id] %>" <%= img[:primary_image_id] == other[:id] ? 'selected' : '' %>>
                         <%= label %>
                       </option>
@@ -286,6 +288,14 @@
                   <option value="<%= g %>" <%= img[:gender] == g ? 'selected' : '' %>><%= g %></option>
                 <% end %>
               </select>
+              <% if !img[:mini_name].to_s.empty? %>
+                <button type="button" class="btn-copy-sibling"
+                        data-id="<%= img[:id] %>"
+                        title="Copy species/gender/stance/weapons from another <%= img[:mini_name] %> in this collection"
+                        onclick="copySibling(<%= img[:id] %>)">
+                  ⤵ copy sibling
+                </button>
+              <% end %>
             <% else %>
               <span class="secondary-name-hidden" title="Linked images don't need their own name">—</span>
             <% end %>

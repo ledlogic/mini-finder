@@ -483,9 +483,11 @@ get '/catalog' do
   @show_all      = params[:show_all] == '1'
   @folder_filter = params[:folder].to_s.strip
   @status_filter = params[:status].to_s.strip  # legacy single filter
-  @f_untagged    = params[:f_untagged]  == '1'
-  @f_unprinted   = params[:f_unprinted] == '1'
-  @f_unpainted   = params[:f_unpainted] == '1'
+  @f_untagged        = params[:f_untagged]  == '1'
+  @f_unprinted       = params[:f_unprinted] == '1'
+  @f_unpainted       = params[:f_unpainted] == '1'
+  @colorized_catalog = params[:colorized].to_s.strip
+  @colorized_catalog = '' unless %w[true false unknown].include?(@colorized_catalog)
   @page          = [params[:page].to_i, 1].max
   @per_page      = 25
   @root          = settings.root_folder
@@ -496,8 +498,8 @@ get '/catalog' do
   dataset = Images.order(:source_folder, :filename)
 
   # When print/paint flags active, show all tagged states
-  any_flag = @f_untagged || @f_unprinted || @f_unpainted
-  @show_all = true if @f_unprinted || @f_unpainted
+  any_flag = @f_untagged || @f_unprinted || @f_unpainted || !@colorized_catalog.empty?
+  @show_all = true if @f_unprinted || @f_unpainted || !@colorized_catalog.empty?
 
   # Tagged/untagged base filter
   dataset = dataset.where(tagged: false) unless @show_all || any_flag
@@ -507,6 +509,11 @@ get '/catalog' do
 
   # Apply flag filters (combinable)
   dataset = dataset.where(tagged: false) if @f_untagged
+  case @colorized_catalog
+  when 'true'    then dataset = dataset.where(colorized: true)
+  when 'false'   then dataset = dataset.where(colorized: false)
+  when 'unknown' then dataset = dataset.where(colorized: nil)
+  end
   if @f_unprinted
     dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
     dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
@@ -613,7 +620,7 @@ get '/catalog' do
   @collection_images = {}
   collection_ids.each do |cid|
     @collection_images[cid] = Images.where(collection_id: cid)
-                                     .select(:id, :mini_name, :filename)
+                                     .select(:id, :mini_name, :filename, :stance, :weapons)
                                      .order(:filename).all
   end
 
@@ -815,7 +822,7 @@ get '/edit/:id' do
 
   # Other images in the same collection, for the cross-reference dropdown
   @collection_images = Images.where(collection_id: @image[:collection_id])
-                              .select(:id, :mini_name, :filename)
+                              .select(:id, :mini_name, :filename, :stance, :weapons)
                               .order(:filename).all
 
   # Resolve primary image's display name, if this image is a secondary
@@ -1104,6 +1111,30 @@ get '/images/:id/detect_name' do
 end
 
 # Set cover image for a collection
+# Fetch sibling images with the same name in the same collection
+get '/images/:id/siblings' do
+  id  = params[:id].to_i
+  row = Images.where(id: id).first
+  halt 404 unless row
+
+  name = row[:mini_name].to_s.strip
+  halt 400, "No name set" if name.empty?
+
+  siblings = Images.where(collection_id: row[:collection_id])
+                   .where(Sequel.ilike(:mini_name, name))
+                   .exclude(id: id)
+                   .select(:id, :mini_name, :species, :gender, :stance, :weapons, :mini_size)
+                   .all
+
+  content_type :json
+  siblings.map { |s|
+    { id: s[:id], mini_name: s[:mini_name],
+      species: s[:species].to_s, gender: s[:gender].to_s,
+      stance: s[:stance].to_s, weapons: s[:weapons].to_s,
+      mini_size: s[:mini_size].to_s }
+  }.to_json
+end
+
 # Quick colorized toggle — called via fetch from JS
 post '/images/:id/colorized' do
   id    = params[:id].to_i

@@ -37,6 +37,103 @@ async function cycleColorized(imageId, currentState, btn) {
   });
 }
 
+// ── Copy sibling fields ──────────────────────────────────────────────────────
+async function copySibling(imageId) {
+  const btn = document.querySelector(`[data-id="${imageId}"].btn-copy-sibling`);
+  const orig = btn.textContent;
+  btn.textContent = '…';
+  btn.disabled = true;
+
+  let siblings;
+  try {
+    const res = await fetch(`/images/${imageId}/siblings`);
+    if (!res.ok) { btn.textContent = '✕ no name set'; setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000); return; }
+    siblings = await res.json();
+  } catch(e) {
+    btn.textContent = '✕ error'; setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000); return;
+  }
+
+  btn.textContent = orig;
+  btn.disabled = false;
+
+  if (!siblings.length) {
+    btn.textContent = '✕ no siblings';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+    return;
+  }
+
+  // Filter to siblings that have useful data
+  const populated = siblings.filter(s => s.species || s.gender || s.stance || s.weapons);
+  const source = populated.length === 1 ? populated[0]
+    : populated.length > 1  ? await pickSibling(populated)
+    : siblings.length === 1 ? siblings[0]
+    : await pickSibling(siblings);
+
+  if (!source) return;
+
+  fillFromSibling(imageId, source);
+}
+
+function fillFromSibling(imageId, source) {
+  const row = document.getElementById(`row-${imageId}`);
+  if (!row) return;
+
+  const set = (name, val) => {
+    const el = row.querySelector(`[name="${name}"]`);
+    if (!el || !val) return;
+    el.value = val;
+    el.dispatchEvent(new Event('input'));
+    el.classList.add('cell-copied');
+    setTimeout(() => el.classList.remove('cell-copied'), 2000);
+  };
+
+  set('species',   source.species);
+  set('gender',    source.gender);
+  set('stance',    source.stance);
+  set('weapons',   source.weapons);
+  set('mini_size', source.mini_size);
+
+  // Flash the save button to remind user to save
+  const saveBtn = row.querySelector('.btn-save');
+  if (saveBtn) {
+    saveBtn.style.background = 'var(--warn, #f59e0b)';
+    setTimeout(() => saveBtn.style.background = '', 3000);
+  }
+}
+
+function pickSibling(siblings) {
+  return new Promise(resolve => {
+    // Build a small inline picker
+    const existing = document.getElementById('sibling-picker');
+    if (existing) existing.remove();
+
+    const picker = document.createElement('div');
+    picker.id = 'sibling-picker';
+    picker.className = 'sibling-picker';
+    picker.innerHTML = `
+      <div class="sibling-picker-inner">
+        <div class="sibling-picker-title">Pick sibling to copy from:</div>
+        ${siblings.map(s => `
+          <button class="sibling-picker-btn" data-id="${s.id}">
+            <strong>${s.mini_name}</strong>
+            ${[s.stance, s.weapons, s.species, s.gender].filter(Boolean).map(v => `<span>${v}</span>`).join('')}
+          </button>`).join('')}
+        <button class="sibling-picker-cancel">Cancel</button>
+      </div>`;
+
+    picker.querySelectorAll('.sibling-picker-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        picker.remove();
+        resolve(siblings.find(s => s.id == b.dataset.id));
+      });
+    });
+    picker.querySelector('.sibling-picker-cancel').addEventListener('click', () => { picker.remove(); resolve(null); });
+    picker.addEventListener('click', e => { if (e.target === picker) { picker.remove(); resolve(null); } });
+
+    document.body.appendChild(picker);
+  });
+}
+
 // ── Inline collection name edit ──────────────────────────────────────────────
 (function() {
   const input  = document.getElementById('col-name-input');
