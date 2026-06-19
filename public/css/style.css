@@ -433,7 +433,9 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   text-transform: uppercase;
   color: var(--accent);
   margin-right: 12px;
+  text-decoration: none;
 }
+.col-header-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .col-header-month {
   font-size: 0.72rem;
   color: var(--text-faint);
@@ -937,8 +939,10 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .col-info-folder {
   font-family: var(--font-mono);
   font-size: 0.82rem;
-  color: var(--text-dim);
+  color: var(--accent);
+  text-decoration: none;
 }
+.col-info-folder:hover { text-decoration: underline; }
 .col-info-name {
   font-family: var(--font-head);
   font-size: 0.95rem;
@@ -1857,3 +1861,18 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   transition: background 0.15s;
 }
 .xref-alert-link:hover { background: rgba(251,191,36,0.12); }
+
+/* ── Collection name browse link in catalog info bar ─────────────────────── */
+.col-info-name-browse {
+  font-family: var(--font-head);
+  font-size: 1.0rem;
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.col-info-name-browse:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

@@ -110,8 +110,17 @@
   <div class="collection-info-bar">
     <div class="collection-info-left">
       <svg viewBox="0 0 24 24" class="col-info-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      <span class="col-info-folder"><%= File.basename(@folder_filter) %></span>
       <% if active_col %>
+        <a href="/collections#col-<%= active_col[:id] %>" class="col-info-folder" title="Go to collection">⬡ <%= File.basename(@folder_filter) %></a>
+      <% else %>
+        <span class="col-info-folder"><%= File.basename(@folder_filter) %></span>
+      <% end %>
+      <% if active_col %>
+        <a href="/catalog?show_all=1&folder=<%= CGI.escape(active_col[:folder_path]) %>"
+           class="col-info-name-browse"
+           title="Browse this collection">
+          <%= active_col[:name].to_s.empty? ? File.basename(active_col[:folder_path]) : active_col[:name] %>
+        </a>
         <form action="/collections/<%= active_col[:id] %>/rename" method="post" class="col-info-name-form" id="col-name-form">
           <input type="hidden" name="redirect_to" value="<%= request.url %>">
           <input type="text" name="name" value="<%= active_col[:name] %>"
@@ -147,6 +156,19 @@
       <% end %>
     </div>
   </div>
+<% end %>
+
+<% if @unlinked_colorized_count.to_i > 0 %>
+<div class="xref-alert" style="margin-bottom:12px;">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span>
+    <strong><%= @unlinked_colorized_count %></strong>
+    colorized image<%= @unlinked_colorized_count == 1 ? '' : 's' %> in this collection not yet linked to a grey primary.
+  </span>
+  <a href="/catalog?show_all=1&folder=<%= CGI.escape(@folder_filter) %>&colorized=true" class="xref-alert-link">
+    Link colorized →
+  </a>
+</div>
 <% end %>
 
 <% if @images.empty? %>
@@ -185,9 +207,15 @@
           <% col = @collections[img[:collection_id]] %>
           <tr class="collection-header-row">
             <td colspan="11">
-              <span class="col-header-name">
-                <%= col ? (col[:name].to_s.empty? ? '(unnamed collection)' : col[:name]) : File.basename(img[:source_folder]) %>
-              </span>
+              <% if @folder_filter.empty? %>
+                <a href="/catalog?show_all=1&folder=<%= CGI.escape(img[:source_folder]) %>" class="col-header-name" title="Browse this collection">
+                  <%= col ? (col[:name].to_s.empty? ? '(unnamed collection)' : col[:name]) : File.basename(img[:source_folder]) %>
+                </a>
+              <% else %>
+                <span class="col-header-name">
+                  <%= col ? (col[:name].to_s.empty? ? '(unnamed collection)' : col[:name]) : File.basename(img[:source_folder]) %>
+                </span>
+              <% end %>
               <% if col && col[:release_month] %>
                 <span class="col-header-month"><%= col[:release_month] %></span>
               <% end %>

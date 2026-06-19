@@ -347,6 +347,15 @@ get '/catalog' do
   @primary_lookup = primary_ids.empty? ? {} :
     Images.where(id: primary_ids).select_hash(:id, :mini_name)
 
+  # Warn if this folder has colorized images not yet xref-linked
+  @unlinked_colorized_count = if !@folder_filter.empty?
+    Images.where(source_folder: @folder_filter, colorized: true, primary_image_id: nil)
+          .exclude(Sequel.ilike(:mini_name, 'bundle'))
+          .count
+  else
+    0
+  end
+
   erb :catalog
 end
 
