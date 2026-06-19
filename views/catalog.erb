@@ -239,12 +239,13 @@
                         rows="2"
                         placeholder="description…"><%= img[:description] %></textarea>
               <%# ── Cross-reference: link this image as a secondary view ── %>
+              <% if true %>
               <div class="xref-row">
                 <div class="secondary-of" title="This image is a secondary view linked to a primary image" style="<%= is_secondary ? '' : 'display:none;' %>">
                   ↳ <%= @primary_lookup[img[:primary_image_id]].to_s.empty? ? "(primary ##{img[:primary_image_id]})" : @primary_lookup[img[:primary_image_id]] %>
                 </div>
                 <div style="display:flex; align-items:center; gap:4px; margin-top:3px;">
-                  <label class="xref-label" title="Mark this image as an alternate view of another image in this collection">
+                  <label class="xref-label" title="Link this colorized render as secondary to its grey primary">
                     <input type="checkbox" name="is_secondary" value="1"
                            class="xref-checkbox"
                            <%= is_secondary ? 'checked' : '' %>
@@ -256,6 +257,7 @@
                     <option value="">— pick image —</option>
                     <% (@collection_images[img[:collection_id]] || []).each do |other| %>
                       <% next if other[:id] == img[:id] %>
+
                       <% base  = other[:mini_name].to_s.empty? ? other[:filename] : other[:mini_name] %>
                       <% extra = [other[:stance], other[:weapons]].map(&:to_s).reject(&:empty?).join(', ') %>
                       <% label = extra.empty? ? base : "#{base} (#{extra})" %>
@@ -266,6 +268,7 @@
                   </select>
                 </div>
               </div>
+              <% end %>
             </div>
           </td>
           <td class="cell-name-td">
