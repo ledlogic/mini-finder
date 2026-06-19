@@ -3,13 +3,41 @@
     <h1>Collections</h1>
     <p class="page-sub"><%= @collections.length %> folder<%= @collections.length == 1 ? '' : 's' %> scanned</p>
   </div>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <% other_sort = @sort_order == 'asc' ? 'desc' : 'asc' %>
+    <a href="<%= url_collections(sort: other_sort) %>" class="col-info-edit" title="Toggle sort order">
+      <%= @sort_order == 'desc' ? '↓ Newest first' : '↑ Oldest first' %>
+    </a>
+  </div>
 </div>
 
+<% if @unlinked_colorized_count.to_i > 0 || @unset_colorized_count.to_i > 0 %>
+<div class="xref-alert">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span>
+    <% if @unlinked_colorized_count.to_i > 0 %>
+      <strong><%= @unlinked_colorized_count %></strong> colorized image<%= @unlinked_colorized_count == 1 ? '' : 's' %> not yet linked to a grey primary.
+    <% end %>
+    <% if @unset_colorized_count.to_i > 0 %>
+      <strong><%= @unset_colorized_count %></strong> image<%= @unset_colorized_count == 1 ? '' : 's' %> with unknown colorized status.
+    <% end %>
+  </span>
+  <div style="display:flex; gap:6px; margin-left:auto;">
+    <% if @unlinked_colorized_count.to_i > 0 %>
+      <a href="/catalog?show_all=1&colorized=true" class="xref-alert-link">Link colorized →</a>
+    <% end %>
+    <% if @unset_colorized_count.to_i > 0 %>
+      <a href="/bulk?field=colorized" class="xref-alert-link">Set color status →</a>
+    <% end %>
+  </div>
+</div>
+<% end %>
+
 <div class="col-year-bar">
-  <a href="<%= col_url(year: '') %>"
+  <a href="<%= url_collections(year: '') %>"
      class="col-year-btn <%= @year_filter.empty? ? 'col-year-active' : '' %>">All years</a>
   <% @years.each do |yr| %>
-    <a href="<%= col_url(year: yr) %>"
+    <a href="<%= url_collections(year: yr) %>"
        class="col-year-btn <%= @year_filter == yr ? 'col-year-active' : '' %>"><%= yr %></a>
   <% end %>
 </div>
@@ -22,7 +50,7 @@
     ['partially_printed', '🖨 Partial'],
   ] %>
   <% filters.each do |val, label| %>
-    <a href="<%= col_url(filter: val) %>"
+    <a href="<%= url_collections(filter: val) %>"
        class="col-filter-btn <%= @filter == val ? 'col-filter-active' : '' %>">
       <%= label %>
     </a>
@@ -128,16 +156,16 @@
           <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>" class="col-browse-link">
             Browse images →
           </a>
-          <% mmf_url = mmf_search_url(col[:release_month]) %>
+          <% mmf_url = url_mmf_search(col[:release_month]) %>
           <% if mmf_url %>
             <a href="<%= mmf_url %>" class="col-mmf-link" target="_blank"
                title="Search MyMiniFactory for unit9 <%= col[:release_month] %>">
               MMF
             </a>
           <% end %>
-          <% pdf = collection_pdf_path(col[:folder_path]) %>
+          <% pdf = file_collection_pdf_path(col[:folder_path]) %>
           <% if pdf %>
-            <a href="<%= pdf_url(col[:id]) %>" class="col-pdf-link" target="_blank" title="<%= col[:folder_path] %>.pdf">
+            <a href="<%= url_pdf(col[:id]) %>" class="col-pdf-link" target="_blank" title="<%= col[:folder_path] %>.pdf">
               <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Open PDF
             </a>
@@ -162,7 +190,7 @@
         <span class="col-stub-badge">not scanned</span>
       </div>
       <div class="col-stub-actions">
-        <a href="<%= mmf_search_url(ym) %>" class="col-stub-mmf" target="_blank" title="Search MMF for <%= mon_name %> <%= year %>">
+        <a href="<%= url_mmf_search(ym) %>" class="col-stub-mmf" target="_blank" title="Search MMF for <%= mon_name %> <%= year %>">
           <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           MMF →
         </a>

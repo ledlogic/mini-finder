@@ -113,7 +113,9 @@
             <option value="">— pick image —</option>
             <% @collection_images.each do |other| %>
               <% next if other[:id] == @image[:id] %>
-              <% label = other[:mini_name].to_s.empty? ? other[:filename] : other[:mini_name] %>
+              <% base  = other[:mini_name].to_s.empty? ? other[:filename] : other[:mini_name] %>
+              <% extra = [other[:stance], other[:weapons]].map(&:to_s).reject(&:empty?).join(', ') %>
+              <% label = extra.empty? ? base : "#{base} (#{extra})" %>
               <option value="<%= other[:id] %>" <%= @image[:primary_image_id] == other[:id] ? 'selected' : '' %>>
                 <%= label %>
               </option>

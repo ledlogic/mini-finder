@@ -10,6 +10,12 @@ require 'fileutils'
 require 'rtesseract'
 require 'mini_magick'
 
+require_relative 'lib/helpers'
+require_relative 'lib/url_helpers'
+require_relative 'lib/file_helpers'
+require_relative 'lib/ocr_helpers'
+require_relative 'lib/db_helpers'
+
 # ─── Configuration ────────────────────────────────────────────────────────────
 
 configure do
@@ -26,19 +32,6 @@ end
 DB_PATH      = File.join(File.dirname(__FILE__), 'db', 'catalog.db')
 BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
-
-def make_backup(label = 'manual')
-  FileUtils.mkdir_p(BACKUP_DIR)
-  ts   = Time.now.strftime('%Y%m%d-%H%M%S')
-  dest = File.join(BACKUP_DIR, "catalog-#{ts}-#{label}.db")
-  FileUtils.cp(DB_PATH, dest)
-  # Prune old backups, keeping the most recent BACKUP_KEEP
-  backups = Dir.glob(File.join(BACKUP_DIR, 'catalog-*.db')).sort
-  if backups.length > BACKUP_KEEP
-    backups[0..-(BACKUP_KEEP + 1)].each { |f| File.delete(f) }
-  end
-  dest
-end
 
 CHANGES_BEFORE_REMINDER = 25
 
@@ -149,344 +142,16 @@ FIELD_WEIGHTS = {
 
 SUPPORTED_EXTS = %w[.png .jpg .jpeg .gif .webp .bmp].freeze
 
-# ─── OCR ──────────────────────────────────────────────────────────────────────
+MONTH_NAMES = %w[january february march april may june
+                 july august september october november december].freeze
 
-# From analysing UNIT9 image samples, the name block is consistently in the
-# right 60% of the image, between y=65% and y=88%. We use one wide crop zone
-# that captures this whole region, then parse it carefully.
-#
-# Key findings from sample analysis:
-#   - Names are always right-aligned in the bottom portion
-#   - Collection name appears on a darker bar below the mini name
-#   - Accented chars (Ō, Ū, É) need to be normalised
-#   - Mixed case names exist (e.g. "Nomads Tribe", "Security Officer")
-#   - Multi-line names need joining (e.g. DANNY / 'ROAD RAMBLER' / WILLIAMS)
-#   - 2024+ folders contain small thumbnails — skip OCR if image < 400px wide
+MONTH_ABBR  = %w[jan feb mar apr may jun
+                 jul aug sep oct nov dec].freeze
 
-MIN_OCR_WIDTH = 400  # skip images too small for reliable OCR
-
-# ─── MMF filename name extraction ─────────────────────────────────────────────
-
-# Detect if a folder is an MMF folder (ends in -mmf)
-def mmf_folder?(folder_path)
-  File.basename(folder_path).end_with?('-mmf')
-end
-
-# Extract the base month from an MMF folder name e.g. "2026-06-mmf" -> "2026-06"
-def mmf_base_month(folder_path)
-  File.basename(folder_path).sub(/-mmf$/, '')
-end
-
-# Extract mini name from MMF filename by stripping prefix/suffix and splitting CamelCase
-# e.g. "0002_June24-adv-1080-XiuYing02.jpg" -> "Xiu Ying"
 BUNDLE_WORDS    = %w[together bundle pack set group].freeze
 SKIP_NAME_WORDS = %w[adv img page].freeze
 
-def extract_mmf_name(filename)
-  name  = File.basename(filename, '.*')
-  name  = name.sub(/^\d+_/, '')
-  raw   = name.split('-').last.to_s
-  raw   = raw.sub(/\d+$/, '').strip
-  return nil if raw.empty?
-  # Map bundle/group words to "Bundle"
-  return 'Bundle' if BUNDLE_WORDS.include?(raw.downcase)
-  # Skip noise words
-  return nil if SKIP_NAME_WORDS.include?(raw.downcase)
-  # Split CamelCase into space-separated words
-  raw.gsub(/([A-Z])/, ' \\1').strip
-end
-CROP_ZONES = [
-  { label: 'name-block-high',       x: 0.38, y: 0.63, w: 0.62, h: 0.20 },
-  { label: 'name-block-mid',        x: 0.38, y: 0.70, w: 0.62, h: 0.20 },
-  { label: 'name-block-low',        x: 0.38, y: 0.76, w: 0.62, h: 0.18 },
-  { label: 'name-block-bottom',     x: 0.38, y: 0.80, w: 0.62, h: 0.18 },
-  { label: 'name-block-wider',      x: 0.30, y: 0.63, w: 0.70, h: 0.25 },
-  { label: 'name-block-right-only', x: 0.52, y: 0.72, w: 0.48, h: 0.26 },
-].freeze
-
-# Normalise accented characters Tesseract commonly mangles
-def normalise_accents(str)
-  str
-    .gsub(/[ŌÖO]\s*(?=[A-Z])/, 'O')  # Ō → O mid-word
-    .gsub(/Ō/, 'O').gsub(/ō/, 'o')
-    .gsub(/Ū/, 'U').gsub(/ū/, 'u')
-    .gsub(/É/, 'E').gsub(/é/, 'e')
-    .gsub(/Á/, 'A').gsub(/á/, 'a')
-    .gsub(/Í/, 'I').gsub(/í/, 'i')
-end
-
-# Clean a raw OCR line into a usable name candidate.
-# More permissive than before — allows mixed case and some punctuation.
-def clean_ocr_line(line)
-  # Strip leading noise characters (non-alpha, non-quote)
-  cleaned = line.gsub(/^[^A-Za-z\'\"-]+/, '').strip
-  # Remove characters that are definitely noise, keep apostrophes/hyphens
-  cleaned = cleaned.gsub(/[|\\@#$%^&*_=<>{}\[\]]/, '').strip
-  # Collapse multiple spaces
-  cleaned = cleaned.gsub(/\s+/, ' ').strip
-  # Must be at least 2 chars and mostly letters (allow short names like JI, SAN)
-  letter_ratio = cleaned.gsub(/[^A-Za-z]/, '').length.to_f / [cleaned.length, 1].max
-  return nil if cleaned.length < 2 || letter_ratio < 0.4
-  normalise_accents(cleaned)
-end
-
-# Try to join split names e.g. YŪGEN / JII-SAN across two OCR lines
-def join_split_name(lines)
-  return lines if lines.length < 2
-  collection_words = /corp|friends|raiders|nomads|officer|sisters|squad|tribe/i
-  result = []
-  i = 0
-  while i < lines.length
-    line = lines[i]
-    next_line = lines[i + 1] if i + 1 < lines.length
-    if next_line &&
-       line.split.length <= 2 &&
-       next_line.split.length <= 3 &&
-       !next_line.match?(collection_words) &&
-       !line.match?(collection_words)
-      result << "#{line} #{next_line}"
-      i += 2
-    else
-      result << line
-      i += 1
-    end
-  end
-  result
-end
-def zone_score(names)
-  names.sum { |n| n.split.length * n.length }
-end
-
-# Collapse multi-line names: if two consecutive lines look like parts of the
-# same name (short lines, no collection-bar separator), join them.
-def collapse_name_lines(lines)
-  return lines if lines.length < 2
-  result = []
-  i = 0
-  while i < lines.length
-    line = lines[i]
-    # If next line exists and both are short-ish, they may be one multi-line name
-    if i + 1 < lines.length
-      next_line = lines[i + 1]
-      combined_words = (line + ' ' + next_line).split.length
-      # Join if combined would be ≤6 words and neither looks like a collection tag
-      if combined_words <= 6 && !next_line.include?('.') && line.split.length <= 3
-        result << (line + ' ' + next_line)
-        i += 2
-        next
-      end
-    end
-    result << line
-    i += 1
-  end
-  result
-end
-
-# Extract mini name and collection name from a UNIT9 image.
-# Returns { suggested_name: String|nil, collection_name: String|nil }
-def ocr_unit9_image(image_path)
-  return { suggested_name: nil, collection_name: nil } unless File.exist?(image_path)
-
-  orig = MiniMagick::Image.open(image_path)
-  w    = orig.width
-  h    = orig.height
-
-  # Skip tiny thumbnails — not full artwork
-  if w < MIN_OCR_WIDTH || h < MIN_OCR_WIDTH
-    return { suggested_name: nil, collection_name: nil }
-  end
-
-  best_names = []
-  best_score = 0
-
-  CROP_ZONES.each do |zone|
-    img    = MiniMagick::Image.open(image_path)
-    crop_w = (w * zone[:w]).to_i
-    crop_h = (h * zone[:h]).to_i
-    crop_x = (w * zone[:x]).to_i
-    crop_y = (h * zone[:y]).to_i
-
-    img.crop "#{crop_w}x#{crop_h}+#{crop_x}+#{crop_y}"
-    img.colorspace 'Gray'
-    # Boost contrast to make text stand out against dark backgrounds
-    img.contrast
-    img.contrast
-
-    tmp = File.join(Dir.tmpdir, "unit9_ocr_#{Time.now.to_i}_#{rand(99999)}.jpg")
-    img.write(tmp)
-
-    raw   = RTesseract.new(tmp, psm: 6).to_s
-    File.delete(tmp) if File.exist?(tmp)
-
-    lines = raw.split("\n").map(&:strip).reject(&:empty?)
-    names = lines.filter_map { |l| clean_ocr_line(l) }
-    names = collapse_name_lines(names)
-    names = join_split_name(names)
-    score = zone_score(names)
-
-    if score > best_score
-      best_score = score
-      best_names = names
-    end
-  end
-
-  # Line 0: mini name (e.g. "JOHNNY")
-  # Line 1: subtitle/role (e.g. "SECURITY OFFICER") — may be part of name
-  # Line 2: collection/faction (e.g. "MICROMACHINES CORP")
-  # If we have 3+ lines, line 2 is likely the collection.
-  # If we have 2 lines, line 1 is the collection.
-  # If line 1 looks like a role/subtitle (short, all caps descriptor), use line 2 for collection.
-  mini    = best_names[0]
-  line1   = best_names[1]
-  line2   = best_names[2]
-
-  # Heuristic: if line1 is a short role descriptor and line2 exists, use line2 as collection
-  collection = if line2 && line1 && line1.split.length <= 3
-    line2
-  else
-    line1
-  end
-
-  {
-    suggested_name:  mini,
-    collection_name: collection
-  }
-rescue => e
-  warn "OCR failed for #{image_path}: #{e.message}"
-  { suggested_name: nil, collection_name: nil }
-end
-
-
-# ─── Helpers ──────────────────────────────────────────────────────────────────
-
-require_relative 'helpers'
-
-# ─── Scanner ──────────────────────────────────────────────────────────────────
-
-def scan_folder(root)
-  found          = 0
-  first_new_col  = nil   # id of the first newly-created collection
-  return { found: found, first_new_col_id: nil } unless Dir.exist?(root)
-
-  # Find all MMF folders — used to skip their plain yyyy-mm counterparts
-  mmf_base_paths = Dir.glob(File.join(root, '**', '*-mmf'))
-                      .select { |p| File.directory?(p) }
-                      .map    { |p| File.join(File.dirname(p), mmf_base_month(p)) }
-
-  Dir.glob(File.join(root, '**', '*')).each do |path|
-    next unless File.file?(path)
-    next unless SUPPORTED_EXTS.include?(File.extname(path).downcase)
-
-    folder   = File.dirname(path)
-    filename = File.basename(path)
-    next if Images.where(source_folder: folder, filename: filename).any?
-
-    is_mmf = mmf_folder?(folder)
-
-    # Skip folders ending in -cd (alternate image sets we don't want)
-    next if File.basename(folder).end_with?('-cd')
-
-    # Skip plain yyyy-mm folder if an MMF version exists for that month
-    next if !is_mmf && mmf_base_paths.include?(folder)
-
-    # ── Find or create collection for this folder ──
-    col = Collections.where(folder_path: folder).first
-    unless col
-      release_month = is_mmf ? mmf_base_month(folder) : parse_release_month(folder)
-      col_id = Collections.insert(
-        folder_path:   folder,
-        release_month: release_month,
-        created_at:    Time.now,
-        updated_at:    Time.now
-      )
-      col = Collections.where(id: col_id).first
-      first_new_col ||= col_id
-    end
-
-    # ── Name extraction ──
-    if is_mmf
-      # MMF: extract name directly from filename — no OCR needed
-      suggested   = extract_mmf_name(filename)
-      auto_tagged = !suggested.nil?
-      is_bundle   = suggested == 'Bundle'
-    else
-      # Standard: run OCR
-      ocr         = ocr_unit9_image(path)
-      suggested   = ocr[:suggested_name]
-      auto_tagged = false
-
-      if ocr[:collection_name] && col[:name].to_s.empty?
-        Collections.where(id: col[:id]).update(
-          name:       ocr[:collection_name],
-          updated_at: Time.now
-        )
-      end
-    end
-
-    dim_match  = filename.match(/(\d+x\d+)/i)
-    image_size = dim_match ? dim_match[1] : nil
-
-    Images.insert(
-      collection_id:  col[:id],
-      source_folder:  folder,
-      filename:       filename,
-      image_size:     image_size,
-      suggested_name: suggested,
-      mini_name:      auto_tagged ? suggested : nil,
-      mini_count:     is_bundle ? 4 : 1,
-      tagged:         auto_tagged,
-      created_at:     Time.now,
-      updated_at:     Time.now
-    )
-    found += 1
-  end
-  { found: found, first_new_col_id: first_new_col }
-end
-
-# Remove collections whose folder no longer exists on disk,
-# and remove plain yyyy-mm collections when an -mmf sibling exists in the DB or on disk.
-# Returns { removed: N, cleanup_script_output: "..." }
-def purge_missing_collections
-  removed      = 0
-  script_lines = []
-  all_folders  = Collections.select_map(:folder_path)
-
-  Collections.all.each do |col|
-    folder = col[:folder_path]
-    base   = File.basename(folder)
-    parent = File.dirname(folder)
-
-    # Remove if folder is gone from disk
-    if !Dir.exist?(folder)
-      Images.where(collection_id: col[:id]).delete
-      Collections.where(id: col[:id]).delete
-      removed += 1
-      next
-    end
-
-    # Remove -cd folders
-    if base.end_with?('-cd')
-      Images.where(collection_id: col[:id]).delete
-      Collections.where(id: col[:id]).delete
-      removed += 1
-      script_lines << "Removed -cd folder: #{base}"
-      next
-    end
-
-    # Remove plain yyyy-mm if an -mmf sibling exists in the DB or on disk
-    if base.match?(/^\d{4}-\d{2}$/)
-      mmf_sibling_path = File.join(parent, base + '-mmf')
-      if all_folders.include?(mmf_sibling_path) || Dir.exist?(mmf_sibling_path)
-        Images.where(collection_id: col[:id]).delete
-        Collections.where(id: col[:id]).delete
-        removed += 1
-        script_lines << "Removed plain #{base} (MMF sibling exists)"
-      end
-    end
-  end
-
-  { removed: removed, log: script_lines }
-end
+MIN_OCR_WIDTH = 400
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -497,7 +162,7 @@ end
 get '/image_file/:id' do
   row = Images.where(id: params[:id].to_i).first
   halt 404, 'Image not found' unless row
-  path = full_path(row)
+  path = file_image_path(row)
   halt 404, "File not on disk: #{path}" unless File.exist?(path)
   ext = File.extname(row[:filename]).downcase.delete('.')
   content_type "image/#{ext == 'jpg' ? 'jpeg' : ext}"
@@ -520,7 +185,7 @@ get '/catalog' do
   @colorized_catalog = params[:colorized].to_s.strip
   @colorized_catalog = '' unless %w[true false unknown].include?(@colorized_catalog)
   @page          = [params[:page].to_i, 1].max
-  @per_page      = 25
+  @per_page      = 50
   @root          = settings.root_folder
 
   # All distinct folders for the dropdown
@@ -646,8 +311,15 @@ get '/catalog' do
     ordered.concat(secs)
   end
 
-  @images = ordered[(@page - 1) * @per_page, @per_page] || []
-  @pages  = (@total.to_f / @per_page).ceil
+  # Only paginate if total exceeds per_page threshold
+  if @total <= @per_page
+    @images = ordered
+    @pages  = 1
+    @page   = 1
+  else
+    @images = ordered[(@page - 1) * @per_page, @per_page] || []
+    @pages  = (@total.to_f / @per_page).ceil
+  end
 
   # Pre-load collections so views can look them up by id
   @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
@@ -661,7 +333,7 @@ get '/catalog' do
     # Load cover id for this collection
     cid_cover = Collections.where(id: cid).get(:cover_image_id)
     rows = Images.where(collection_id: cid, primary_image_id: nil)
-                 .select(:id, :mini_name, :filename, :stance, :weapons, :mini_count)
+                 .select(:id, :mini_name, :filename, :stance, :weapons, :mini_count, :colorized)
                  .all
     # Sort: cover first, bundles, then alpha by name
     cover_row,  non_cover  = rows.partition { |r| r[:id] == cid_cover }
@@ -681,13 +353,13 @@ end
 post '/scan' do
   # Auto-backup on first scan of each browser session
   unless session[:scanned_this_session]
-    make_backup('scan')
+    db_make_backup('scan')
     session[:scanned_this_session] = true
     session[:changes_since_backup] = 0
   end
-  purge_result = purge_missing_collections
+  purge_result = db_purge_missing_collections
   purged       = purge_result[:removed]
-  scan_result  = scan_folder(settings.root_folder)
+  scan_result  = db_scan_folder(settings.root_folder)
   count        = scan_result[:found]
   new_col_id   = scan_result[:first_new_col_id]
   params_str   = "scanned=#{count}&purged=#{purged}"
@@ -697,7 +369,7 @@ end
 
 # Manual backup endpoint
 post '/backup' do
-  dest = make_backup('manual')
+  dest = db_make_backup('manual')
   session[:changes_since_backup] = 0
   filename = File.basename(dest)
   redirect back + (back.include?('?') ? '&' : '?') + "backed_up=#{CGI.escape(filename)}"
@@ -777,7 +449,12 @@ get '/collections' do
   @filter     = params[:filter].to_s.strip
   @year_filter = params[:year].to_s.strip   # e.g. '2024'
 
-  @collections = Collections.order(:release_month, :name).all
+  @sort_order  = params[:sort].to_s == 'asc' ? 'asc' : 'desc'
+  @collections = if @sort_order == 'asc'
+    Collections.order(:release_month, :name).all
+  else
+    Collections.order(Sequel.desc(:release_month), :name).all
+  end
 
   # Build list of available years from release_month values
   @years = @collections
@@ -844,7 +521,24 @@ get '/collections' do
       end
       d = d >> 1
     end
+    @stubs.reverse! if @sort_order == 'desc'
   end
+
+  # Count colorized images that haven't been xref-linked yet
+  # Also count unknown (nil) colorized images as needing attention
+  @unlinked_colorized_count = Images
+    .where(colorized: true)
+    .where(primary_image_id: nil)
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    .count
+
+  # Separately count images with unknown colorized status (nil) for a fuller picture
+  @unset_colorized_count = Images
+    .where(colorized: nil, primary_image_id: nil)
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    .count
 
   erb :collections
 end
@@ -872,7 +566,7 @@ get '/edit/:id' do
   _cover_id = Collections.where(id: @image[:collection_id]).get(:cover_image_id)
   _rows = Images.where(collection_id: @image[:collection_id], primary_image_id: nil)
                 .exclude(id: @image[:id])
-                .select(:id, :mini_name, :filename, :stance, :weapons, :mini_count)
+                .select(:id, :mini_name, :filename, :stance, :weapons, :mini_count, :colorized)
                 .all
   _cover_r,  _non   = _rows.partition { |r| r[:id] == _cover_id }
   _bundle_r, _rest  = _non.partition  { |r| r[:mini_count].to_i >= 4 || r[:mini_name].to_s.downcase == 'bundle' }

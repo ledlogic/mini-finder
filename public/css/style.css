@@ -1823,3 +1823,37 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   text-decoration: underline;
 }
 .sibling-picker-cancel:hover { color: var(--text-dim); }
+
+/* ── Unlinked colorized images alert ─────────────────────────────────────── */
+.xref-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.4);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+.xref-alert svg {
+  width: 18px; height: 18px; flex-shrink: 0;
+  stroke: #fbbf24; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.xref-alert strong { color: #fbbf24; }
+.xref-alert-link {
+  margin-left: auto;
+  white-space: nowrap;
+  font-family: var(--font-head);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fbbf24;
+  text-decoration: none;
+  border: 1px solid rgba(251,191,36,0.4);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  transition: background 0.15s;
+}
+.xref-alert-link:hover { background: rgba(251,191,36,0.12); }
