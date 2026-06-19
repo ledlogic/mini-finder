@@ -158,6 +158,18 @@
   </div>
 <% end %>
 
+<% if @missing_bundle %>
+<div class="xref-alert" style="margin-bottom:12px; border-color:rgba(168,85,247,0.4); background:rgba(168,85,247,0.06);">
+  <svg viewBox="0 0 24 24" style="stroke:#a855f7;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span style="color:var(--text-dim);">
+    This collection has no <strong style="color:#a855f7;">bundle/gallery image</strong> — no image is marked as a bundle (<code>mini_count ≥ 4</code> or named "Bundle").
+  </span>
+  <a href="/catalog?show_all=1&folder=<%= CGI.escape(@folder_filter) %>" class="xref-alert-link" style="border-color:rgba(168,85,247,0.4); color:#a855f7;">
+    Review →
+  </a>
+</div>
+<% end %>
+
 <% if @unlinked_colorized_count.to_i > 0 %>
 <div class="xref-alert" style="margin-bottom:12px;">
   <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -336,7 +348,7 @@
           <td>
             <div class="cell-stack">
               <input type="text" name="stance"  class="cell-input" value="<%= img[:stance] %>"  placeholder="stance…">
-              <input type="text" name="weapons" class="cell-input" value="<%= img[:weapons] %>" placeholder="weapons…">
+              <input type="text" name="weapons" class="cell-input" style="text-transform:uppercase;" value="<%= img[:weapons] %>" placeholder="weapons…">
             </div>
           </td>
           <td class="cell-count">

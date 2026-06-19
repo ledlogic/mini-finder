@@ -40,94 +40,15 @@ CHANGES_BEFORE_REMINDER = 25
 DB = Sequel.sqlite(File.join(File.dirname(__FILE__), 'db', 'catalog.db'))
 
 # Collections — one per folder
-DB.create_table?(:collections) do
-  primary_key :id
-  String   :folder_path,    null: false, unique: true
-  String   :name                          # e.g. "ASH NOMADS"
-  String   :release_month                 # e.g. "2026-02" parsed from folder
-  String   :notes
-  Integer  :cover_image_id
-  DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
-  DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
-end
 
-# Images — belong to a collection
-DB.create_table?(:images) do
-  primary_key :id
-  foreign_key :collection_id, :collections
-  String   :source_folder,  null: false
-  String   :filename,       null: false
-  String   :image_size
-  String   :suggested_name               # from OCR line 1
-  String   :mini_name                    # confirmed by user
-  String   :species
-  String   :gender
-  String   :weapons
-  String   :stance
-  String   :mini_size
-  String   :notes
-  String   :description
-  Integer  :mini_count, default: 1
-  Integer  :printed,    default: 0
-  Integer  :painted,    default: 0
-  Boolean  :tagged,     default: false
-  Boolean  :colorized,  default: nil   # nil=unknown, true=rendered, false=3d grey
-  Integer  :primary_image_id              # if set, this image is a secondary
-                                           # (alt view) of another image
-  DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
-  DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
-end
-
-# Migrations — add columns to existing DBs that predate this version
-[
-  "ALTER TABLE images ADD COLUMN collection_id INTEGER REFERENCES collections(id)",
-  "ALTER TABLE images ADD COLUMN suggested_name TEXT",
-  "ALTER TABLE images ADD COLUMN description TEXT",
-  "ALTER TABLE images ADD COLUMN mini_count INTEGER DEFAULT 1",
-  "ALTER TABLE images ADD COLUMN printed INTEGER DEFAULT 0",
-  "ALTER TABLE images ADD COLUMN painted INTEGER DEFAULT 0",
-  "ALTER TABLE collections ADD COLUMN release_month TEXT",
-  "ALTER TABLE collections ADD COLUMN notes TEXT",
-  "ALTER TABLE collections ADD COLUMN cover_image_id INTEGER",
-  "ALTER TABLE images ADD COLUMN primary_image_id INTEGER",
-  "ALTER TABLE images ADD COLUMN colorized BOOLEAN DEFAULT NULL",
-].each do |sql|
-  begin; DB.run(sql); rescue Sequel::DatabaseError; end
-end
+# Schema and migrations — defined in lib/db_helpers.rb
+db_setup_schema
 
 Collections = DB[:collections]
 Images      = DB[:images]
 
-# ─── Fix chained secondaries ──────────────────────────────────────────────────
-# A secondary should only ever point to a primary (primary_image_id = nil).
-# If secondary A points to secondary B which points to primary C, fix A -> C.
-# If secondary A points to another secondary that itself has no primary found,
-# clear A's link entirely.
-begin
-  fixed = 0
-  Images.where(Sequel.~(primary_image_id: nil)).each do |img|
-    target = Images.where(id: img[:primary_image_id]).first
-    next unless target                          # orphaned link — leave for scan cleanup
-    next if target[:primary_image_id].nil?     # already points to a primary, ok
-
-    # Target is itself a secondary — walk the chain to find the real primary
-    seen = [img[:id]]
-    cursor = target
-    while cursor && !cursor[:primary_image_id].nil?
-      break if seen.include?(cursor[:id])       # circular, break
-      seen << cursor[:id]
-      cursor = Images.where(id: cursor[:primary_image_id]).first
-    end
-
-    new_primary = cursor && cursor[:primary_image_id].nil? ? cursor[:id] : nil
-    Images.where(id: img[:id]).update(primary_image_id: new_primary, updated_at: Time.now)
-    fixed += 1
-    puts "  [chain-fix] image #{img[:id]} -> #{new_primary.inspect} (was #{img[:primary_image_id]})"
-  end
-  puts "Chain fix: #{fixed} image(s) corrected." if fixed > 0
-rescue => e
-  puts "Chain fix error: #{e.message}"
-end
+# Fix any chained secondary links — defined in lib/db_helpers.rb
+db_fix_chained_secondaries
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -175,187 +96,23 @@ end
 
 # ── 1. Catalog ────────────────────────────────────────────────────────────────
 
+# ── 1. Catalog ────────────────────────────────────────────────────────────────
+
 get '/catalog' do
-  @show_all      = params[:show_all] == '1'
-  @folder_filter = params[:folder].to_s.strip
-  @status_filter = params[:status].to_s.strip  # legacy single filter
-  @f_untagged        = params[:f_untagged]  == '1'
-  @f_unprinted       = params[:f_unprinted] == '1'
-  @f_unpainted       = params[:f_unpainted] == '1'
-  @colorized_catalog = params[:colorized].to_s.strip
-  @colorized_catalog = '' unless %w[true false unknown].include?(@colorized_catalog)
-  @page          = [params[:page].to_i, 1].max
-  @per_page      = 50
-  @root          = settings.root_folder
+  any_flag = catalog_setup_params
+  catalog_build_images(Images.order(:source_folder, :filename), any_flag)
+  erb :catalog
+end
 
-  # All distinct folders for the dropdown
-  @folders = Images.distinct.select_map(:source_folder).sort
+# ── 1b. Single collection view ─────────────────────────────────────────────────
 
-  dataset = Images.order(:source_folder, :filename)
-
-  # When print/paint flags active, show all tagged states
-  any_flag = @f_untagged || @f_unprinted || @f_unpainted || !@colorized_catalog.empty?
-  @show_all = true if @f_unprinted || @f_unpainted || !@colorized_catalog.empty?
-
-  # Tagged/untagged base filter
-  dataset = dataset.where(tagged: false) unless @show_all || any_flag
-
-  # Apply folder filter
-  dataset = dataset.where(source_folder: @folder_filter) unless @folder_filter.empty?
-
-  # Apply flag filters (combinable)
-  dataset = dataset.where(tagged: false) if @f_untagged
-  case @colorized_catalog
-  when 'true'    then dataset = dataset.where(colorized: true)
-  when 'false'   then dataset = dataset.where(colorized: false)
-  when 'unknown' then dataset = dataset.where(colorized: nil)
-  end
-  if @f_unprinted
-    dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
-    dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
-    dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
-    dataset = dataset.where(primary_image_id: nil)
-  end
-  if @f_unpainted
-    dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
-    dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
-    dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
-    dataset = dataset.where(primary_image_id: nil)
-  end
-
-  # Legacy single status filter (from collections page links)
-  case @status_filter
-  when 'unprinted'
-    @f_unprinted = true
-    dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
-    dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
-    dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
-    dataset = dataset.where(primary_image_id: nil)
-  when 'unpainted'
-    @f_unpainted = true
-    dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
-    dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
-    dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
-    dataset = dataset.where(primary_image_id: nil)
-  when 'untagged'
-    @f_untagged = true
-    dataset = dataset.where(tagged: false)
-  end
-
-  @total  = dataset.count
-
-  # Calculate comparison total for "X filtered / Y total" display
-  any_active_flag = @f_untagged || @f_unprinted || @f_unpainted
-
-  if !@folder_filter.empty?
-    # Folder selected — compare against folder total (without flag filters)
-    folder_base = Images.where(source_folder: @folder_filter)
-    folder_base = folder_base.where(tagged: false) unless @show_all || @f_untagged
-    @total_unfiltered = folder_base.count
-    @total_context    = 'in folder'
-  elsif any_active_flag
-    # Flag filters only — compare against full unfiltered DB
-    grand_base = Images
-    grand_base = grand_base.where(tagged: false) unless @show_all || @f_untagged
-    @total_unfiltered = grand_base.count
-    @total_context    = 'total'
-  end
-
-  # ── Group secondary images directly after their primary, cover image first ─
-  # Fetch all matching rows (unpaginated), reorder so each secondary follows
-  # its primary, then paginate the reordered list in Ruby.
-  all_rows = dataset.all
-
-  # Build a set of cover_image_ids across all collections in this result set
-  col_ids_in_view = all_rows.map { |img| img[:collection_id] }.uniq
-  cover_ids = Collections.where(id: col_ids_in_view)
-                          .select_hash(:id, :cover_image_id)
-                          .values.compact.to_set
-
-  # Build lookup: primary_id => [secondary rows...]
-  by_primary = Hash.new { |h, k| h[k] = [] }
-  primaries_and_unlinked = []
-  all_rows.each do |img|
-    if img[:primary_image_id]
-      by_primary[img[:primary_image_id]] << img
-    else
-      primaries_and_unlinked << img
-    end
-  end
-
-  # Sort order: cover first, then bundles (alpha), then primaries (alpha),
-  # each followed immediately by their secondaries (also alpha by name)
-  covers,  non_covers = primaries_and_unlinked.partition { |img| cover_ids.include?(img[:id]) }
-  bundles, rest       = non_covers.partition { |img|
-    img[:mini_count].to_i >= 4 || img[:mini_name].to_s.downcase == 'bundle'
-  }
-  bundles_sorted = bundles.sort_by { |img| img[:mini_name].to_s.downcase }
-  rest_sorted    = rest.sort_by    { |img| img[:mini_name].to_s.downcase }
-  primaries_and_unlinked = covers + bundles_sorted + rest_sorted
-
-  ordered = []
-  primaries_and_unlinked.each do |img|
-    ordered << img
-    # Append this image's secondaries sorted alphabetically by name
-    if by_primary.key?(img[:id])
-      sorted_secs = by_primary[img[:id]].sort_by { |s| s[:mini_name].to_s.downcase }
-      ordered.concat(sorted_secs)
-    end
-  end
-
-  # Any "orphaned" secondaries whose primary isn't in this result set
-  # (e.g. primary is on a different tagged/filter state) — append at the end
-  linked_ids = primaries_and_unlinked.map { |img| img[:id] }
-  by_primary.each do |primary_id, secs|
-    next if linked_ids.include?(primary_id)
-    ordered.concat(secs)
-  end
-
-  # Only paginate if total exceeds per_page threshold
-  if @total <= @per_page
-    @images = ordered
-    @pages  = 1
-    @page   = 1
-  else
-    @images = ordered[(@page - 1) * @per_page, @per_page] || []
-    @pages  = (@total.to_f / @per_page).ceil
-  end
-
-  # Pre-load collections so views can look them up by id
-  @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
-
-  # For each image's collection, build a list of "candidate primary" images
-  # (other images in the same collection) for the secondary-link dropdown,
-  # and resolve each image's primary's display name if it's a secondary.
-  collection_ids = @images.map { |img| img[:collection_id] }.compact.uniq
-  @collection_images = {}
-  collection_ids.each do |cid|
-    # Load cover id for this collection
-    cid_cover = Collections.where(id: cid).get(:cover_image_id)
-    rows = Images.where(collection_id: cid, primary_image_id: nil)
-                 .select(:id, :mini_name, :filename, :stance, :weapons, :mini_count, :colorized)
-                 .all
-    # Sort: cover first, bundles, then alpha by name
-    cover_row,  non_cover  = rows.partition { |r| r[:id] == cid_cover }
-    bundle_rows, rest_rows = non_cover.partition { |r| r[:mini_count].to_i >= 4 || r[:mini_name].to_s.downcase == 'bundle' }
-    @collection_images[cid] = cover_row +
-                               bundle_rows.sort_by { |r| r[:mini_name].to_s.downcase } +
-                               rest_rows.sort_by   { |r| r[:mini_name].to_s.downcase }
-  end
-
-  primary_ids = @images.map { |img| img[:primary_image_id] }.compact.uniq
-  @primary_lookup = primary_ids.empty? ? {} :
-    Images.where(id: primary_ids).select_hash(:id, :mini_name)
-
-  # Warn if this folder has colorized images not yet xref-linked
-  @unlinked_colorized_count = if !@folder_filter.empty?
-    Images.where(source_folder: @folder_filter, colorized: true, primary_image_id: nil)
-          .exclude(Sequel.ilike(:mini_name, 'bundle'))
-          .count
-  else
-    0
-  end
-
+get '/collection/:id' do
+  col = Collections.where(id: params[:id].to_i).first
+  halt 404, 'Collection not found' unless col
+  params[:folder]   = col[:folder_path]
+  params[:show_all] = '1'
+  any_flag = catalog_setup_params
+  catalog_build_images(Images.order(:source_folder, :filename), any_flag)
   erb :catalog
 end
 
@@ -423,7 +180,7 @@ post '/images/:id' do
     mini_name:        params[:mini_name].to_s.strip.split.map(&:capitalize).join(' '),
     species:          params[:species].to_s.strip,
     gender:           params[:gender].to_s.strip,
-    weapons:          params[:weapons].to_s.strip,
+    weapons:          params[:weapons].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
     mini_size:        params[:mini_size].to_s.strip,
     notes:            params[:notes].to_s.strip,
@@ -621,7 +378,7 @@ post '/edit/:id' do
     mini_name:        params[:mini_name].to_s.strip.split.map(&:capitalize).join(' '),
     species:          params[:species].to_s.strip,
     gender:           params[:gender].to_s.strip,
-    weapons:          params[:weapons].to_s.strip,
+    weapons:          params[:weapons].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
     mini_size:        params[:mini_size].to_s.strip,
     notes:            params[:notes].to_s.strip,
@@ -648,6 +405,100 @@ post '/edit/:id' do
 end
 
 # ── 2b. Random images ───────────────────────────────────────────────────────
+
+get '/statistics' do
+  # Total counts
+  @total_images      = Images.count
+  @total_collections = Collections.count
+  @total_tagged      = Images.where(tagged: true).count
+  @total_untagged    = @total_images - @total_tagged
+
+  # Exclude bundles and secondaries from print/paint stats
+  trackable = Images
+    .where(primary_image_id: nil)
+    .where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+
+  @total_trackable   = trackable.count
+  @total_printed     = trackable.where(Sequel.expr { printed > 0 }).count
+  @total_unprinted   = trackable.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil)).count
+  @total_painted     = trackable.where(Sequel.expr { painted > 0 }).count
+  @total_unpainted   = trackable.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil)).count
+  @sum_printed       = trackable.sum(:printed).to_i
+  @sum_painted       = trackable.sum(:painted).to_i
+
+  # Colorized breakdown
+  @colorized_color   = Images.where(colorized: true).count
+  @colorized_grey    = Images.where(colorized: false).count
+  @colorized_unknown = Images.where(colorized: nil).count
+
+  # Unlinked colorized (need xref)
+  @unlinked_colorized = Images
+    .where(colorized: true, primary_image_id: nil)
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .count
+
+  # Species breakdown (non-empty, non-bundle, split on comma)
+  species_raw = Images
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .where(Sequel.~(species: nil))
+    .exclude(species: '')
+    .select_map(:species)
+  @by_species = species_raw
+    .flat_map { |s| s.split(',').map(&:strip) }
+    .reject(&:empty?)
+    .tally
+    .sort_by { |_, v| -v }
+
+  # Gender breakdown
+  gender_raw = Images
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .where(Sequel.~(gender: nil))
+    .exclude(gender: '')
+    .select_map(:gender)
+  @by_gender = gender_raw
+    .flat_map { |g| g.split(',').map(&:strip) }
+    .reject(&:empty?)
+    .tally
+    .sort_by { |_, v| -v }
+
+  # Weapons breakdown
+  weapons_raw = Images
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .where(Sequel.~(weapons: nil))
+    .exclude(weapons: '')
+    .select_map(:weapons)
+  @by_weapons = weapons_raw
+    .flat_map { |w| w.split(',').map(&:strip) }
+    .reject(&:empty?)
+    .tally
+    .sort_by { |_, v| -v }
+
+  # Stance breakdown
+  stance_raw = Images
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .where(Sequel.~(stance: nil))
+    .exclude(stance: '')
+    .select_map(:stance)
+  @by_stance = stance_raw
+    .flat_map { |s| s.split(',').map(&:strip) }
+    .reject(&:empty?)
+    .tally
+    .sort_by { |_, v| -v }
+
+  # Mini size breakdown
+  size_raw = Images
+    .where(Sequel.~(mini_size: nil))
+    .exclude(mini_size: '')
+    .select_map(:mini_size)
+  @by_size = size_raw
+    .flat_map { |s| s.split(',').map(&:strip) }
+    .reject(&:empty?)
+    .tally
+    .sort_by { |k, _| k }
+
+  erb :statistics
+end
 
 get '/random' do
   @colorized_filter  = params[:colorized].to_s
@@ -736,6 +587,7 @@ post '/bulk/set' do
   ids   = Array(params[:ids]).map(&:to_i).select { |i| i > 0 }
   field = params[:field].to_s.strip
   value = params[:value].to_s.strip
+  value = value.upcase if field == 'weapons'
 
   allowed = %w[stance weapons gender species mini_size colorized]
   halt 400, "Invalid field" unless allowed.include?(field)

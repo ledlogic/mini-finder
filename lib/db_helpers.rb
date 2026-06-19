@@ -147,4 +147,89 @@ helpers do
     { removed: removed, log: script_lines }
   end
 
+
+end # helpers do
+
+# ─── Startup methods (called directly from app.rb, not Sinatra helpers) ───────
+
+def db_setup_schema
+  DB.create_table?(:collections) do
+    primary_key :id
+    String   :folder_path,    null: false, unique: true
+    String   :name
+    String   :release_month
+    String   :notes
+    Integer  :cover_image_id
+    DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
+    DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
+  end
+
+  DB.create_table?(:images) do
+    primary_key :id
+    foreign_key :collection_id, :collections
+    String   :source_folder,  null: false
+    String   :filename,       null: false
+    String   :image_size
+    String   :suggested_name
+    String   :mini_name
+    String   :species
+    String   :gender
+    String   :weapons
+    String   :stance
+    String   :mini_size
+    String   :notes
+    String   :description
+    Integer  :mini_count,       default: 1
+    Integer  :printed,          default: 0
+    Integer  :painted,          default: 0
+    Boolean  :tagged,           default: false
+    Boolean  :colorized,        default: nil
+    Integer  :primary_image_id
+    DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
+    DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
+  end
+
+  [
+    "ALTER TABLE images ADD COLUMN collection_id INTEGER REFERENCES collections(id)",
+    "ALTER TABLE images ADD COLUMN suggested_name TEXT",
+    "ALTER TABLE images ADD COLUMN description TEXT",
+    "ALTER TABLE images ADD COLUMN mini_count INTEGER DEFAULT 1",
+    "ALTER TABLE images ADD COLUMN printed INTEGER DEFAULT 0",
+    "ALTER TABLE images ADD COLUMN painted INTEGER DEFAULT 0",
+    "ALTER TABLE collections ADD COLUMN release_month TEXT",
+    "ALTER TABLE collections ADD COLUMN notes TEXT",
+    "ALTER TABLE collections ADD COLUMN cover_image_id INTEGER",
+    "ALTER TABLE images ADD COLUMN primary_image_id INTEGER",
+    "ALTER TABLE images ADD COLUMN colorized BOOLEAN DEFAULT NULL",
+  ].each do |sql|
+    begin; DB.run(sql); rescue Sequel::DatabaseError; end
+  end
 end
+
+# ─── Fix chained secondary links on startup ───────────────────────────────────
+
+def db_fix_chained_secondaries
+  fixed = 0
+  Images.where(Sequel.~(primary_image_id: nil)).each do |img|
+    target = Images.where(id: img[:primary_image_id]).first
+    next unless target
+    next if target[:primary_image_id].nil?
+
+    seen   = [img[:id]]
+    cursor = target
+    while cursor && !cursor[:primary_image_id].nil?
+      break if seen.include?(cursor[:id])
+      seen << cursor[:id]
+      cursor = Images.where(id: cursor[:primary_image_id]).first
+    end
+
+    new_primary = cursor && cursor[:primary_image_id].nil? ? cursor[:id] : nil
+    Images.where(id: img[:id]).update(primary_image_id: new_primary, updated_at: Time.now)
+    fixed += 1
+    puts "  [chain-fix] image #{img[:id]} -> #{new_primary.inspect} (was #{img[:primary_image_id]})"
+  end
+  puts "Chain fix: #{fixed} image(s) corrected." if fixed > 0
+rescue => e
+  puts "Chain fix error: #{e.message}"
+end
+

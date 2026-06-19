@@ -73,7 +73,13 @@
 
 <% if @query_made %>
   <div class="results-header">
-    <span class="results-count"><%= @results.length %> result<%= @results.length == 1 ? '' : 's' %></span>
+    <span class="results-count" id="results-count"><%= @results.length %> result<%= @results.length == 1 ? '' : 's' %></span>
+    <div class="score-filter">
+      <label for="score-slider">Min score:</label>
+      <input type="range" id="score-slider" min="0" max="5" step="0.1" value="0.9"
+             oninput="filterByScore(this.value)">
+      <span id="score-value">0.9</span>
+    </div>
     <span class="results-sorted">sorted by score</span>
   </div>
 
@@ -83,7 +89,7 @@
     <div class="results-grid">
       <% @results.each do |result| %>
         <% img = result[:row]; score = result[:score]; hl = result[:highlights] %>
-        <div class="result-card">
+        <div class="result-card" data-score="<%= score %>">
           <div class="result-image-wrap" onclick="openLightbox('/image_file/<%= img[:id] %>')">
             <img src="/image_file/<%= img[:id] %>" alt="<%= img[:filename] %>" loading="lazy" class="result-image">
             <div class="score-badge"><%= score %></div>
@@ -190,6 +196,50 @@
       <% end %>
     </div>
   <% end %>
+<% end %>
+
+<% if @query_made && @results.any? %>
+<script>
+var _scoreTimer = null;
+
+function filterByScore(min) {
+  min = parseFloat(min);
+  // Update label immediately so slider feels responsive
+  document.getElementById('score-value').textContent = min.toFixed(1);
+  // Debounce the actual DOM filtering
+  clearTimeout(_scoreTimer);
+  _scoreTimer = setTimeout(function() {
+    let cards = document.querySelectorAll('.result-card');
+    let visible = 0;
+    // Batch visibility changes to avoid repeated reflows
+    let show = [], hide = [];
+    cards.forEach(function(card) {
+      parseFloat(card.dataset.score) >= min ? show.push(card) : hide.push(card);
+    });
+    hide.forEach(function(c) { c.style.display = 'none'; });
+    show.forEach(function(c) { c.style.display = ''; });
+    visible = show.length;
+    let total = cards.length;
+    document.getElementById('results-count').textContent =
+      visible === total
+        ? total + ' result' + (total === 1 ? '' : 's')
+        : visible + ' of ' + total + ' result' + (total === 1 ? '' : 's');
+  }, 180);
+}
+// Apply default threshold on load (no debounce needed on init)
+(function() {
+  let cards = document.querySelectorAll('.result-card');
+  cards.forEach(function(c) {
+    if (parseFloat(c.dataset.score) < 0.9) c.style.display = 'none';
+  });
+  let visible = document.querySelectorAll('.result-card:not([style*="none"])').length;
+  let total = cards.length;
+  if (visible < total) {
+    document.getElementById('results-count').textContent =
+      visible + ' of ' + total + ' result' + (total === 1 ? '' : 's');
+  }
+})();
+</script>
 <% end %>
 
 <!-- Lightbox -->

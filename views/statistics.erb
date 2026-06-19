@@ -1,0 +1,183 @@
+<div class="page-header">
+  <div>
+    <h1>Statistics</h1>
+    <p class="page-sub"><%= @total_images %> images · <%= @total_collections %> collections</p>
+  </div>
+</div>
+
+<div class="stats-grid">
+
+  <%# ── Overview ── %>
+  <div class="stats-card stats-card-wide">
+    <h2 class="stats-title">Overview</h2>
+    <div class="stats-row-group">
+      <div class="stats-row">
+        <a href="/catalog?show_all=1" class="stats-label stats-link">Total images</a>
+        <span class="stats-value"><%= @total_images %></span>
+      </div>
+      <div class="stats-row">
+        <a href="/collections" class="stats-label stats-link">Collections</a>
+        <span class="stats-value"><%= @total_collections %></span>
+      </div>
+      <div class="stats-row">
+        <a href="/catalog?show_all=1" class="stats-label stats-link">Tagged</a>
+        <span class="stats-value"><%= @total_tagged %> <span class="stats-pct">(<%= @total_images > 0 ? (@total_tagged * 100 / @total_images) : 0 %>%)</span></span>
+      </div>
+      <div class="stats-row">
+        <a href="/catalog" class="stats-label stats-link stats-warn">Untagged</a>
+        <span class="stats-value stats-warn"><%= @total_untagged %></span>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Colorized ── %>
+  <div class="stats-card">
+    <h2 class="stats-title">Colorized</h2>
+    <div class="stats-row-group">
+      <div class="stats-row">
+        <a href="/catalog?show_all=1&colorized=true" class="stats-label stats-link">🎨 Colorized</a>
+        <span class="stats-value"><%= @colorized_color %></span>
+      </div>
+      <div class="stats-row">
+        <a href="/catalog?show_all=1&colorized=false" class="stats-label stats-link">⬜ Grey</a>
+        <span class="stats-value"><%= @colorized_grey %></span>
+      </div>
+      <div class="stats-row">
+        <a href="/bulk?field=colorized" class="stats-label stats-link stats-warn">◌ Unknown</a>
+        <span class="stats-value stats-warn"><%= @colorized_unknown %></span>
+      </div>
+      <div class="stats-row">
+        <a href="/catalog?show_all=1&colorized=true" class="stats-label stats-link <%= @unlinked_colorized > 0 ? 'stats-warn' : '' %>">🔗 Unlinked colorized</a>
+        <span class="stats-value <%= @unlinked_colorized > 0 ? 'stats-warn' : '' %>"><%= @unlinked_colorized %></span>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Printed ── %>
+  <div class="stats-card">
+    <h2 class="stats-title">🖨 Printed</h2>
+    <p class="stats-note">Excludes bundles &amp; secondaries (<%= @total_trackable %> trackable)</p>
+    <div class="stats-row-group">
+      <div class="stats-row">
+        <a href="/catalog?show_all=1&f_unprinted=0" class="stats-label stats-link">Any printed</a>
+        <span class="stats-value"><%= @total_printed %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_printed * 100 / @total_trackable) : 0 %>%)</span></span>
+      </div>
+      <div class="stats-row">
+        <a href="/catalog?show_all=1&f_unprinted=1" class="stats-label stats-link stats-warn">Unprinted</a>
+        <span class="stats-value stats-warn"><%= @total_unprinted %></span>
+      </div>
+      <div class="stats-row">
+        <span class="stats-label">Total copies</span>
+        <span class="stats-value stats-accent"><%= @sum_printed %></span>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Painted ── %>
+  <div class="stats-card">
+    <h2 class="stats-title">🎨 Painted</h2>
+    <p class="stats-note">Excludes bundles &amp; secondaries (<%= @total_trackable %> trackable)</p>
+    <div class="stats-row-group">
+      <div class="stats-row">
+        <a href="/catalog?show_all=1&f_unpainted=0" class="stats-label stats-link">Any painted</a>
+        <span class="stats-value"><%= @total_painted %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_painted * 100 / @total_trackable) : 0 %>%)</span></span>
+      </div>
+      <div class="stats-row">
+        <a href="/catalog?show_all=1&f_unpainted=1" class="stats-label stats-link stats-warn">Unpainted</a>
+        <span class="stats-value stats-warn"><%= @total_unpainted %></span>
+      </div>
+      <div class="stats-row">
+        <span class="stats-label">Total copies</span>
+        <span class="stats-value stats-accent"><%= @sum_painted %></span>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Species ── %>
+  <div class="stats-card stats-card-wide">
+    <h2 class="stats-title">Species</h2>
+    <% if @by_species.empty? %>
+      <p class="stats-empty">No species data yet</p>
+    <% else %>
+      <table class="stats-table">
+        <thead><tr><th>Species</th><th>#</th></tr></thead>
+        <tbody>
+          <% @by_species.each do |s, count| %>
+            <tr>
+              <td><a href="/search?species=<%= CGI.escape(s) %>" class="stats-link"><%= s %></a></td>
+              <td><%= count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+
+  <%# ── Gender ── %>
+  <div class="stats-card">
+    <h2 class="stats-title">Gender</h2>
+    <div class="stats-row-group">
+      <% @by_gender.each do |g, count| %>
+        <div class="stats-row">
+          <a href="/search?gender=<%= CGI.escape(g) %>" class="stats-label stats-link"><%= g %></a>
+          <span class="stats-value"><%= count %></span>
+        </div>
+      <% end %>
+      <% if @by_gender.empty? %><p class="stats-empty">No gender data yet</p><% end %>
+    </div>
+  </div>
+
+  <%# ── Size ── %>
+  <div class="stats-card">
+    <h2 class="stats-title">Mini Size</h2>
+    <div class="stats-row-group">
+      <% @by_size.each do |s, count| %>
+        <div class="stats-row">
+          <a href="/search?mini_size=<%= CGI.escape(s) %>" class="stats-label stats-link"><%= s %></a>
+          <span class="stats-value"><%= count %></span>
+        </div>
+      <% end %>
+      <% if @by_size.empty? %><p class="stats-empty">No size data yet</p><% end %>
+    </div>
+  </div>
+
+  <%# ── Weapons ── %>
+  <div class="stats-card stats-card-wide">
+    <h2 class="stats-title">Weapons</h2>
+    <% if @by_weapons.empty? %>
+      <p class="stats-empty">No weapons data yet</p>
+    <% else %>
+      <table class="stats-table">
+        <thead><tr><th>Weapon</th><th>#</th></tr></thead>
+        <tbody>
+          <% @by_weapons.each do |w, count| %>
+            <tr>
+              <td><a href="/search?weapons=<%= CGI.escape(w) %>" class="stats-link"><%= w %></a></td>
+              <td><%= count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+
+  <%# ── Stance ── %>
+  <div class="stats-card stats-card-wide">
+    <h2 class="stats-title">Stances</h2>
+    <% if @by_stance.empty? %>
+      <p class="stats-empty">No stance data yet</p>
+    <% else %>
+      <table class="stats-table">
+        <thead><tr><th>Stance</th><th>#</th></tr></thead>
+        <tbody>
+          <% @by_stance.each do |s, count| %>
+            <tr>
+              <td><a href="/search?stance=<%= CGI.escape(s) %>" class="stats-link"><%= s %></a></td>
+              <td><%= count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+

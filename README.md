@@ -237,21 +237,29 @@ This project was designed and built collaboratively with **Claude Sonnet 4.6** (
 
 **Session stats:**
 - Started: June 6, 2026
+- Last updated: June 19, 2026
 - Model: Claude Sonnet 4.6 (`claude-sonnet-4-6`)
-- Exchanges: 160+ back-and-forth messages across 3 conversation sessions
-- Code produced: ~2,200 lines of Ruby · ~1,500 lines of ERB templates · ~1,600 lines of CSS · ~500 lines of JavaScript
+- Exchanges: 200+ back-and-forth messages across 3 conversation sessions
+- Code produced:
+  - ~2,350 lines of Ruby
+  - ~1,800 lines of ERB templates
+  - ~2,000 lines of CSS
+  - ~630 lines of JavaScript
 
 **What Claude helped with:**
 - Full application architecture (Sinatra, Sequel, SQLite schema, migrations)
 - All Ruby routes, helper modules, and scanner logic
 - OCR pipeline for UNIT9 image name extraction (MiniMagick + Tesseract)
 - Inline editing UI, lightbox, autocomplete, dirty-state tracking
-- Fuzzy search scoring (Levenshtein), bulk tagger, random image sampler
+- Fuzzy search scoring (Levenshtein) with dynamic score slider
+- Bulk tagger, random image sampler with count/filter controls
 - Cross-reference (xref) secondary image linking system
-- Colorized/grey image classification and filtering
-- Collection management: cover images, stubs, year/sort filters
+- Colorized/grey image classification and filtering with alert banners
+- Collection management: cover images, stubs, year/sort filters, `/collection/:id` route
+- Statistics page: species, gender, stance, weapons, print/paint breakdowns with live links
 - Backup system with session-aware auto-backup and change counter
-- Refactoring: separation of concerns across `helpers.rb`, `url_helpers.rb`, `file_helpers.rb`, `ocr_helpers.rb`, `db_helpers.rb`
+- Major refactoring: separation of concerns across `lib/helpers.rb`, `lib/url_helpers.rb`, `lib/file_helpers.rb`, `lib/ocr_helpers.rb`, `lib/db_helpers.rb`
+- Consistent method naming conventions (`url_*`, `file_*`, `ocr_*`, `db_*`, `catalog_*`, `str_*`)
 - This README
 
 > *"All code was reviewed and guided by a human developer throughout. Claude handled implementation; the human handled direction, testing, and domain knowledge about UNIT9 miniatures."*
