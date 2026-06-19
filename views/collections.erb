@@ -70,7 +70,7 @@
     <div class="collection-card <%= is_saved ? 'collection-card-saved' : '' %>"
          id="col-<%= col[:id] %>">
       <% preview = @previews[col[:id]] %>
-      <% col_link = "/catalog?show_all=1&folder=#{CGI.escape(col[:folder_path])}" %>
+      <% col_link = "/collection/#{col[:id]}" %>
       <% if preview %>
         <a href="<%= col_link %>" class="col-preview-wrap">
           <img src="/image_file/<%= preview[:id] %>"
@@ -139,13 +139,13 @@
           <span class="col-stat <%= (s[:printed] || 0) == 0 ? 'col-stat-zero' : '' %>" title="Printed"><span class="col-stat-icon">🖨</span> <%= s[:printed] || 0 %></span>
           <span class="col-stat <%= (s[:painted] || 0) == 0 ? 'col-stat-zero' : '' %>" title="Painted"><span class="col-stat-icon">🎨</span> <%= s[:painted] || 0 %></span>
           <% if (s[:unprinted] || 0) > 0 %>
-            <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>&f_unprinted=1"
+            <a href="/collection/<%= col[:id] %>?f_unprinted=1"
                class="col-stat col-stat-warn col-stat-link" title="View unprinted images in catalog">
               ⚠ <%= s[:unprinted] %> unprinted
             </a>
           <% end %>
           <% if (s[:unpainted] || 0) > 0 && (s[:painted] || 0) > 0 %>
-            <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>&f_unpainted=1"
+            <a href="/collection/<%= col[:id] %>?f_unpainted=1"
                class="col-stat col-stat-warn col-stat-link" title="View unpainted images in catalog">
               ⚠ <%= s[:unpainted] %> unpainted
             </a>
@@ -153,7 +153,7 @@
         </div>
 
         <div class="col-card-footer">
-          <a href="/catalog?show_all=1&folder=<%= CGI.escape(col[:folder_path]) %>" class="col-browse-link">
+          <a href="/collection/<%= col[:id] %>" class="col-browse-link">
             Browse images →
           </a>
           <% mmf_url = url_mmf_search(col[:release_month]) %>

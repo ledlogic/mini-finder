@@ -116,7 +116,7 @@
         <span class="col-info-folder"><%= File.basename(@folder_filter) %></span>
       <% end %>
       <% if active_col %>
-        <a href="/catalog?show_all=1&folder=<%= CGI.escape(active_col[:folder_path]) %>"
+        <a href="/collection/<%= active_col[:id] %>"
            class="col-info-name-browse"
            title="Browse this collection">
           <%= active_col[:name].to_s.empty? ? File.basename(active_col[:folder_path]) : active_col[:name] %>
@@ -164,7 +164,8 @@
   <span style="color:var(--text-dim);">
     This collection has no <strong style="color:#a855f7;">bundle/gallery image</strong> — no image is marked as a bundle (<code>mini_count ≥ 4</code> or named "Bundle").
   </span>
-  <a href="/catalog?show_all=1&folder=<%= CGI.escape(@folder_filter) %>" class="xref-alert-link" style="border-color:rgba(168,85,247,0.4); color:#a855f7;">
+  <% _alert_col = @collections.values.find { |c| c[:folder_path] == @folder_filter } %>
+  <a href="<%= _alert_col ? "/collection/#{_alert_col[:id]}" : "/catalog?show_all=1&folder=#{CGI.escape(@folder_filter)}" %>" class="xref-alert-link" style="border-color:rgba(168,85,247,0.4); color:#a855f7;">
     Review →
   </a>
 </div>
@@ -177,7 +178,8 @@
     <strong><%= @unlinked_colorized_count %></strong>
     colorized image<%= @unlinked_colorized_count == 1 ? '' : 's' %> in this collection not yet linked to a grey primary.
   </span>
-  <a href="/catalog?show_all=1&folder=<%= CGI.escape(@folder_filter) %>&colorized=true" class="xref-alert-link">
+  <% _alert_col2 = @collections.values.find { |c| c[:folder_path] == @folder_filter } %>
+  <a href="<%= _alert_col2 ? "/collection/#{_alert_col2[:id]}?colorized=true" : "/catalog?show_all=1&folder=#{CGI.escape(@folder_filter)}&colorized=true" %>" class="xref-alert-link">
     Link colorized →
   </a>
 </div>
@@ -202,7 +204,7 @@
     <thead>
       <tr>
         <th>Preview</th>
-        <th>Folder / File</th>
+        <th><%= @folder_filter.empty? ? "Folder / File" : "File" %></th>
         <th>Name / Species / Gender</th>
         <th>Stance / Weapons</th>
         <th title="Size / Minis / Printed / Painted">🖨</th>
@@ -220,7 +222,7 @@
           <tr class="collection-header-row">
             <td colspan="11">
               <% if @folder_filter.empty? %>
-                <a href="/catalog?show_all=1&folder=<%= CGI.escape(img[:source_folder]) %>" class="col-header-name" title="Browse this collection">
+                <a href="/collection/<%= col ? col[:id] : '' %>" class="col-header-name" title="Browse this collection">
                   <%= col ? (col[:name].to_s.empty? ? '(unnamed collection)' : col[:name]) : File.basename(img[:source_folder]) %>
                 </a>
               <% else %>
@@ -231,7 +233,6 @@
               <% if col && col[:release_month] %>
                 <span class="col-header-month"><%= col[:release_month] %></span>
               <% end %>
-              <a href="/collections#col-<%= col ? col[:id] : '' %>" class="col-header-edit">edit collection ✎</a>
             </td>
           </tr>
         <% end %>
@@ -269,10 +270,12 @@
           </td>
           <td class="cell-folder-file">
             <div class="cell-stack">
-              <a href="/catalog?folder=<%= CGI.escape(img[:source_folder]) %><%= @show_all ? '&show_all=1' : '' %>"
-                 class="folder-link" title="<%= img[:source_folder] %>">
-                <%= File.basename(img[:source_folder]) %>
-              </a>
+              <% if @folder_filter.empty? %>
+                <a href="/collection/<%= @collections.values.find{|c| c[:folder_path]==img[:source_folder]}&.dig(:id) || '' %>"
+                   class="folder-link" title="<%= img[:source_folder] %>">
+                  <%= File.basename(img[:source_folder]) %>
+                </a>
+              <% end %>
               <span class="file-name"><%= img[:filename] %></span>
               <% if img[:image_size] %><span class="img-size-badge"><%= img[:image_size] %></span><% end %>
               <textarea name="description" class="cell-input cell-desc-inline"

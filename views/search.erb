@@ -97,7 +97,9 @@
 
           <div class="result-body">
             <div class="result-file">
-              <a href="/catalog?show_all=1&folder=<%= CGI.escape(img[:source_folder]) %>#row-<%= img[:id] %>" class="folder-name" title="View in collection"><%= File.basename(img[:source_folder]) %></a>
+              <% _sc = @collections[img[:collection_id]] %>
+              <a href="<%= _sc ? "/collection/#{_sc[:id]}#row-#{img[:id]}" : "/catalog?show_all=1&folder=#{CGI.escape(img[:source_folder])}#row-#{img[:id]}" %>"
+                 class="folder-name" title="View in collection"><%= File.basename(img[:source_folder]) %></a>
               <span class="file-name"><%= img[:filename] %></span>
             </div>
 
@@ -174,7 +176,7 @@
 
             <div class="result-actions">
               <a href="/edit/<%= img[:id] %>" class="btn-edit-sm">Edit ✎</a>
-              <a href="/catalog?show_all=1&folder=<%= CGI.escape(img[:source_folder]) %>#row-<%= img[:id] %>"
+              <a href="<%= _sc ? "/collection/#{_sc[:id]}#row-#{img[:id]}" : "/catalog?show_all=1&folder=#{CGI.escape(img[:source_folder])}#row-#{img[:id]}" %>"
                  class="btn-edit-sm" title="View in collection: <%= File.basename(img[:source_folder]) %>">
                 <%= File.basename(img[:source_folder]) %> →
               </a>

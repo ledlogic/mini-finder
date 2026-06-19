@@ -533,21 +533,21 @@ get '/random' do
     ids = base.select_map(:id)
     sample_ids = ids.sample([n, ids.length].min)
     rows = Images.where(id: sample_ids).all
-    col_map = Collections.select_hash(:id, :folder_path)
+    col_map  = Collections.select_hash(:id, :folder_path)
+    name_map = Collections.select_hash(:id, :name)
     @images = rows.map do |img|
-      # Compute this image's position within its folder (ordered by filename,
-      # matching the catalog page's ordering), so we can link directly to the
-      # catalog page containing this row.
       position = Images.where(source_folder: img[:source_folder])
                         .where { filename < img[:filename] }
                         .count
       target_page = (position / per_page) + 1
       {
-        id:           img[:id],
-        filename:     img[:filename],
-        mini_name:    img[:mini_name],
-        folder_path:  col_map[img[:collection_id]],
-        target_page:  target_page
+        id:              img[:id],
+        filename:        img[:filename],
+        mini_name:       img[:mini_name],
+        collection_id:   img[:collection_id],
+        collection_name: name_map[img[:collection_id]],
+        folder_path:     col_map[img[:collection_id]],
+        target_page:     target_page
       }
     end.shuffle
   end
