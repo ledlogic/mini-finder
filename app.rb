@@ -105,6 +105,37 @@ end
 Collections = DB[:collections]
 Images      = DB[:images]
 
+# ─── Fix chained secondaries ──────────────────────────────────────────────────
+# A secondary should only ever point to a primary (primary_image_id = nil).
+# If secondary A points to secondary B which points to primary C, fix A -> C.
+# If secondary A points to another secondary that itself has no primary found,
+# clear A's link entirely.
+begin
+  fixed = 0
+  Images.where(Sequel.~(primary_image_id: nil)).each do |img|
+    target = Images.where(id: img[:primary_image_id]).first
+    next unless target                          # orphaned link — leave for scan cleanup
+    next if target[:primary_image_id].nil?     # already points to a primary, ok
+
+    # Target is itself a secondary — walk the chain to find the real primary
+    seen = [img[:id]]
+    cursor = target
+    while cursor && !cursor[:primary_image_id].nil?
+      break if seen.include?(cursor[:id])       # circular, break
+      seen << cursor[:id]
+      cursor = Images.where(id: cursor[:primary_image_id]).first
+    end
+
+    new_primary = cursor && cursor[:primary_image_id].nil? ? cursor[:id] : nil
+    Images.where(id: img[:id]).update(primary_image_id: new_primary, updated_at: Time.now)
+    fixed += 1
+    puts "  [chain-fix] image #{img[:id]} -> #{new_primary.inspect} (was #{img[:primary_image_id]})"
+  end
+  puts "Chain fix: #{fixed} image(s) corrected." if fixed > 0
+rescue => e
+  puts "Chain fix error: #{e.message}"
+end
+
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 FIELD_WEIGHTS = {
@@ -587,16 +618,24 @@ get '/catalog' do
     end
   end
 
-  # Pin cover images to the front of primaries_and_unlinked, preserving order
-  # for all other images
-  covers, rest = primaries_and_unlinked.partition { |img| cover_ids.include?(img[:id]) }
-  primaries_and_unlinked = covers + rest
+  # Sort order: cover first, then bundles (alpha), then primaries (alpha),
+  # each followed immediately by their secondaries (also alpha by name)
+  covers,  non_covers = primaries_and_unlinked.partition { |img| cover_ids.include?(img[:id]) }
+  bundles, rest       = non_covers.partition { |img|
+    img[:mini_count].to_i >= 4 || img[:mini_name].to_s.downcase == 'bundle'
+  }
+  bundles_sorted = bundles.sort_by { |img| img[:mini_name].to_s.downcase }
+  rest_sorted    = rest.sort_by    { |img| img[:mini_name].to_s.downcase }
+  primaries_and_unlinked = covers + bundles_sorted + rest_sorted
 
   ordered = []
   primaries_and_unlinked.each do |img|
     ordered << img
-    # Append this image's secondaries (already in source_folder/filename order)
-    ordered.concat(by_primary[img[:id]]) if by_primary.key?(img[:id])
+    # Append this image's secondaries sorted alphabetically by name
+    if by_primary.key?(img[:id])
+      sorted_secs = by_primary[img[:id]].sort_by { |s| s[:mini_name].to_s.downcase }
+      ordered.concat(sorted_secs)
+    end
   end
 
   # Any "orphaned" secondaries whose primary isn't in this result set
@@ -619,9 +658,17 @@ get '/catalog' do
   collection_ids = @images.map { |img| img[:collection_id] }.compact.uniq
   @collection_images = {}
   collection_ids.each do |cid|
-    @collection_images[cid] = Images.where(collection_id: cid)
-                                     .select(:id, :mini_name, :filename, :stance, :weapons)
-                                     .order(:filename).all
+    # Load cover id for this collection
+    cid_cover = Collections.where(id: cid).get(:cover_image_id)
+    rows = Images.where(collection_id: cid, primary_image_id: nil)
+                 .select(:id, :mini_name, :filename, :stance, :weapons, :mini_count)
+                 .all
+    # Sort: cover first, bundles, then alpha by name
+    cover_row,  non_cover  = rows.partition { |r| r[:id] == cid_cover }
+    bundle_rows, rest_rows = non_cover.partition { |r| r[:mini_count].to_i >= 4 || r[:mini_name].to_s.downcase == 'bundle' }
+    @collection_images[cid] = cover_row +
+                               bundle_rows.sort_by { |r| r[:mini_name].to_s.downcase } +
+                               rest_rows.sort_by   { |r| r[:mini_name].to_s.downcase }
   end
 
   primary_ids = @images.map { |img| img[:primary_image_id] }.compact.uniq
@@ -821,9 +868,17 @@ get '/edit/:id' do
   @collection = Collections.where(id: @image[:collection_id]).first
 
   # Other images in the same collection, for the cross-reference dropdown
-  @collection_images = Images.where(collection_id: @image[:collection_id])
-                              .select(:id, :mini_name, :filename, :stance, :weapons)
-                              .order(:filename).all
+  # Exclude secondaries; sort cover first, then bundles, then alpha
+  _cover_id = Collections.where(id: @image[:collection_id]).get(:cover_image_id)
+  _rows = Images.where(collection_id: @image[:collection_id], primary_image_id: nil)
+                .exclude(id: @image[:id])
+                .select(:id, :mini_name, :filename, :stance, :weapons, :mini_count)
+                .all
+  _cover_r,  _non   = _rows.partition { |r| r[:id] == _cover_id }
+  _bundle_r, _rest  = _non.partition  { |r| r[:mini_count].to_i >= 4 || r[:mini_name].to_s.downcase == 'bundle' }
+  @collection_images = _cover_r +
+                       _bundle_r.sort_by { |r| r[:mini_name].to_s.downcase } +
+                       _rest.sort_by     { |r| r[:mini_name].to_s.downcase }
 
   # Resolve primary image's display name, if this image is a secondary
   @primary_name = nil
@@ -849,7 +904,12 @@ post '/edit/:id' do
     if candidate != id
       cand_row = Images.where(id: candidate).first
       if cand_row && cand_row[:collection_id] == row[:collection_id]
-        primary_id = candidate
+        # Refuse to create a chain: candidate must itself be a primary (not a secondary)
+        if cand_row[:primary_image_id].nil?
+          primary_id = candidate
+        else
+          puts "[xref-save] rejected chain: #{id} -> #{candidate} (which is itself a secondary)"
+        end
       end
     end
   end
@@ -887,11 +947,27 @@ end
 # ── 2b. Random images ───────────────────────────────────────────────────────
 
 get '/random' do
-  @colorized_filter = params[:colorized].to_s  # 'true', 'false', or ''
+  @colorized_filter  = params[:colorized].to_s
+  @no_bundles        = params[:no_bundles]  == '1'
+  @unprinted_only    = params[:unprinted]   == '1'
+  @random_count      = [params[:n].to_i, 10].max
+  @random_count      = [@random_count, 240].min
+  @random_count      = 60 if params[:n].to_s.empty?
+
   base = Images
   base = base.where(colorized: true)  if @colorized_filter == 'true'
   base = base.where(colorized: false) if @colorized_filter == 'false'
   base = base.where(colorized: nil)   if @colorized_filter == 'unknown'
+  if @no_bundles
+    base = base.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    base = base.exclude(Sequel.ilike(:mini_name, 'bundle'))
+  end
+  if @unprinted_only
+    base = base.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
+    base = base.where(primary_image_id: nil)
+    base = base.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    base = base.exclude(Sequel.ilike(:mini_name, 'bundle'))
+  end
   count = base.count
   @count = count
   per_page = 25
@@ -899,7 +975,7 @@ get '/random' do
     @images = []
   else
     # Pick a screen's worth of random ids efficiently
-    n = 60
+    n = @random_count
     ids = base.select_map(:id)
     sample_ids = ids.sample([n, ids.length].min)
     rows = Images.where(id: sample_ids).all
