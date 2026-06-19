@@ -118,6 +118,12 @@ helpers do
   end
 
   # Build a collections page URL preserving both year and status filters
+  def rand_url(colorized: @colorized_filter, no_bundles: @no_bundles, unprinted: @unprinted_only, n: @random_count)
+    qs = { colorized: colorized, no_bundles: (no_bundles ? '1' : nil), unprinted: (unprinted ? '1' : nil), n: (n != 60 ? n : nil) }
+          .reject { |_, v| v.to_s.empty? }.map { |k, v| "#{k}=#{v}" }.join('&')
+    qs.empty? ? '/random' : "/random?#{qs}"
+  end
+
   def col_url(filter: @filter, year: @year_filter)
     parts = []
     parts << "filter=#{filter}" unless filter.to_s.empty?
