@@ -82,7 +82,6 @@ function fillFromSibling(imageId, source) {
     const el = row.querySelector(`[name="${name}"]`);
     if (!el || !val) return;
     el.value = val;
-    el.dispatchEvent(new Event('input'));
     el.classList.add('cell-copied');
     setTimeout(() => el.classList.remove('cell-copied'), 2000);
   };
