@@ -2033,3 +2033,22 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   margin-top: 6px;
   letter-spacing: 0.05em;
 }
+
+/* ── OCR detect name button ──────────────────────────────────────────────── */
+.btn-ocr-detect {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 1px 5px;
+  line-height: 1.4;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.btn-ocr-detect:hover {
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+.btn-ocr-detect:disabled { opacity: 0.5; cursor: wait; }

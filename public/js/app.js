@@ -366,12 +366,21 @@ function buildDropdown(input, query) {
 
   if (items.length === 0) return;
 
-  // Sort: warnings first, then by score desc
-  items.sort((a, b) => {
-    if (a.type === 'warn' && b.type !== 'warn') return -1;
-    if (b.type === 'warn' && a.type !== 'warn') return  1;
-    return (b.score || 0) - (a.score || 0);
-  });
+  // If the query is very close (dist <= 1) to a confirmed name, suppress everything else
+  const veryClose = confirmedNames.find(n => levenshtein(query, n) <= 1);
+  if (veryClose) {
+    // Only keep the near-exact confirmed match; drop warns and suggested
+    items.length = 0;
+    items.push({ type: 'confirmed', name: veryClose, score: 3 });
+  } else {
+    // Sort: warns first, then confirmed (blue) above suggested (grey), then by score desc
+    const typeOrder = { warn: 0, confirmed: 1, suggested: 2 };
+    items.sort((a, b) => {
+      const tDiff = typeOrder[a.type] - typeOrder[b.type];
+      if (tDiff !== 0) return tDiff;
+      return (b.score || 0) - (a.score || 0);
+    });
+  }
 
   const dropdown = document.createElement('ul');
   dropdown.className = 'autocomplete-dropdown';
@@ -697,4 +706,54 @@ function saveRow(id, ctx, btn) {
       btn.textContent = '✓';
       alert('Save failed: ' + err);
     });
+}
+
+// ── OCR detect name for a single image ───────────────────────────────────────
+function detectName(id) {
+  var btn = document.getElementById('ocr-btn-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+
+  fetch('/images/' + id + '/detect_name', {
+    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    if (btn) { btn.disabled = false; btn.textContent = '💡'; }
+
+    if (data.error) {
+      alert('OCR: ' + data.error);
+      return;
+    }
+
+    var row   = btn ? btn.closest('tr') : null;
+    var input = row ? row.querySelector('input[name="mini_name"]') : null;
+
+    if (data.suggested_name && input) {
+      // If name field is empty, fill it directly; otherwise show as suggestion
+      if (!input.value.trim()) {
+        input.value = data.suggested_name;
+        input.dispatchEvent(new Event('input'));
+      } else {
+        // Insert a temporary suggestion button
+        var existing = row.querySelector('.btn-ocr-suggestion');
+        if (existing) existing.remove();
+        var sug = document.createElement('button');
+        sug.type = 'button';
+        sug.className = 'btn-suggestion btn-ocr-suggestion';
+        sug.textContent = '✦ ' + data.suggested_name;
+        sug.onclick = function() {
+          input.value = data.suggested_name;
+          input.dispatchEvent(new Event('input'));
+          sug.remove();
+        };
+        input.insertAdjacentElement('afterend', sug);
+      }
+    } else {
+      alert('OCR: no name detected in this image');
+    }
+  })
+  .catch(function(err) {
+    if (btn) { btn.disabled = false; btn.textContent = '💡'; }
+    alert('OCR failed: ' + err);
+  });
 }

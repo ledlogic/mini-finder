@@ -310,16 +310,25 @@
           <td class="cell-name-td">
             <div class="cell-stack">
             <% unless is_secondary %>
-              <input type="text" name="mini_name" class="cell-input"
-                     value="<%= img[:mini_name] %>"
-                     placeholder="name…"
-                     id="name-input-<%= img[:id] %>">
-              <% if img[:suggested_name].to_s.strip.length > 0 && img[:mini_name].to_s.strip.empty? %>
-                <button type="button" class="btn-suggestion"
-                        onclick="useSuggestion(<%= img[:id] %>, '<%= img[:suggested_name].gsub("'", "\\'") %>')">
-                  ✦ <%= img[:suggested_name] %>
-                </button>
-              <% end %>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <input type="text" name="mini_name" class="cell-input"
+                       value="<%= img[:mini_name] %>"
+                       placeholder="name…"
+                       id="name-input-<%= img[:id] %>"
+                       style="min-width:0; flex:1;">
+                <button type="button" class="btn-ocr-detect"
+                        id="ocr-btn-<%= img[:id] %>"
+                        title="Detect name from image via OCR"
+                        onclick="detectName(<%= img[:id] %>)">💡</button>
+              </div>
+              <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+                <% if img[:suggested_name].to_s.strip.length > 0 && img[:mini_name].to_s.strip.empty? %>
+                  <button type="button" class="btn-suggestion"
+                          onclick="useSuggestion(<%= img[:id] %>, '<%= img[:suggested_name].gsub("'", "\\'") %>')">
+                    ✦ <%= img[:suggested_name] %>
+                  </button>
+                <% end %>
+              </div>
               <input type="text" name="species" class="cell-input" value="<%= img[:species] %>" placeholder="species…">
               <select name="gender" class="cell-select">
                 <option value="">—</option>

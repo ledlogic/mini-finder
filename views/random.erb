@@ -53,7 +53,7 @@
   <div class="results-grid" id="random-grid">
     <% @images.each do |img| %>
       <% col_link = img[:folder_path] ?
-           "/catalog?show_all=1&folder=#{CGI.escape(img[:folder_path])}&page=#{img[:target_page]}#row-#{img[:id]}" :
+           (img[:collection_id] ? "/collection/#{img[:collection_id]}?page=#{img[:target_page]}#row-#{img[:id]}" : "/catalog?show_all=1&folder=#{CGI.escape(img[:folder_path].to_s)}&page=#{img[:target_page]}#row-#{img[:id]}") :
            nil %>
       <div class="result-card">
         <% if col_link %>
@@ -70,8 +70,8 @@
             <span class="file-name"><%= img[:mini_name].to_s.empty? ? img[:filename] : img[:mini_name] %></span>
           </div>
           <% if col_link %>
-            <a href="<%= col_link %>" class="col-info-edit" style="display:inline-block; margin-top:6px;">
-              View collection ✎
+            <a href="<%= col_link %>" class="folder-name" style="display:block; margin-top:4px;">
+              <%= img[:collection_name].to_s.empty? ? File.basename(img[:folder_path].to_s) : img[:collection_name] %>
             </a>
           <% end %>
         </div>
