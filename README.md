@@ -233,6 +233,48 @@ mini-finder/
 
 ## Changelog
 
+### v1.83 — July 2, 2026
+- Chrome autofill dark background fix (`-webkit-autofill` override)
+- Weapons input styled consistently with other inputs (moved `text-transform` to CSS class)
+- Autocomplete dropdown: confirmed (blue) names always sort above OCR suggestions; suppress all alternatives when query is within 1 character of a confirmed name
+- 💡 OCR lightbulb button per image row: retry name detection inline, fills or suggests
+- `saveRow()` resets dirty-state baseline after save so button returns to green correctly
+- Enter key in catalog rows triggers `saveRow()` instead of stale `form.requestSubmit()`
+- Chrome DevTools probe (`/.well-known/appspecific/com.chrome.devtools.json`) silenced with empty JSON response
+
+### v1.82
+- Delete image: 🗑 button converted from nested form to pure JS `deleteImage()` fetch — fixes nested-form bug where delete was silently ignored
+- Save row: converted from HTML form submit to pure JS `saveRow()` via fetch — no more nested forms in catalog rows
+- Dirty-state watcher stores baseline on `row._dirtyOriginals`; resets after successful save
+- Save button background resets to green on successful save
+
+### v1.81
+- Statistics page: Overview and Colorized on same row; Print and Paint as separate cards
+- Statistics: weapons table added; all stats show full data (no Top 20 cap)
+- Statistics: species, gender, size, weapons, stance all linkable to search/catalog/bulk
+- Score slider on search: debounced 180ms, label updates instantly, `min-height` prevents layout shift
+
+### v1.80
+- `/statistics` route with full stats page: overview, colorized, print/paint, species, gender, size, weapons, stance
+- Statistics nav link added to sidebar
+
+### v1.79
+- `/collection/:id` links used consistently across all pages (collections, random, search, catalog)
+- Collection name header in catalog rows links to `/collection/:id` when browsing full catalog, plain text when inside a collection
+- Folder name row hidden entirely when in collection view; column header changes to "File"
+- "Edit collection ✎" link removed from row header
+- Random page cards show collection name as link
+
+### v1.78
+- Unlinked colorized alert banner on `/collections` and `/collection/:id`
+- Missing bundle/gallery image alert (purple) on collection pages
+- Collection name in catalog info bar is a clickable browse link
+
+### v1.77
+- `/collection/:id` dedicated route sharing `catalog_setup_params` + `catalog_build_images` helpers
+- `catalog_sort_images` and `catalog_collection_images` extracted to `lib/helpers.rb`
+- All `catalog?folder=` links replaced with `/collection/:id`
+
 ### v1.76 — June 19, 2026
 - Pure JS row actions — save (✓), delete (🗑) no longer use HTML forms; eliminates nested-form bugs
 - Delete image: 🗑 button deletes file from disk and removes DB record with confirm dialog
