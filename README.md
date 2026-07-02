@@ -231,6 +231,111 @@ mini-finder/
 
 ---
 
+## Changelog
+
+### v1.76 — June 19, 2026
+- Pure JS row actions — save (✓), delete (🗑) no longer use HTML forms; eliminates nested-form bugs
+- Delete image: 🗑 button deletes file from disk and removes DB record with confirm dialog
+- Action button sizing unified (28×28px, box-sizing, display:contents on delete form)
+- `saveRow()` posts via fetch, server returns JSON; page does not reload on save
+- App version constant (`APP_VERSION`) displayed in sidebar footer
+
+### v1.75
+- Statistics page (`/statistics`): overview, colorized, print/paint, species, gender, size, weapons, stance — all with clickable links
+- Score slider on search page: dynamic client-side filter with 180ms debounce, no page reload
+- Weapons forced uppercase on save and in bulk set; UI inputs show `text-transform: uppercase`
+
+### v1.74
+- `/collection/:id` route — dedicated single-collection endpoint sharing catalog helpers
+- `catalog_setup_params` and `catalog_build_images` extracted to `lib/helpers.rb`
+- `catalog_sort_images` and `catalog_collection_images` helper methods
+- All `catalog?folder=` links replaced with `/collection/:id` across collections, search, random pages
+- Collection name header in catalog rows is a link when browsing full catalog, plain text in collection view
+- "Folder / File" column header changes to "File" when in collection view
+- Folder name row hidden entirely when already in a collection view
+
+### v1.73
+- Unlinked colorized alert banner on both `/collections` and `/collection/:id` pages
+- Missing bundle/gallery image alert (purple) on collection pages
+- Collection name in catalog info bar is a clickable browse link
+- Collection name header in row groups is a clickable link to `/collection/:id`
+- "Edit collection ✎" link removed from row header (redundant with name click)
+
+### v1.72
+- DB schema and chain-fix moved to `lib/db_helpers.rb` as `db_setup_schema` / `db_fix_chained_secondaries`
+- `db_setup_schema` and `db_fix_chained_secondaries` are top-level defs (not Sinatra helpers) called at startup
+
+### v1.71
+- Major helper refactor: all methods moved from `app.rb` into `lib/` subfolder
+- `lib/helpers.rb` — search scoring, view helpers (`str_levenshtein`, `score_row`, `hl_field`)
+- `lib/url_helpers.rb` — URL builders (`url_pdf`, `url_random`, `url_collections`, `url_mmf_search`, `url_query`)
+- `lib/file_helpers.rb` — filesystem helpers (`file_image_path`, `file_mmf_folder?`, etc.)
+- `lib/ocr_helpers.rb` — OCR pipeline (`ocr_unit9_image`, `ocr_clean_line`, etc.)
+- `lib/db_helpers.rb` — DB helpers (`db_scan_folder`, `db_purge_missing_collections`, `db_make_backup`)
+- Consistent method naming conventions: `url_*`, `file_*`, `ocr_*`, `db_*`, `catalog_*`, `str_*`
+- `OCR_CROP_ZONES` renamed from `CROP_ZONES`
+- `levenshtein` renamed to `str_levenshtein`
+
+### v1.70
+- Collections page sort toggle: newest first (default) / oldest first
+- `/random` page: No Bundles toggle, Unprinted only toggle, Count selector (10–240), all filters persist through Shuffle
+- Xref dropdown auto-checks the 🔗 checkbox when a primary image is selected
+- Grey/grey xref supported (e.g. back of mini → front of mini)
+
+### v1.69
+- Pagination removed when ≤50 images in view (threshold raised to 50 per page)
+- Collections page unlinked colorized alert with counts and direct links
+- `url_query` (was `q`) URL query string builder
+
+### v1.68
+- Bulk Tag page: stance, weapons, gender, species, mini_size, colorized fields
+- Random page with color, size, and shuffle filters
+- Search page: colorized filter dropdown and quick 🎨/⬜/◌ toggle buttons on result cards
+- Fuzzy search scoring with Levenshtein distance and match highlights
+
+### v1.67
+- Collections page: year filter bar, status filter, stub cards for unscanned months with MMF links
+- Cover image set via ⊙ button; cover sorts first in catalog
+- ⤵ copy sibling button pre-fills fields from another image with same name
+- Inline collection name rename from catalog info bar
+
+### v1.66
+- Backup system: auto-backup on first scan of session, manual Backup button, 25-change reminder
+- `db_make_backup` with timestamped files, keeps 20 most recent
+
+### v1.65
+- Cross-reference (xref) secondary image linking — colorized renders linked to grey primaries
+- Primary/secondary sort: cover → bundles → primaries (alpha), each followed by secondaries
+- Colorized/grey/unknown classification with 🎨/⬜/◌ filter flags
+
+### v1.60
+- MMF folder support (`yyyy-mm-mmf`): names extracted from filenames, no OCR needed
+- `file_extract_mmf_name` parsing CamelCase MMF filenames
+- Plain `yyyy-mm` folders auto-removed when `-mmf` sibling exists
+
+### v1.50
+- OCR pipeline for UNIT9 image name extraction (MiniMagick + Tesseract, 6 crop zones)
+- `ocr_unit9_image` with zone scoring, accent normalisation, multi-line name collapse
+
+### v1.40
+- Full catalog with inline editing: name, species, gender, weapons, stance, size, count, printed, painted
+- Print/paint counts (0–10) excluding bundles and secondaries
+- Flag filters: Untagged, Unprinted, Unpainted, Colorized, Grey, Unknown
+
+### v1.30
+- Collection management: cover images, release month, notes, rename
+- Collection card grid with stats and quick links
+
+### v1.20
+- Image scanner: discovers images, creates collections, extracts names
+- SQLite schema via Sequel; images and collections tables with migrations
+
+### v1.10
+- Initial Sinatra app: catalog, edit, search routes
+- SQLite DB, dark cyberpunk theme (Oxanium + DM Mono)
+
+---
+
 ## Built With Claude AI
 
 This project was designed and built collaboratively with **Claude Sonnet 4.6** (Anthropic) through an extended back-and-forth pairing session.

@@ -34,6 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
+APP_VERSION = "1.76"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,12 @@ MIN_OCR_WIDTH = 400
 
 get '/' do
   redirect '/catalog'
+end
+
+# Silence Chrome DevTools auto-probe (Chrome 136+)
+get '/.well-known/appspecific/com.chrome.devtools.json' do
+  content_type :json
+  '{}'
 end
 
 get '/image_file/:id' do
@@ -143,6 +150,26 @@ end
 
 # ── 2. Inline save ────────────────────────────────────────────────────────────
 
+post '/images/:id/delete' do
+  id  = params[:id].to_i
+  row = Images.where(id: id).first
+  halt 404, 'Not found' unless row
+
+  # Remove file from disk
+  path = File.join(row[:source_folder], row[:filename])
+  File.delete(path) if File.exist?(path)
+
+  # Remove from DB (also clear any references to this as a primary)
+  Images.where(primary_image_id: id).update(primary_image_id: nil, updated_at: Time.now)
+  Images.where(id: id).delete
+
+  session[:changes_since_backup] = (session[:changes_since_backup].to_i + 1)
+
+  # Redirect back to the collection or catalog
+  col = Collections.where(id: row[:collection_id]).first
+  redirect col ? "/collection/#{col[:id]}" : '/catalog'
+end
+
 post '/images/:id' do
   id  = params[:id].to_i
   row = Images.where(id: id).first
@@ -203,10 +230,16 @@ post '/images/:id' do
 
   Images.where(id: id).update(update_fields)
   session[:changes_since_backup] = (session[:changes_since_backup].to_i + 1)
-  # Build redirect back preserving folder/page params, anchor to the saved row
-  back_url = request.referer || '/catalog'
-  back_url = back_url.sub(/#.*$/, '')  # strip any existing anchor
-  redirect "#{back_url}#row-#{id}"
+
+  # AJAX save — return JSON
+  if request.xhr? || request.env['HTTP_ACCEPT']&.include?('application/json')
+    content_type :json
+    { ok: true, id: id }.to_json
+  else
+    back_url = request.referer || '/catalog'
+    back_url = back_url.sub(/#.*$/, '')
+    redirect "#{back_url}#row-#{id}"
+  end
 end
 
 # ── Collections management ────────────────────────────────────────────────────
