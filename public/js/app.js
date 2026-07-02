@@ -606,8 +606,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!btn) return;
     const originals = {};
     inputs.forEach(inp => { originals[inp.name] = inp.value; });
+    // Store on element so saveRow can reset after a successful save
+    row._dirtyOriginals = originals;
+    row._dirtyInputs    = inputs;
     inputs.forEach(inp => {
       inp.addEventListener('input', () => {
+        const dirty = Array.from(inputs).some(i => i.value !== originals[i.name]);
+        btn.style.background = dirty ? 'var(--accent2)' : 'var(--accent)';
+      });
+      inp.addEventListener('change', () => {
         const dirty = Array.from(inputs).some(i => i.value !== originals[i.name]);
         btn.style.background = dirty ? 'var(--accent2)' : 'var(--accent)';
       });
@@ -695,8 +702,15 @@ function saveRow(id, ctx, btn) {
       btn.disabled = false;
       btn.textContent = '✓';
       if (resp.ok || resp.redirected) {
+        btn.style.background = 'var(--accent)';
         row.classList.add('row-tagged');
         row.classList.remove('row-untagged');
+        // Reset dirty-state baseline so button doesn't re-red
+        if (row._dirtyOriginals && row._dirtyInputs) {
+          row._dirtyInputs.forEach(function(inp) {
+            row._dirtyOriginals[inp.name] = inp.value;
+          });
+        }
       } else {
         alert('Save failed (status ' + resp.status + ')');
       }
