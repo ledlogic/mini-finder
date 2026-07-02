@@ -240,15 +240,7 @@
         <%# ── Image row ── %>
         <% is_secondary = !img[:primary_image_id].nil? %>
         <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %> <%= is_secondary ? 'row-is-secondary' : '' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
-          <form action="/images/<%= img[:id] %>" method="post" onsubmit="console.log('[xref-client-debug] is_secondary checkbox:', this.querySelector('input[name=is_secondary]')?.checked, 'primary_image_id:', this.querySelector('select[name=primary_image_id]')?.value)">
-          <input type="hidden" name="folder"      value="<%= @folder_filter %>">
-          <input type="hidden" name="show_all"    value="<%= @show_all ? '1' : '0' %>">
-          <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
-          <input type="hidden" name="f_unprinted" value="<%= @f_unprinted ? '1' : '' %>">
-          <input type="hidden" name="f_unpainted" value="<%= @f_unpainted ? '1' : '' %>">
-          <input type="hidden" name="colorized"   value="<%= @colorized_catalog %>">
-      <input type="hidden" name="f_unprinted" value="<%= @f_unprinted ? '1' : '' %>">
-      <input type="hidden" name="f_unpainted" value="<%= @f_unpainted ? '1' : '' %>">
+          <% _ctx = url_query({folder: @folder_filter, show_all: (@show_all ? '1' : ''), f_untagged: (@f_untagged ? '1' : ''), f_unprinted: (@f_unprinted ? '1' : ''), f_unpainted: (@f_unpainted ? '1' : ''), colorized: @colorized_catalog}) %>
           <td class="cell-thumb">
             <div class="thumb-wrap">
               <img
@@ -402,10 +394,11 @@
             </div>
           </td>
           <td class="cell-actions">
-            <button type="submit" class="btn-save" title="Save">✓</button>
+            <button type="button" class="btn-save" title="Save" onclick="saveRow(<%= img[:id] %>, '<%= _ctx %>', this)">✓</button>
             <a href="/edit/<%= img[:id] %>" class="btn-edit" title="Full edit">✎</a>
+            <button type="button" class="btn-delete" title="Delete image and file"
+                    onclick="deleteImage(<%= img[:id] %>, '<%= img[:filename].gsub("'", "\\'") %>', this)">🗑</button>
           </td>
-          </form>
         </tr>
       <% end %>
     </tbody>

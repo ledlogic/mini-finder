@@ -226,6 +226,7 @@ input.cell-input[name="mini_name"] { text-transform: capitalize; }
   width: 28px; height: 28px; border-radius: var(--radius);
   cursor: pointer; font-size: 0.9rem; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
+  box-sizing: border-box; flex-shrink: 0;
   transition: opacity 0.15s;
 }
 .btn-save:hover { opacity: 0.8; }
@@ -235,6 +236,7 @@ input.cell-input[name="mini_name"] { text-transform: capitalize; }
   background: transparent; border: 1px solid var(--border2);
   border-radius: var(--radius); color: var(--text-dim);
   text-decoration: none; font-size: 0.9rem;
+  box-sizing: border-box; flex-shrink: 0;
   transition: border-color 0.15s, color 0.15s;
 }
 .btn-edit:hover { border-color: var(--accent2); color: var(--accent2); }
@@ -2001,3 +2003,33 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 
 /* Prevent results grid collapse from shifting slider position */
 .results-grid { min-height: 200px; }
+
+/* ── Delete image button ─────────────────────────────────────────────────── */
+.btn-delete {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.9rem;
+  box-sizing: border-box; flex-shrink: 0;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.btn-delete:hover {
+  color: #ef4444;
+  border-color: rgba(239,68,68,0.4);
+  background: rgba(239,68,68,0.06);
+}
+
+/* ── App version ─────────────────────────────────────────────────────────── */
+.app-version {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-faint);
+  text-align: center;
+  margin-top: 6px;
+  letter-spacing: 0.05em;
+}

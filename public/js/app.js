@@ -627,3 +627,74 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('scroll', closeAllAutocompletes, { passive: true });
 });
+
+// ── Delete image ─────────────────────────────────────────────────────────────
+function deleteImage(id, filename, btn) {
+  if (!confirm('Delete ' + filename + '\nThis will remove the file from disk. Are you sure?')) return;
+  btn.disabled = true;
+  btn.textContent = '…';
+  fetch('/images/' + id + '/delete', { method: 'POST' })
+    .then(function(resp) {
+      if (resp.ok || resp.redirected) {
+        // Remove the row from the DOM immediately
+        var row = btn.closest('tr');
+        // Also remove the preceding collection-header-row if this was the only image
+        if (row) row.remove();
+        // Reload to reflect accurate state
+        window.location.reload();
+      } else {
+        alert('Delete failed (status ' + resp.status + ')');
+        btn.disabled = false;
+        btn.textContent = '🗑';
+      }
+    })
+    .catch(function(err) {
+      alert('Delete failed: ' + err);
+      btn.disabled = false;
+      btn.textContent = '🗑';
+    });
+}
+
+// ── Save image row (replaces HTML form submit) ────────────────────────────────
+function saveRow(id, ctx, btn) {
+  var row = btn.closest('tr');
+  if (!row) return;
+
+  // Collect all named inputs/selects/textareas in this row
+  var data = new FormData();
+  row.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
+    if (el.type === 'checkbox') {
+      data.append(el.name, el.checked ? el.value : '');
+    } else {
+      data.append(el.name, el.value);
+    }
+  });
+
+  // Append context params (folder filter, flags etc)
+  if (ctx) {
+    ctx.split('&').forEach(function(pair) {
+      var parts = pair.split('=');
+      if (parts[0]) data.append(decodeURIComponent(parts[0]), decodeURIComponent(parts[1] || ''));
+    });
+  }
+
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  fetch('/images/' + id, { method: 'POST', body: data, headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(resp) {
+      btn.disabled = false;
+      btn.textContent = '✓';
+      if (resp.ok || resp.redirected) {
+        row.classList.add('row-tagged');
+        row.classList.remove('row-untagged');
+      } else {
+        alert('Save failed (status ' + resp.status + ')');
+      }
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = '✓';
+      alert('Save failed: ' + err);
+    });
+}
