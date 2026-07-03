@@ -933,6 +933,8 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
 }
 .col-info-icon {
   width: 15px; height: 15px;
@@ -1518,9 +1520,11 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 
 /* ── Inline collection name edit in catalog info bar ─────────────────────── */
 .col-info-name-form {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 .col-info-name-input {
   text-transform: uppercase;
@@ -1533,8 +1537,9 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   font-weight: 700;
   letter-spacing: 0.05em;
   padding: 2px 4px;
-  min-width: 120px;
-  width: auto;
+  min-width: 240px;
+  width: 100%;
+  max-width: 420px;
   transition: border-color 0.15s, background 0.15s;
   -webkit-text-fill-color: var(--text);
 }
