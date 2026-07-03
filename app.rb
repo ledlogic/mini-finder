@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "1.83"
+APP_VERSION = "1.87"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 

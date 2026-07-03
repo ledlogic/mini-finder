@@ -233,6 +233,28 @@ mini-finder/
 
 ## Changelog
 
+### v1.87 — July 3, 2026
+- Collection name input min-width widened to 220px to fit longer names like "BLACK STONE COMMANDOS"
+- Collection name save button changed to orange/red (`var(--accent2)`) to match dirty-state convention
+- `autocomplete="off"` added to all catalog row inputs, selects, and the table element to prevent Chrome autofill interference
+- Chrome autofill dark background override via `-webkit-autofill` CSS
+
+### v1.86
+- Weapons input style fixed: moved `text-transform:uppercase` to CSS class `cell-input-upper` so dark background renders correctly
+- Save button background properly resets to green after successful `saveRow()` save
+- Dirty-state baseline resets after save so button doesn't re-red unnecessarily
+- Enter key in catalog rows now triggers `saveRow()` via `btn.click()` instead of stale `form.requestSubmit()`
+
+### v1.85
+- 💡 OCR lightbulb button per catalog row: retry name detection inline without leaving the page
+- Fills name field directly if empty; shows suggestion button if name already set
+- `detectName()` JS function added to app.js
+
+### v1.84
+- Autocomplete dropdown: confirmed (blue) names always sort above OCR suggestions
+- Suppress all alternatives when query is within 1 edit distance of a confirmed name
+- `change` event added alongside `input` on dirty-state watcher so selects trigger correctly
+
 ### v1.83 — July 2, 2026
 - Chrome autofill dark background fix (`-webkit-autofill` override)
 - Weapons input styled consistently with other inputs (moved `text-transform` to CSS class)

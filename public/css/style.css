@@ -1547,9 +1547,9 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .col-info-name-input::placeholder { color: var(--text-faint); font-weight: 400; -webkit-text-fill-color: var(--text-faint); }
 
 .col-info-name-save {
-  background: var(--accent);
+  background: var(--accent2);
   border: none;
-  color: #000;
+  color: #fff;
   font-weight: 700;
   font-size: 0.8rem;
   width: 22px;
