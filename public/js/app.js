@@ -596,7 +596,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('input[name="mini_name"]').forEach(attachAutocomplete);
 
   // Attach static vocabulary autocomplete to species and stance
-  document.querySelectorAll('input[name="species"]').forEach(inp => attachSimpleAutocomplete(inp, FIELD_VOCAB.species));
+  document.querySelectorAll('input[name="species"]').forEach(inp => {
+    attachSimpleAutocomplete(inp, FIELD_VOCAB.species);
+    // Auto-set gender to NA when typing a non-gendered species
+    inp.addEventListener('change', function() {
+      applySpeciesRules(inp.value, inp.closest('tr'));
+    });
+    inp.addEventListener('blur', function() {
+      applySpeciesRules(inp.value, inp.closest('tr'));
+    });
+  });
   document.querySelectorAll('input[name="stance"]').forEach(inp => attachSimpleAutocomplete(inp, FIELD_VOCAB.stance));
 
   // Dirty-row save button highlight
@@ -713,6 +722,13 @@ function saveRow(id, ctx, btn) {
             row._dirtyOriginals[inp.name] = inp.value;
           });
         }
+        // If an xref was assigned or removed, reload so sort order and secondary display updates
+        var xrefCheckbox = row.querySelector('input[name="is_secondary"]');
+        var xrefSelect   = row.querySelector('select[name="primary_image_id"]');
+        if (xrefCheckbox && (xrefCheckbox.checked || xrefSelect && xrefSelect.value)) {
+          window.location.reload();
+          return;
+        }
       } else {
         alert('Save failed (status ' + resp.status + ')');
       }
@@ -775,6 +791,26 @@ function detectName(id) {
 }
 
 
+// ── Species that imply NA gender ─────────────────────────────────────────────
+var NA_GENDER_SPECIES = ['ROBOT', 'VEHICLE', 'DRONE', 'CONSTRUCT', 'BEAST'];
+
+function applySpeciesRules(speciesValue, row) {
+  if (!row) return;
+  var species = (speciesValue || '').toUpperCase();
+  var implied = NA_GENDER_SPECIES.some(function(s) { return species.includes(s); });
+  if (implied) {
+    var genderSelect = row.querySelector('select[name="gender"]');
+    if (genderSelect && genderSelect.value !== 'NA') {
+      genderSelect.value = 'NA';
+      genderSelect.dispatchEvent(new Event('change'));
+      // Flash to draw attention
+      genderSelect.style.transition = 'background 0.3s';
+      genderSelect.style.background = 'rgba(0,212,255,0.2)';
+      setTimeout(function() { genderSelect.style.background = ''; }, 1200);
+    }
+  }
+}
+
 // ── Field quick-pick buttons (species, stance, etc.) ─────────────────────────
 function setFieldQuickpick(btn) {
   var fieldName = btn.dataset.field;
@@ -787,6 +823,8 @@ function setFieldQuickpick(btn) {
   btn.closest('.species-quickpick').querySelectorAll('.btn-quickpick').forEach(function(b) {
     b.classList.toggle('btn-quickpick-active', b === btn);
   });
+  // Auto-set gender to NA for non-gendered species
+  if (fieldName === 'species') applySpeciesRules(value, row);
 }
 
 // ── Edit page quick-pick buttons ──────────────────────────────────────────────
@@ -801,4 +839,15 @@ function editQuickpick(btn) {
     b.classList.remove('btn-quickpick-active');
   });
   btn.classList.add('btn-quickpick-active');
+  // Auto-set gender to NA for non-gendered species on edit page
+  if (targetId === 'edit-species') {
+    var genderSelect = document.querySelector('select[name="gender"]');
+    var implied = NA_GENDER_SPECIES.some(function(s) { return value.toUpperCase().includes(s); });
+    if (implied && genderSelect && genderSelect.value !== 'NA') {
+      genderSelect.value = 'NA';
+      genderSelect.style.transition = 'background 0.3s';
+      genderSelect.style.background = 'rgba(0,212,255,0.2)';
+      setTimeout(function() { genderSelect.style.background = ''; }, 1200);
+    }
+  }
 }

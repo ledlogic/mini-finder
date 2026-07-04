@@ -266,7 +266,8 @@ helpers do
       .tally
       .sort_by { |_, v| -v }
       .map(&:first)
-    @top_weapons = (core_weapons + (db_weapons - core_weapons)).first(8)
+    # NONE always first, then core, then DB extras, cap at 9 total
+    @top_weapons = (['NONE'] + (core_weapons + (db_weapons - core_weapons)).reject { |w| w == 'NONE' }).first(9)
 
     # Check if this collection is missing a bundle/gallery image
     # (an image with mini_count >= 4 or named 'bundle')
