@@ -230,8 +230,8 @@ helpers do
     end
 
     # Top species for quick-pick buttons
-    core_species = %w[HUMAN ROBOT VEHICLE ALIEN CREATURE UNDEAD BEAST]
-    db_species   = Images
+    fallback_species = %w[HUMAN ROBOT VEHICLE ALIEN CREATURE UNDEAD BEAST]
+    db_species = Images
       .where(Sequel.~(species: nil))
       .exclude(species: '')
       .select_map(:species)
@@ -240,11 +240,11 @@ helpers do
       .tally
       .sort_by { |_, v| -v }
       .map(&:first)
-    @top_species = (core_species + (db_species - core_species)).first(8)
+    @top_species = (db_species + (fallback_species - db_species)).first(8)
 
     # Top stance for quick-pick buttons
-    core_stance = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT]
-    db_stance   = Images
+    fallback_stance = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT]
+    db_stance = Images
       .where(Sequel.~(stance: nil))
       .exclude(stance: '')
       .select_map(:stance)
@@ -253,11 +253,12 @@ helpers do
       .tally
       .sort_by { |_, v| -v }
       .map(&:first)
-    @top_stance = (core_stance + (db_stance - core_stance)).first(8)
+    @top_stance = (db_stance + (fallback_stance - db_stance)).first(8)
 
     # Top weapons for quick-pick buttons
-    core_weapons = %w[SWORD PISTOL RIFLE KNIFE STAFF SHIELD BOW AXE]
-    db_weapons   = Images
+    # NONE always first, then DB by frequency, then fallback core for sparse DBs
+    fallback_weapons = ['SWORD', 'PISTOL', 'RIFLE', 'KNIFE', 'STAFF', 'SHIELD', 'BOW', 'AXE', 'MACHINE GUN']
+    db_weapons = Images
       .where(Sequel.~(weapons: nil))
       .exclude(weapons: '')
       .select_map(:weapons)
@@ -266,8 +267,7 @@ helpers do
       .tally
       .sort_by { |_, v| -v }
       .map(&:first)
-    # NONE always first, then core, then DB extras, cap at 9 total
-    @top_weapons = (['NONE'] + (core_weapons + (db_weapons - core_weapons)).reject { |w| w == 'NONE' }).first(9)
+    @top_weapons = (['NONE'] + (db_weapons + (fallback_weapons - db_weapons)).reject { |w| w == 'NONE' }).first(9)
 
     # Check if this collection is missing a bundle/gallery image
     # (an image with mini_count >= 4 or named 'bundle')

@@ -233,6 +233,44 @@ mini-finder/
 
 ## Changelog
 
+### v1.97 — July 4, 2026
+- Stance and species quick-pick buttons now DB-frequency ordered (most used first), fallback list for sparse DBs
+- Fixes AIMING and other common stances not appearing due to hardcoded core list taking priority
+
+### v1.96 — July 4, 2026
+- Weapons quick-pick buttons now ordered by DB frequency (most used first), not hardcoded list
+- NONE always pinned first; fallback list used only when DB is sparse
+- MACHINE GUN and other multi-word weapons now correctly appear when they lead the stats
+
+### v1.95 — July 4, 2026
+- JS split into four focused files: `mf-autocomplete.js`, `mf-actions.js`, `mf-catalog.js`, `mf-ui.js`; `app.js` retired
+
+### v1.94
+- Selecting ROBOT, VEHICLE, DRONE, CONSTRUCT, or BEAST species auto-sets gender to NA with cyan flash
+- `NA_GENDER_SPECIES` constant; `applySpeciesRules()` triggered from quickpick and species input blur/change
+- Rule also applies on edit page via `editQuickpick()`
+
+### v1.93
+- Weapons quick-pick buttons added to catalog rows and edit page (NONE · SWORD · PISTOL · RIFLE · KNIFE · STAFF · SHIELD · BOW · AXE)
+- NONE always pinned as first weapon button regardless of DB frequency
+- `setFieldQuickpick()` and `editQuickpick()` use `data-*` attributes to avoid HTML quote conflicts
+
+### v1.92
+- After saving a row with an xref assigned, page reloads automatically so secondary ordering updates
+- Species and stance quick-pick buttons fixed (were silently broken due to single-quote conflicts in onclick)
+- `setFieldQuickpick(btn)` reads from `data-field` / `data-value` data attributes
+
+### v1.91
+- Stance quick-pick buttons added to catalog rows and edit page (STANDING · CROUCHING · RUNNING · KNEELING · CHARGING · PRONE · JUMPING · COMBAT)
+- `@top_stance` computed in `catalog_build_images` helper and edit route
+- `setFieldQuickpick()` generic function handles both species and stance
+
+### v1.90
+- Species quick-pick buttons added to catalog rows and edit page
+- Core species always shown: HUMAN · ROBOT · VEHICLE · ALIEN · CREATURE · UNDEAD · BEAST
+- DB most-common species fill remaining slots up to 8
+- `@top_species` computed in `catalog_build_images` helper and edit route
+
 ### v1.89 — July 3, 2026
 - Random 🚫 Vehicles filter now also excludes xref secondaries (colorized renders) linked to vehicle primaries
 

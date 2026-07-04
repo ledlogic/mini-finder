@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "1.89"
+APP_VERSION = "1.97"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -381,35 +381,35 @@ get '/edit/:id' do
     @primary_name = p_row ? (p_row[:mini_name].to_s.empty? ? p_row[:filename] : p_row[:mini_name]) : nil
   end
 
-  core_species = %w[HUMAN ROBOT VEHICLE ALIEN CREATURE UNDEAD BEAST]
-  db_species   = Images
+  fallback_species = %w[HUMAN ROBOT VEHICLE ALIEN CREATURE UNDEAD BEAST]
+  db_species = Images
     .where(Sequel.~(species: nil))
     .exclude(species: '')
     .select_map(:species)
     .flat_map { |s| s.split(',').map(&:strip).map(&:upcase) }
     .reject(&:empty?)
     .tally.sort_by { |_, v| -v }.map(&:first)
-  @top_species = (core_species + (db_species - core_species)).first(8)
+  @top_species = (db_species + (fallback_species - db_species)).first(8)
 
-  core_stance = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT]
-  db_stance   = Images
+  fallback_stance = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT]
+  db_stance = Images
     .where(Sequel.~(stance: nil))
     .exclude(stance: '')
     .select_map(:stance)
     .flat_map { |s| s.split(',').map(&:strip).map(&:upcase) }
     .reject(&:empty?)
     .tally.sort_by { |_, v| -v }.map(&:first)
-  @top_stance = (core_stance + (db_stance - core_stance)).first(8)
+  @top_stance = (db_stance + (fallback_stance - db_stance)).first(8)
 
-  core_weapons = %w[SWORD PISTOL RIFLE KNIFE STAFF SHIELD BOW AXE]
-  db_weapons   = Images
+  fallback_weapons = %w[SWORD PISTOL RIFLE KNIFE STAFF SHIELD BOW AXE]
+  db_weapons = Images
     .where(Sequel.~(weapons: nil))
     .exclude(weapons: '')
     .select_map(:weapons)
     .flat_map { |w| w.split(',').map(&:strip).map(&:upcase) }
     .reject(&:empty?)
     .tally.sort_by { |_, v| -v }.map(&:first)
-  @top_weapons = (['NONE'] + (core_weapons + (db_weapons - core_weapons)).reject { |w| w == 'NONE' }).first(9)
+  @top_weapons = (['NONE'] + (db_weapons + (fallback_weapons - db_weapons)).reject { |w| w == 'NONE' }).first(9)
 
   erb :edit
 end
