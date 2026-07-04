@@ -409,7 +409,7 @@ get '/edit/:id' do
     .flat_map { |w| w.split(',').map(&:strip).map(&:upcase) }
     .reject(&:empty?)
     .tally.sort_by { |_, v| -v }.map(&:first)
-  @top_weapons = (core_weapons + (db_weapons - core_weapons)).first(8)
+  @top_weapons = (['NONE'] + (core_weapons + (db_weapons - core_weapons)).reject { |w| w == 'NONE' }).first(9)
 
   erb :edit
 end
