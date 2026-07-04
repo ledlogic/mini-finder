@@ -636,7 +636,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !activeDropdown) {
         e.preventDefault();
-        inp.closest('form')?.requestSubmit();
+        const row = inp.closest('.img-row');
+        const btn = row?.querySelector('.btn-save');
+        if (btn) btn.click();
       }
     });
   });
@@ -770,4 +772,33 @@ function detectName(id) {
     if (btn) { btn.disabled = false; btn.textContent = '💡'; }
     alert('OCR failed: ' + err);
   });
+}
+
+
+// ── Field quick-pick buttons (species, stance, etc.) ─────────────────────────
+function setFieldQuickpick(btn) {
+  var fieldName = btn.dataset.field;
+  var value     = btn.dataset.value;
+  var row       = btn.closest('tr');
+  var input     = row ? row.querySelector('input[name="' + fieldName + '"]') : null;
+  if (!input) return;
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+  btn.closest('.species-quickpick').querySelectorAll('.btn-quickpick').forEach(function(b) {
+    b.classList.toggle('btn-quickpick-active', b === btn);
+  });
+}
+
+// ── Edit page quick-pick buttons ──────────────────────────────────────────────
+function editQuickpick(btn) {
+  var targetId = btn.dataset.target;
+  var value    = btn.dataset.value;
+  var input    = document.getElementById(targetId);
+  if (!input) return;
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+  btn.closest('.species-quickpick').querySelectorAll('.btn-quickpick').forEach(function(b) {
+    b.classList.remove('btn-quickpick-active');
+  });
+  btn.classList.add('btn-quickpick-active');
 }

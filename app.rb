@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "1.87"
+APP_VERSION = "1.89"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -120,6 +120,7 @@ get '/collection/:id' do
   params[:show_all] = '1'
   any_flag = catalog_setup_params
   catalog_build_images(Images.order(:source_folder, :filename), any_flag)
+  @page_title = col[:name].to_s.empty? ? File.basename(col[:folder_path]) : col[:name]
   erb :catalog
 end
 
@@ -380,6 +381,36 @@ get '/edit/:id' do
     @primary_name = p_row ? (p_row[:mini_name].to_s.empty? ? p_row[:filename] : p_row[:mini_name]) : nil
   end
 
+  core_species = %w[HUMAN ROBOT VEHICLE ALIEN CREATURE UNDEAD BEAST]
+  db_species   = Images
+    .where(Sequel.~(species: nil))
+    .exclude(species: '')
+    .select_map(:species)
+    .flat_map { |s| s.split(',').map(&:strip).map(&:upcase) }
+    .reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+  @top_species = (core_species + (db_species - core_species)).first(8)
+
+  core_stance = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT]
+  db_stance   = Images
+    .where(Sequel.~(stance: nil))
+    .exclude(stance: '')
+    .select_map(:stance)
+    .flat_map { |s| s.split(',').map(&:strip).map(&:upcase) }
+    .reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+  @top_stance = (core_stance + (db_stance - core_stance)).first(8)
+
+  core_weapons = %w[SWORD PISTOL RIFLE KNIFE STAFF SHIELD BOW AXE]
+  db_weapons   = Images
+    .where(Sequel.~(weapons: nil))
+    .exclude(weapons: '')
+    .select_map(:weapons)
+    .flat_map { |w| w.split(',').map(&:strip).map(&:upcase) }
+    .reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+  @top_weapons = (core_weapons + (db_weapons - core_weapons)).first(8)
+
   erb :edit
 end
 
@@ -536,6 +567,7 @@ end
 get '/random' do
   @colorized_filter  = params[:colorized].to_s
   @no_bundles        = params[:no_bundles]  == '1'
+  @no_vehicles       = params[:no_vehicles] == '1'
   @unprinted_only    = params[:unprinted]   == '1'
   @random_count      = [params[:n].to_i, 10].max
   @random_count      = [@random_count, 240].min
@@ -548,6 +580,25 @@ get '/random' do
   if @no_bundles
     base = base.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
     base = base.exclude(Sequel.ilike(:mini_name, 'bundle'))
+  end
+  if @no_vehicles
+    # Find vehicle image ids directly (by species or name keywords)
+    vehicle_ids = Images
+      .where(
+        Sequel.ilike(:species, '%VEHICLE%') |
+        Sequel.ilike(:mini_name, '%vehicle%') |
+        Sequel.ilike(:mini_name, '%bike%') |
+        Sequel.ilike(:mini_name, '%car%') |
+        Sequel.ilike(:mini_name, '%truck%') |
+        Sequel.ilike(:mini_name, '%mech%')
+      )
+      .select_map(:id)
+    # Also include secondaries (xrefs) whose primary is a vehicle
+    xref_vehicle_ids = Images
+      .where(primary_image_id: vehicle_ids)
+      .select_map(:id)
+    all_vehicle_ids = (vehicle_ids + xref_vehicle_ids).uniq
+    base = base.exclude(id: all_vehicle_ids) unless all_vehicle_ids.empty?
   end
   if @unprinted_only
     base = base.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
@@ -702,6 +753,8 @@ get '/search' do
     @results = scored
   end
 
+  q = params[:q].to_s.strip
+  @page_title = q.empty? ? nil : "Search: #{q}"
   erb :search
 end
 

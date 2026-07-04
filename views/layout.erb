@@ -3,7 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UNIT9 Miniatures Catalog</title>
+  <title><%= 
+    if @page_title
+      "#{@page_title} — UNIT9 Catalog"
+    elsif !@folder_filter.to_s.empty?
+      col = @collections&.values&.find { |c| c[:folder_path] == @folder_filter }
+      name = col&.dig(:name)
+      name && !name.empty? ? "#{name} — UNIT9 Catalog" : "#{File.basename(@folder_filter)} — UNIT9 Catalog"
+    else
+      case request.path_info
+      when '/catalog'     then 'Catalog — UNIT9'
+      when '/collections' then 'Collections — UNIT9'
+      when '/search'      then 'Search — UNIT9'
+      when '/random'      then 'Random — UNIT9'
+      when '/bulk'        then 'Bulk Tag — UNIT9'
+      when '/statistics'  then 'Statistics — UNIT9'
+      else 'UNIT9 Miniatures Catalog'
+      end
+    end
+  %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;600;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">

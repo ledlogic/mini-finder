@@ -233,6 +233,15 @@ mini-finder/
 
 ## Changelog
 
+### v1.89 — July 3, 2026
+- Random 🚫 Vehicles filter now also excludes xref secondaries (colorized renders) linked to vehicle primaries
+
+### v1.88 — July 3, 2026
+- Random page: 🚫 Vehicles filter toggle — excludes images by species=VEHICLE and common vehicle name keywords
+- Dynamic HTML page titles per route and collection name
+- Collection name input width now fills available bar space (flex:1, max-width 420px)
+- `collection-info-left` and `col-info-name-form` made flex:1 so name input stretches properly
+
 ### v1.87 — July 3, 2026
 - Collection name input min-width widened to 220px to fit longer names like "BLACK STONE COMMANDOS"
 - Collection name save button changed to orange/red (`var(--accent2)`) to match dirty-state convention

@@ -42,7 +42,17 @@
       <div class="form-row">
         <div class="form-group">
           <label>Species <span class="hint">comma-separated</span></label>
-          <input type="text" name="species" value="<%= @image[:species] %>" placeholder="e.g. Human, Elf, Orc">
+          <input type="text" name="species" id="edit-species" value="<%= @image[:species] %>" placeholder="e.g. Human, Elf, Orc" autocomplete="off">
+          <% if @top_species&.any? %>
+            <div class="species-quickpick" style="margin-top:6px;">
+              <% @top_species.each do |sp| %>
+                <button type="button"
+                        class="btn-quickpick <%= @image[:species].to_s.split(',').map(&:strip).map(&:upcase).include?(sp) ? 'btn-quickpick-active' : '' %>"
+                        data-target="edit-species" data-value="<%= sp %>"
+                        onclick="editQuickpick(this)"><%= sp %></button>
+              <% end %>
+            </div>
+          <% end %>
         </div>
         <div class="form-group">
           <label>Gender</label>
@@ -62,13 +72,33 @@
 
       <div class="form-group">
         <label>Weapons <span class="hint">comma-separated</span></label>
-        <input type="text" name="weapons" value="<%= @image[:weapons] %>" class="cell-input-upper" placeholder="e.g. Sword, Pistol, Staff">
+        <input type="text" name="weapons" id="edit-weapons" value="<%= @image[:weapons] %>" class="cell-input-upper" placeholder="e.g. Sword, Pistol, Staff" autocomplete="off">
+        <% if @top_weapons&.any? %>
+          <div class="species-quickpick" style="margin-top:6px;">
+            <% @top_weapons.each do |wp| %>
+              <button type="button"
+                      class="btn-quickpick <%= @image[:weapons].to_s.split(',').map(&:strip).map(&:upcase).include?(wp) ? 'btn-quickpick-active' : '' %>"
+                      data-target="edit-weapons" data-value="<%= wp %>"
+                      onclick="editQuickpick(this)"><%= wp %></button>
+            <% end %>
+          </div>
+        <% end %>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label>Stance <span class="hint">comma-separated</span></label>
-          <input type="text" name="stance" value="<%= @image[:stance] %>" placeholder="e.g. Combat, Resting, Charging">
+          <input type="text" name="stance" id="edit-stance" value="<%= @image[:stance] %>" placeholder="e.g. Combat, Resting, Charging" autocomplete="off">
+          <% if @top_stance&.any? %>
+            <div class="species-quickpick" style="margin-top:6px;">
+              <% @top_stance.each do |st| %>
+                <button type="button"
+                        class="btn-quickpick <%= @image[:stance].to_s.split(',').map(&:strip).map(&:upcase).include?(st) ? 'btn-quickpick-active' : '' %>"
+                        data-target="edit-stance" data-value="<%= st %>"
+                        onclick="editQuickpick(this)"><%= st %></button>
+              <% end %>
+            </div>
+          <% end %>
         </div>
         <div class="form-group">
           <label>Mini Count <span class="hint">number of minis shown</span></label>

@@ -98,6 +98,7 @@
       <button class="size-btn" onclick="setThumbSize(240)" data-size="240">L</button>
       <button class="size-btn" onclick="setThumbSize(320)" data-size="320">XL</button>
     </div>
+
     <% if @total == 0 && !@show_all %>
       <span class="badge badge-ok">✓ All tagged</span>
     <% end %>
@@ -192,7 +193,7 @@
 <% else %>
 
 <div class="catalog-table-wrap">
-  <table class="catalog-table" id="catalog-table">
+  <table class="catalog-table" id="catalog-table" autocomplete="off">
     <colgroup>
       <col class="col-thumb">
       <col class="col-folder-file">
@@ -311,7 +312,7 @@
             <div class="cell-stack">
             <% unless is_secondary %>
               <div style="display:flex; gap:4px; align-items:center;">
-                <input type="text" name="mini_name" class="cell-input"
+                <input type="text" name="mini_name" class="cell-input" autocomplete="off"
                        value="<%= img[:mini_name] %>"
                        placeholder="name…"
                        id="name-input-<%= img[:id] %>"
@@ -329,8 +330,17 @@
                   </button>
                 <% end %>
               </div>
-              <input type="text" name="species" class="cell-input" value="<%= img[:species] %>" placeholder="species…">
-              <select name="gender" class="cell-select">
+              <input type="text" name="species" class="cell-input" autocomplete="off" value="<%= img[:species] %>" placeholder="species…">
+              <% if @top_species&.any? %>
+                <div class="species-quickpick">
+                  <% @top_species.each do |sp| %>
+                    <button type="button" class="btn-quickpick <%= img[:species].to_s.split(',').map(&:strip).map(&:upcase).include?(sp) ? 'btn-quickpick-active' : '' %>"
+                            data-row-id="<%= img[:id] %>" data-field="species" data-value="<%= sp %>"
+                            onclick="setFieldQuickpick(this)"><%= sp %></button>
+                  <% end %>
+                </div>
+              <% end %>
+              <select name="gender" class="cell-select" autocomplete="off">
                 <option value="">—</option>
                 <% ['M','F','NA','M,F','M,NA','F,NA','M,F,NA'].each do |g| %>
                   <option value="<%= g %>" <%= img[:gender] == g ? 'selected' : '' %>><%= g %></option>
@@ -351,15 +361,33 @@
           </td>
           <td>
             <div class="cell-stack">
-              <input type="text" name="stance"  class="cell-input" value="<%= img[:stance] %>"  placeholder="stance…">
-              <input type="text" name="weapons" class="cell-input cell-input-upper" value="<%= img[:weapons] %>" placeholder="weapons…">
+              <input type="text" name="stance" class="cell-input" autocomplete="off" value="<%= img[:stance] %>" placeholder="stance…">
+              <% if @top_stance&.any? %>
+                <div class="species-quickpick">
+                  <% @top_stance.each do |st| %>
+                    <button type="button" class="btn-quickpick <%= img[:stance].to_s.split(',').map(&:strip).map(&:upcase).include?(st) ? 'btn-quickpick-active' : '' %>"
+                            data-row-id="<%= img[:id] %>" data-field="stance" data-value="<%= st %>"
+                            onclick="setFieldQuickpick(this)"><%= st %></button>
+                  <% end %>
+                </div>
+              <% end %>
+              <input type="text" name="weapons" class="cell-input cell-input-upper" autocomplete="off" value="<%= img[:weapons] %>" placeholder="weapons…">
+              <% if @top_weapons&.any? %>
+                <div class="species-quickpick">
+                  <% @top_weapons.each do |wp| %>
+                    <button type="button" class="btn-quickpick <%= img[:weapons].to_s.split(',').map(&:strip).map(&:upcase).include?(wp) ? 'btn-quickpick-active' : '' %>"
+                            data-row-id="<%= img[:id] %>" data-field="weapons" data-value="<%= wp %>"
+                            onclick="setFieldQuickpick(this)"><%= wp %></button>
+                  <% end %>
+                </div>
+              <% end %>
             </div>
           </td>
           <td class="cell-count">
             <div class="count-stack">
               <div class="count-row" title="Mini size">
                 <span class="count-icon">📐</span>
-                <select name="mini_size" class="count-mini-select">
+                <select name="mini_size" class="count-mini-select" autocomplete="off">
                   <option value="">—</option>
                   <% ['S','M','L','S,M','M,L','S,M,L'].each do |s| %>
                     <option value="<%= s %>" <%= img[:mini_size] == s ? 'selected' : '' %>><%= s %></option>
@@ -368,7 +396,7 @@
               </div>
               <div class="count-row" title="Minis in image">
                 <span class="count-icon">⬡</span>
-                <select name="mini_count" class="count-mini-select" title="Number of minis in this image">
+                <select name="mini_count" class="count-mini-select" autocomplete="off" title="Number of minis in this image">
                   <% [1,2,3,'4+'].each do |n| %>
                     <% cur = (img[:mini_count] || 1) %>
                     <% selected = (n == '4+' ? cur >= 4 : cur == n) ? 'selected' : '' %>
@@ -378,7 +406,7 @@
               </div>
               <div class="count-row" title="Printed" style="<%= is_secondary ? 'display:none;' : '' %>">
                 <span class="count-icon count-printed">🖨</span>
-                <select name="printed" class="count-mini-select">
+                <select name="printed" class="count-mini-select" autocomplete="off">
                   <% (0..10).each do |n| %>
                     <option value="<%= n %>" <%= (img[:printed] || 0) == n ? 'selected' : '' %>><%= n %></option>
                   <% end %>
@@ -386,7 +414,7 @@
               </div>
               <div class="count-row" title="Painted" style="<%= is_secondary ? 'display:none;' : '' %>">
                 <span class="count-icon count-painted">🎨</span>
-                <select name="painted" class="count-mini-select">
+                <select name="painted" class="count-mini-select" autocomplete="off">
                   <% (0..10).each do |n| %>
                     <option value="<%= n %>" <%= (img[:painted] || 0) == n ? 'selected' : '' %>><%= n %></option>
                   <% end %>
@@ -394,7 +422,7 @@
               </div>
               <div class="count-row" title="Colorized render?">
                 <span class="count-icon">🖼</span>
-                <select name="colorized" class="count-mini-select">
+                <select name="colorized" class="count-mini-select" autocomplete="off">
                   <option value=""  <%= img[:colorized].nil?   ? 'selected' : '' %>>? unknown</option>
                   <option value="true"  <%= img[:colorized] == true  ? 'selected' : '' %>>🎨 color</option>
                   <option value="false" <%= img[:colorized] == false ? 'selected' : '' %>>⬜ grey</option>

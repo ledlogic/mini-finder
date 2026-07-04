@@ -32,6 +32,10 @@
      class="col-year-btn <%= @no_bundles ? 'col-year-active' : '' %>">
     🚫 Bundles
   </a>
+  <a href="<%= url_random(no_vehicles: !@no_vehicles) %>"
+     class="col-year-btn <%= @no_vehicles ? 'col-year-active' : '' %>">
+    🚫 Vehicles
+  </a>
   <a href="<%= url_random(unprinted: !@unprinted_only) %>"
      class="col-year-btn <%= @unprinted_only ? 'col-year-active' : '' %>">
     🖨 Unprinted only

@@ -17,11 +17,12 @@ helpers do
   end
 
   # Build a /random page URL preserving all current filters
-  def url_random(colorized: @colorized_filter, no_bundles: @no_bundles, unprinted: @unprinted_only, n: @random_count)
-    qs = { colorized:  colorized,
-           no_bundles: (no_bundles ? '1' : nil),
-           unprinted:  (unprinted  ? '1' : nil),
-           n:          (n != 60    ? n   : nil) }
+  def url_random(colorized: @colorized_filter, no_bundles: @no_bundles, no_vehicles: @no_vehicles, unprinted: @unprinted_only, n: @random_count)
+    qs = { colorized:   colorized,
+           no_bundles:  (no_bundles  ? '1' : nil),
+           no_vehicles: (no_vehicles ? '1' : nil),
+           unprinted:   (unprinted   ? '1' : nil),
+           n:           (n != 60     ? n   : nil) }
           .reject { |_, v| v.to_s.empty? }.map { |k, v| "#{k}=#{v}" }.join('&')
     qs.empty? ? '/random' : "/random?#{qs}"
   end

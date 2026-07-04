@@ -2069,3 +2069,33 @@ input:-webkit-autofill:active {
   caret-color: var(--text);
   transition: background-color 5000s ease-in-out 0s;
 }
+
+/* ── Species quick-pick buttons ──────────────────────────────────────────── */
+.species-quickpick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 3px;
+}
+.btn-quickpick {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  padding: 1px 5px;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  background: var(--bg3);
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.btn-quickpick:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn-quickpick-active {
+  border-color: var(--accent);
+  background: rgba(0,212,255,0.12);
+  color: var(--accent);
+  font-weight: 600;
+}

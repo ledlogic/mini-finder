@@ -229,6 +229,45 @@ helpers do
       0
     end
 
+    # Top species for quick-pick buttons
+    core_species = %w[HUMAN ROBOT VEHICLE ALIEN CREATURE UNDEAD BEAST]
+    db_species   = Images
+      .where(Sequel.~(species: nil))
+      .exclude(species: '')
+      .select_map(:species)
+      .flat_map { |s| s.split(',').map(&:strip).map(&:upcase) }
+      .reject(&:empty?)
+      .tally
+      .sort_by { |_, v| -v }
+      .map(&:first)
+    @top_species = (core_species + (db_species - core_species)).first(8)
+
+    # Top stance for quick-pick buttons
+    core_stance = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT]
+    db_stance   = Images
+      .where(Sequel.~(stance: nil))
+      .exclude(stance: '')
+      .select_map(:stance)
+      .flat_map { |s| s.split(',').map(&:strip).map(&:upcase) }
+      .reject(&:empty?)
+      .tally
+      .sort_by { |_, v| -v }
+      .map(&:first)
+    @top_stance = (core_stance + (db_stance - core_stance)).first(8)
+
+    # Top weapons for quick-pick buttons
+    core_weapons = %w[SWORD PISTOL RIFLE KNIFE STAFF SHIELD BOW AXE]
+    db_weapons   = Images
+      .where(Sequel.~(weapons: nil))
+      .exclude(weapons: '')
+      .select_map(:weapons)
+      .flat_map { |w| w.split(',').map(&:strip).map(&:upcase) }
+      .reject(&:empty?)
+      .tally
+      .sort_by { |_, v| -v }
+      .map(&:first)
+    @top_weapons = (core_weapons + (db_weapons - core_weapons)).first(8)
+
     # Check if this collection is missing a bundle/gallery image
     # (an image with mini_count >= 4 or named 'bundle')
     @missing_bundle = if !@folder_filter.empty?
