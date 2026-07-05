@@ -73,7 +73,7 @@
       <div class="form-group">
         <label>Weapons <span class="hint">comma-separated</span></label>
         <input type="text" name="weapons" id="edit-weapons" value="<%= @image[:weapons] %>" class="cell-input-upper" placeholder="e.g. Sword, Pistol, Staff" autocomplete="off">
-        <% if @top_weapons&.any? %>
+        <% if @top_weapons&.any? && @image[:weapons].to_s.strip.empty? %>
           <div class="species-quickpick" style="margin-top:6px;">
             <% @top_weapons.each do |wp| %>
               <button type="button"
@@ -89,7 +89,7 @@
         <div class="form-group">
           <label>Stance <span class="hint">comma-separated</span></label>
           <input type="text" name="stance" id="edit-stance" value="<%= @image[:stance] %>" placeholder="e.g. Combat, Resting, Charging" autocomplete="off">
-          <% if @top_stance&.any? %>
+          <% if @top_stance&.any? && @image[:stance].to_s.strip.empty? %>
             <div class="species-quickpick" style="margin-top:6px;">
               <% @top_stance.each do |st| %>
                 <button type="button"

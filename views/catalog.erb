@@ -362,7 +362,7 @@
           <td>
             <div class="cell-stack">
               <input type="text" name="stance" class="cell-input" autocomplete="off" value="<%= img[:stance] %>" placeholder="stance…">
-              <% if @top_stance&.any? %>
+              <% if @top_stance&.any? && img[:stance].to_s.strip.empty? %>
                 <div class="species-quickpick">
                   <% @top_stance.each do |st| %>
                     <button type="button" class="btn-quickpick <%= img[:stance].to_s.split(',').map(&:strip).map(&:upcase).include?(st) ? 'btn-quickpick-active' : '' %>"
@@ -372,7 +372,7 @@
                 </div>
               <% end %>
               <input type="text" name="weapons" class="cell-input cell-input-upper" autocomplete="off" value="<%= img[:weapons] %>" placeholder="weapons…">
-              <% if @top_weapons&.any? %>
+              <% if @top_weapons&.any? && img[:weapons].to_s.strip.empty? %>
                 <div class="species-quickpick">
                   <% @top_weapons.each do |wp| %>
                     <button type="button" class="btn-quickpick <%= img[:weapons].to_s.split(',').map(&:strip).map(&:upcase).include?(wp) ? 'btn-quickpick-active' : '' %>"

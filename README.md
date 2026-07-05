@@ -233,6 +233,17 @@ mini-finder/
 
 ## Changelog
 
+### v1.99 — July 4, 2026
+- Stance and weapons quick-pick buttons hidden when field already has a value; only shown when blank
+
+### v1.98 — July 4, 2026
+- CSS split into 5 focused files (style.css retired):
+  - `mf-base.css` — fonts, variables, layout, nav, toast (157 lines)
+  - `mf-components.css` — reusable widgets: buttons, autocomplete, lightbox, modals, alerts (589 lines)
+  - `mf-catalog.css` — catalog table, rows, cells, xref, info bar, filter pills (712 lines)
+  - `mf-collections.css` — collections page: cards, thumbnails, stubs, filter bar (313 lines)
+  - `mf-pages.css` — edit, search, bulk tagger, statistics page styles (425 lines)
+
 ### v1.97 — July 4, 2026
 - Stance and species quick-pick buttons now DB-frequency ordered (most used first), fallback list for sparse DBs
 - Fixes AIMING and other common stances not appearing due to hardcoded core list taking priority

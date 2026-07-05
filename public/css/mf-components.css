@@ -1,0 +1,588 @@
+/* mf-components.css — Components — reusable widgets: buttons, dropdowns, lightbox, modals, alerts */
+
+/* ── Lightbox ─────────────────────────────────────────────────────────────── */
+.lightbox {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(8px);
+  z-index: 1000; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: var(--radius-lg); box-shadow: 0 0 60px rgba(0,0,0,0.8); }
+.lightbox-close {
+  position: absolute; top: 20px; right: 24px;
+  background: rgba(255,255,255,0.08); border: none; color: #fff;
+  font-size: 1.2rem; width: 36px; height: 36px; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.lightbox-close:hover { background: rgba(255,255,255,0.15); }
+
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center; padding: 60px 24px; color: var(--text-dim); font-size: 0.9rem;
+  border: 1px dashed var(--border); border-radius: var(--radius-lg);
+}
+
+
+/* ── Thumb sizer toolbar ──────────────────────────────────────────────────── */
+.toolbar-right { display: flex; align-items: center; gap: 12px; }
+.thumb-sizer { display: flex; gap: 4px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; }
+.size-btn {
+  background: transparent; border: none; color: var(--text-dim);
+  font-family: var(--font-head); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.05em; padding: 4px 9px; border-radius: 3px;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.size-btn:hover { background: var(--bg2); color: var(--text); }
+.size-btn-active { background: var(--accent) !important; color: #000 !important; }
+
+
+/* ── OCR suggestion button ────────────────────────────────────────────────── */
+.cell-name-td { position: relative; }
+.btn-suggestion {
+  display: block;
+  margin-top: 3px;
+  background: rgba(168,85,247,0.1);
+  border: 1px solid rgba(168,85,247,0.4);
+  border-radius: var(--radius);
+  color: var(--accent3);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  text-align: left;
+}
+.btn-suggestion:hover {
+  background: rgba(168,85,247,0.2);
+  border-color: var(--accent3);
+}
+
+
+/* ── Autocomplete dropdown ────────────────────────────────────────────────── */
+.autocomplete-dropdown {
+  position: absolute;
+  z-index: 500;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 4px 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.autocomplete-item {
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.autocomplete-item:hover,
+.autocomplete-item.autocomplete-active {
+  background: rgba(0,212,255,0.08);
+  color: var(--text);
+}
+.autocomplete-item mark {
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+
+/* ── Autocomplete item types ──────────────────────────────────────────────── */
+.autocomplete-warn {
+  color: var(--accent2) !important;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem !important;
+  padding: 8px 12px !important;
+  background: rgba(255,107,53,0.06);
+}
+.autocomplete-warn:hover,
+.autocomplete-warn.autocomplete-active {
+  background: rgba(255,107,53,0.14) !important;
+}
+.autocomplete-warn strong { font-weight: 700; }
+
+.autocomplete-suggested {
+  color: var(--accent3) !important;
+}
+.autocomplete-suggested:hover,
+.autocomplete-suggested.autocomplete-active {
+  background: rgba(168,85,247,0.1) !important;
+}
+
+.autocomplete-confirmed {
+  color: var(--text-dim);
+}
+
+
+/* ── Collection save button dirty state ───────────────────────────────────── */
+.col-save-btn.col-save-dirty {
+  background: #e53e3e !important;
+  box-shadow: 0 0 8px rgba(229,62,62,0.5);
+  animation: pulse-red 1s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 6px rgba(229,62,62,0.4); }
+  50%       { box-shadow: 0 0 14px rgba(229,62,62,0.8); }
+}
+
+
+/* ── Collection saved highlight ───────────────────────────────────────────── */
+.collection-card-saved {
+  border-color: var(--ok) !important;
+  box-shadow: 0 0 16px rgba(34,197,94,0.2);
+  transition: border-color 0.5s, box-shadow 0.5s;
+}
+.col-saved-badge {
+  font-size: 0.7rem;
+  color: var(--ok);
+  font-family: var(--font-head);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+
+/* ── Collection card focused (from catalog link) ──────────────────────────── */
+.collection-card-focused {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 20px rgba(0,212,255,0.25);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+
+/* ── Saved row highlight ───────────────────────────────────────────────────── */
+@keyframes row-saved-flash {
+  0%   { background: rgba(34,197,94,0.18); }
+  60%  { background: rgba(34,197,94,0.10); }
+  100% { background: transparent; }
+}
+.row-just-saved {
+  animation: row-saved-flash 2s ease-out forwards;
+}
+
+
+/* ── Stat link ────────────────────────────────────────────────────────────── */
+.col-stat-link {
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+  transition: opacity 0.15s;
+}
+.col-stat-link:hover { opacity: 0.75; }
+
+
+/* ── Cross-reference (secondary image) UI ──────────────────────────────────── */
+.secondary-of {
+  font-size: 0.68rem;
+  color: var(--accent2);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  opacity: 0.85;
+}
+.xref-row {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border2);
+}
+.xref-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.xref-checkbox {
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+  accent-color: var(--accent);
+  margin: 0;
+}
+.xref-icon {
+  font-size: 0.7rem;
+  margin-left: 3px;
+  opacity: 0.6;
+}
+.xref-label:has(.xref-checkbox:checked) .xref-icon { opacity: 1; }
+.xref-select {
+  font-size: 0.68rem;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Visually indicate a row is a secondary (linked) image */
+.row-is-secondary {
+  background: rgba(0,212,255,0.03);
+}
+.row-is-secondary .cell-thumb .thumb {
+  border-color: var(--accent2);
+}
+
+.xref-label-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.xref-label-edit input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+
+.secondary-name-hidden {
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  opacity: 0.4;
+}
+
+.cell-count {
+  min-width: 220px;
+}
+
+.toast-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.toast-link:hover { opacity: 0.8; }
+
+
+/* ── Backup button ────────────────────────────────────────────────────────── */
+.backup-form { margin-top: 8px; }
+.btn-backup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-family: var(--font-head);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-backup svg {
+  width: 13px; height: 13px; flex-shrink: 0;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.btn-backup:hover { border-color: var(--accent); color: var(--accent); }
+.btn-backup-warn {
+  border-color: var(--warn, #f59e0b) !important;
+  color: var(--warn, #f59e0b) !important;
+  animation: backup-pulse 2s ease-in-out infinite;
+}
+@keyframes backup-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+.toast-backup {
+  background: rgba(34,197,94,0.08);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.toast-backup code {
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+  margin-left: 4px;
+}
+
+
+/* ── Colorized toggle button on thumbnail ─────────────────────────────────── */
+.btn-colorized {
+  position: absolute;
+  bottom: 24px;
+  right: 4px;
+  background: rgba(0,0,0,0.55);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.thumb-wrap:hover .btn-colorized { opacity: 1; }
+.btn-colorized-color  { opacity: 1; }
+.btn-colorized-grey   { opacity: 0.7; }
+.btn-colorized-unknown { opacity: 0; }
+.thumb-wrap:hover .btn-colorized-unknown { opacity: 0.4; }
+
+
+/* ── Colorized quick-set buttons on search results ───────────────────────── */
+.colorized-btns {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.btn-col-set {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 2px 7px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.15s, border-color 0.15s;
+  line-height: 1.4;
+}
+.btn-col-set:hover  { opacity: 1; border-color: var(--accent); }
+.btn-col-active     { opacity: 1; border-color: var(--accent) !important; background: rgba(0,212,255,0.08); }
+
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+
+/* ── Copy sibling button ──────────────────────────────────────────────────── */
+.btn-copy-sibling {
+  background: transparent;
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 2px;
+  align-self: flex-start;
+}
+.btn-copy-sibling:hover { border-color: var(--accent); color: var(--accent); }
+.btn-copy-sibling:disabled { opacity: 0.4; cursor: wait; }
+
+/* Flash copied fields */
+@keyframes cell-copied-flash {
+  0%   { background: rgba(0,212,255,0.18); }
+  100% { background: transparent; }
+}
+.cell-copied { animation: cell-copied-flash 2s ease-out forwards; }
+
+
+/* ── Sibling picker modal ─────────────────────────────────────────────────── */
+.sibling-picker {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sibling-picker-inner {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  min-width: 280px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sibling-picker-title {
+  font-family: var(--font-head);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.sibling-picker-btn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s;
+}
+.sibling-picker-btn strong {
+  font-family: var(--font-head);
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.sibling-picker-btn span {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.sibling-picker-btn:hover { border-color: var(--accent); }
+.sibling-picker-cancel {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  text-decoration: underline;
+}
+.sibling-picker-cancel:hover { color: var(--text-dim); }
+
+
+/* ── Unlinked colorized images alert ─────────────────────────────────────── */
+.xref-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.4);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+.xref-alert svg {
+  width: 18px; height: 18px; flex-shrink: 0;
+  stroke: #fbbf24; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.xref-alert strong { color: #fbbf24; }
+.xref-alert-link {
+  margin-left: auto;
+  white-space: nowrap;
+  font-family: var(--font-head);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fbbf24;
+  text-decoration: none;
+  border: 1px solid rgba(251,191,36,0.4);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  transition: background 0.15s;
+}
+.xref-alert-link:hover { background: rgba(251,191,36,0.12); }
+
+
+/* ── Delete image button ─────────────────────────────────────────────────── */
+.btn-delete {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.9rem;
+  box-sizing: border-box; flex-shrink: 0;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.btn-delete:hover {
+  color: #ef4444;
+  border-color: rgba(239,68,68,0.4);
+  background: rgba(239,68,68,0.06);
+}
+
+
+/* ── App version ─────────────────────────────────────────────────────────── */
+.app-version {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-faint);
+  text-align: center;
+  margin-top: 6px;
+  letter-spacing: 0.05em;
+}
+
+
+/* ── OCR detect name button ──────────────────────────────────────────────── */
+.btn-ocr-detect {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 1px 5px;
+  line-height: 1.4;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.btn-ocr-detect:hover {
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+.btn-ocr-detect:disabled { opacity: 0.5; cursor: wait; }
+
+
+/* ── Override Chrome autofill white background ───────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+
+/* ── Species quick-pick buttons ──────────────────────────────────────────── */
+.species-quickpick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 3px;
+}
+.btn-quickpick {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  padding: 1px 5px;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  background: var(--bg3);
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.btn-quickpick:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn-quickpick-active {
+  border-color: var(--accent);
+  background: rgba(0,212,255,0.12);
+  color: var(--accent);
+  font-weight: 600;
+}
