@@ -5,12 +5,18 @@
   base_params[:f_untagged]  = '1'             if @f_untagged
   base_params[:f_unprinted] = '1'             if @f_unprinted
   base_params[:f_unpainted] = '1'             if @f_unpainted
+  base_params[:f_no_weapons]  = '1'           if @f_no_weapons
+  base_params[:f_no_stance]   = '1'           if @f_no_stance
+  base_params[:f_no_species]  = '1'           if @f_no_species
+  base_params[:f_no_vehicles] = '1'           if @f_no_vehicles
+  base_params[:f_no_robots]   = '1'           if @f_no_robots
+  base_params[:f_no_bundles]  = '1'           if @f_no_bundles
   base_params[:colorized]   = @colorized_catalog if @colorized_catalog && !@colorized_catalog.empty?
 %>
 <div class="page-header">
   <div>
     <h1>Image Catalog</h1>
-    <p class="page-sub">
+    <p class="page-sub" id="catalog-count">
       <% if @total_unfiltered && @total_unfiltered != @total %>
         <strong><%= @total %></strong> filtered / <%= @total_unfiltered %> <%= @total_context %>
       <% elsif @total_unfiltered %>
@@ -18,8 +24,8 @@
       <% else %>
         <%= @total %> image<%= @total == 1 ? '' : 's' %>
       <% end %>
-      <% if @f_untagged || @f_unprinted || @f_unpainted || !@colorized_catalog.to_s.empty? %>
-        &nbsp;·&nbsp; <a href="/catalog?<%= url_query(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted,:colorized].include?(k)}) %>">Clear filters</a>
+      <% if @f_untagged || @f_unprinted || @f_unpainted || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.to_s.empty? %>
+        &nbsp;·&nbsp; <a href="/catalog?<%= url_query(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted,:f_no_weapons,:f_no_stance,:f_no_species,:f_no_vehicles,:f_no_robots,:f_no_bundles,:colorized].include?(k)}) %>">Clear filters</a>
       <% end %>
       <% unless @folder_filter.empty? %>
         &nbsp;·&nbsp; <a href="/catalog?<%= url_query(base_params.reject{|k,_| k == :folder}) %>">All folders</a>
@@ -36,11 +42,18 @@
     <%# ── Status flag toggles ── %>
     <div class="status-filter-pills">
       <span class="status-pills-label">Filter:</span>
+      <div class="status-pills-inner">
       <%
         flags = [
-          [:f_untagged,  '○ Untagged',  @f_untagged],
-          [:f_unprinted, '🖨 Unprinted', @f_unprinted],
-          [:f_unpainted, '🎨 Unpainted', @f_unpainted],
+          [:f_untagged,   '○ Untagged',    @f_untagged],
+          [:f_unprinted,  '🖨 Unprinted',  @f_unprinted],
+          [:f_unpainted,  '🎨 Unpainted',  @f_unpainted],
+          [:f_no_weapons, '🔫 No weapons', @f_no_weapons],
+          [:f_no_stance,  '🦶 No stance',  @f_no_stance],
+          [:f_no_species,  '🧬 No species',  @f_no_species],
+          [:f_no_vehicles, '🚗 No vehicles', @f_no_vehicles],
+          [:f_no_robots,   '🤖 No robots',   @f_no_robots],
+          [:f_no_bundles,  '📦 No bundles',  @f_no_bundles],
           [:colorized_color,   '🎨 Color',   @colorized_catalog == 'true'],
           [:colorized_grey,    '⬜ Grey',    @colorized_catalog == 'false'],
           [:colorized_unknown, '◌ Unknown',  @colorized_catalog == 'unknown'],
@@ -64,10 +77,11 @@
           <%= label %>
         </a>
       <% end %>
-      <% if @f_untagged || @f_unprinted || @f_unpainted || !@colorized_catalog.to_s.empty? %>
+      <% if @f_untagged || @f_unprinted || @f_unpainted || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.to_s.empty? %>
         <a href="/catalog?<%= url_query(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted,:colorized].include?(k)}) %>"
            class="status-pill-clear">✕ clear</a>
       <% end %>
+      </div>
     </div>
 
     <%# ── Folder filter dropdown ── %>
@@ -93,10 +107,12 @@
     </form>
 
     <div class="thumb-sizer" title="Thumbnail size">
-      <button class="size-btn" onclick="setThumbSize(60)"  data-size="60">S</button>
-      <button class="size-btn" onclick="setThumbSize(120)" data-size="120">M</button>
-      <button class="size-btn" onclick="setThumbSize(240)" data-size="240">L</button>
-      <button class="size-btn" onclick="setThumbSize(320)" data-size="320">XL</button>
+      <button class="size-btn" onclick="setThumbSize(40)" data-size="40">XS</button>
+      <button class="size-btn" onclick="setThumbSize(60)" data-size="60">S</button>
+      <button class="size-btn" onclick="setThumbSize(100)" data-size="100">M</button>
+      <button class="size-btn" onclick="setThumbSize(160)" data-size="160">L</button>
+      <button class="size-btn" onclick="setThumbSize(240)" data-size="240">XL</button>
+      <button class="size-btn" onclick="setThumbSize(360)" data-size="360">XXL</button>
     </div>
 
     <% if @total == 0 && !@show_all %>
@@ -160,7 +176,7 @@
 <% end %>
 
 <% if @missing_bundle %>
-<div class="xref-alert" style="margin-bottom:12px; border-color:rgba(168,85,247,0.4); background:rgba(168,85,247,0.06);">
+<div class="xref-alert" id="missing-bundle-alert" style="margin-bottom:12px; border-color:rgba(168,85,247,0.4); background:rgba(168,85,247,0.06);">
   <svg viewBox="0 0 24 24" style="stroke:#a855f7;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
   <span style="color:var(--text-dim);">
     This collection has no <strong style="color:#a855f7;">bundle/gallery image</strong> — no image is marked as a bundle (<code>mini_count ≥ 4</code> or named "Bundle").
@@ -192,6 +208,7 @@
   </div>
 <% else %>
 
+<div class="catalog-table-wrap">
 <div class="catalog-table-wrap">
   <table class="catalog-table" id="catalog-table" autocomplete="off">
     <colgroup>
@@ -240,7 +257,15 @@
 
         <%# ── Image row ── %>
         <% is_secondary = !img[:primary_image_id].nil? %>
-        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %> <%= is_secondary ? 'row-is-secondary' : '' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
+        <%
+          _is_bundle    = img[:mini_count].to_i >= 4 || img[:mini_name].to_s.downcase == 'bundle'
+          _is_secondary = img[:primary_image_id].to_i > 0
+          _incomplete   = img[:tagged] && !_is_bundle && !_is_secondary &&
+                          (img[:species].to_s.strip.empty? ||
+                           img[:stance].to_s.strip.empty?  ||
+                           img[:weapons].to_s.strip.empty?)
+        %>
+        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %> <%= is_secondary ? 'row-is-secondary' : '' %> <%= _incomplete ? 'row-incomplete' : '' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
           <% _ctx = url_query({folder: @folder_filter, show_all: (@show_all ? '1' : ''), f_untagged: (@f_untagged ? '1' : ''), f_unprinted: (@f_unprinted ? '1' : ''), f_unpainted: (@f_unpainted ? '1' : ''), colorized: @colorized_catalog}) %>
           <td class="cell-thumb">
             <div class="thumb-wrap">
@@ -256,8 +281,8 @@
               <% if img[:collection_id] %>
                 <button type="button"
                         class="btn-set-cover"
-                        title="Set as collection cover image"
-                        onclick="setCover(<%= img[:collection_id] %>, <%= img[:id] %>, this)">⊙</button>
+                        title="Set as cover / mark as bundle"
+                        onclick="setCoverAndBundle(<%= img[:collection_id] %>, <%= img[:id] %>, this)">⊙</button>
               <% end %>
             </div>
           </td>
@@ -278,7 +303,10 @@
               <% if true %>
               <div class="xref-row">
                 <div class="secondary-of" title="This image is a secondary view linked to a primary image" style="<%= is_secondary ? '' : 'display:none;' %>">
-                  ↳ <%= @primary_lookup[img[:primary_image_id]].to_s.empty? ? "(primary ##{img[:primary_image_id]})" : @primary_lookup[img[:primary_image_id]] %>
+                  <% _primary_name = @primary_lookup[img[:primary_image_id]].to_s %>
+                  <% _primary_label = _primary_name.empty? ? "(primary ##{img[:primary_image_id]})" : _primary_name %>
+                  ↳ <a href="/catalog?show_all=1<%= @folder_filter.empty? ? '' : "&folder=#{CGI.escape(@folder_filter)}" %>#row-<%= img[:primary_image_id] %>"
+                       class="secondary-of-link"><%= _primary_label %></a>
                 </div>
                 <div style="display:flex; align-items:center; gap:4px; margin-top:3px;">
                   <label class="xref-label" title="Link this colorized render as secondary to its grey primary">
@@ -362,9 +390,18 @@
           <td>
             <div class="cell-stack">
               <input type="text" name="stance" class="cell-input" autocomplete="off" value="<%= img[:stance] %>" placeholder="stance…">
-              <% if @top_stance&.any? && img[:stance].to_s.strip.empty? %>
+              <% if @top_stance&.any? && (img[:stance].to_s.strip.empty? || @f_no_stance) %>
+                <%
+                  _sp_st = img[:species].to_s.split(',').map(&:strip).map(&:upcase).first
+                  _sp_stances = (_sp_st && @stance_by_species&.dig(_sp_st)&.any?)                     ? @stance_by_species[_sp_st]                     : nil
+                  _stance_list = _sp_stances || @top_stance
+                  _has_stance_species = _sp_st && @stance_by_species&.key?(_sp_st)
+                %>
                 <div class="species-quickpick">
-                  <% @top_stance.each do |st| %>
+                  <% if _has_stance_species %>
+                    <span class="quickpick-label"><%= _sp_st %> stances:</span>
+                  <% end %>
+                  <% _stance_list.each do |st| %>
                     <button type="button" class="btn-quickpick <%= img[:stance].to_s.split(',').map(&:strip).map(&:upcase).include?(st) ? 'btn-quickpick-active' : '' %>"
                             data-row-id="<%= img[:id] %>" data-field="stance" data-value="<%= st %>"
                             onclick="setFieldQuickpick(this)"><%= st %></button>
@@ -372,9 +409,18 @@
                 </div>
               <% end %>
               <input type="text" name="weapons" class="cell-input cell-input-upper" autocomplete="off" value="<%= img[:weapons] %>" placeholder="weapons…">
-              <% if @top_weapons&.any? && img[:weapons].to_s.strip.empty? %>
+              <% if @top_weapons&.any? && (img[:weapons].to_s.strip.empty? || @f_no_weapons) %>
+                <%
+                  # Use per-species weapon list if species is known and we have stats for it
+                  _sp = img[:species].to_s.split(',').map(&:strip).map(&:upcase).first
+                  _weapon_list = (_sp && @weapons_by_species&.dig(_sp)&.any?)                     ? @weapons_by_species[_sp]                     : @top_weapons
+                  _has_species_data = _sp && @weapons_by_species&.key?(_sp)
+                %>
                 <div class="species-quickpick">
-                  <% @top_weapons.each do |wp| %>
+                  <% if _has_species_data %>
+                    <span class="quickpick-label"><%= _sp %> weapons:</span>
+                  <% end %>
+                  <% _weapon_list.each do |wp| %>
                     <button type="button" class="btn-quickpick <%= img[:weapons].to_s.split(',').map(&:strip).map(&:upcase).include?(wp) ? 'btn-quickpick-active' : '' %>"
                             data-row-id="<%= img[:id] %>" data-field="weapons" data-value="<%= wp %>"
                             onclick="setFieldQuickpick(this)"><%= wp %></button>
@@ -464,14 +510,27 @@
 </div>
 
 <script>
+// Per-species adaptive quickpick data (generated server-side)
+window.MF_WEAPONS_BY_SPECIES = <%= (@weapons_by_species || {}).to_json %>;
+window.MF_STANCE_BY_SPECIES  = <%= (@stance_by_species  || {}).to_json %>;
+window.MF_TOP_WEAPONS = <%= (@top_weapons || []).to_json %>;
+window.MF_TOP_STANCE  = <%= (@top_stance  || []).to_json %>;
+</script>
+
+<script>
 (function() {
   const saved = localStorage.getItem('thumbSize');
   if (saved) applyThumbSize(parseInt(saved), false);
 })();
 
 function setThumbSize(px) {
-  localStorage.setItem('thumbSize', px);
-  applyThumbSize(px, true);
+  document.querySelectorAll('.catalog-thumb').forEach(img => {
+    img.style.width = px + 'px'; img.style.height = px + 'px';
+  });
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.classList.toggle('size-btn-active', parseInt(btn.dataset.size) === px);
+  });
+  try { localStorage.setItem('mf_thumb_size', px); } catch(e) {}
 }
 
 function applyThumbSize(px, animate) {

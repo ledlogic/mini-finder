@@ -233,6 +233,96 @@ mini-finder/
 
 ## Changelog
 
+### v2.23 — July 6, 2026
+- ⊙ button now sets cover AND offers to mark as bundle/gallery image (sets name to "Bundle", count to 4+) in one click
+
+### v2.22 — July 6, 2026
+- Purple "no bundle" alert dismisses automatically after saving a row with name "bundle" or mini_count ≥ 4
+
+### v2.21 — July 6, 2026
+- Incomplete rows highlighted with amber left border: tagged minis missing species, stance, or weapons
+- Highlight updates live after save — clears when all three fields are filled
+- Bundles and xref secondaries excluded from incomplete check
+
+### v2.20 — July 6, 2026
+- Catalog count in page header updates live after rows are filtered out on save
+
+### v2.19 — July 6, 2026
+- When a row is filtered out after save, its xref secondaries are also faded and removed from view
+
+### v2.18 — July 6, 2026
+- Quickpick buttons use `change` event instead of `input` to avoid triggering autocomplete dropdown
+
+### v2.17 — July 6, 2026
+- Fixed adaptive quickpick insertion: only checks immediate next sibling, never steals another field's container
+
+### v2.16 — July 6, 2026
+- Fixed adaptive quickpick buttons positioning: stance buttons now appear immediately after the stance input, not at the bottom of the cell
+
+### v2.15 — July 6, 2026
+- Stance and weapons quickpick buttons update live when species is clicked — selecting ROBOT immediately shows ROBOT-specific stances and weapons without a page reload
+- Per-species data embedded as `window.MF_WEAPONS_BY_SPECIES` / `window.MF_STANCE_BY_SPECIES` JSON in the page
+- `refreshAdaptiveButtons()` and `rebuildQuickpickGroup()` handle dynamic button rebuild
+
+### v2.14 — July 6, 2026
+- Stance quickpick buttons now adapt per-species (same as weapons): shows most common stances for that species from DB stats
+- Added FLYING, AIMING, MOUNTED to fallback stance list
+- Per-species stance stats computed in `catalog_build_images` as `@stance_by_species`
+
+### v2.13 — July 6, 2026
+- After saving a row, if it no longer meets the active filter conditions (e.g. weapons now set while f_no_weapons is active), the row fades red and removes itself from the view
+- Covers: f_no_weapons, f_no_stance, f_no_species, f_no_vehicles, f_no_robots, f_no_bundles
+
+### v2.12 — July 5, 2026
+- Weapons quickpick buttons adapt per-species: if the image has a known species (e.g. HUMAN), shows the most common weapons for that species from DB stats; falls back to global top weapons otherwise
+- Small species label shown above adapted weapon buttons (e.g. "HUMAN weapons:")
+
+### v2.11 — July 5, 2026
+- Stance and weapons quickpick buttons always visible when their respective "no field" filter is active (🦶 No stance / 🔫 No weapons)
+
+### v2.10 — July 5, 2026
+- Filter pills wrap onto second line aligned to the right of the "Filter:" label using CSS grid
+
+### v2.09 — July 5, 2026
+- Filter pills bar wraps onto multiple lines when there are many active filters
+
+### v2.08 — July 5, 2026
+- Catalog action buttons wrap onto next line instead of pushing into right margin
+- Table uses `overflow-x: auto` wrapper for narrow screens
+
+### v2.07 — July 5, 2026
+- Xref ↳ primary name is now a clickable link that jumps to that row in the catalog
+
+### v2.06 — July 5, 2026
+- Catalog 🚗 No vehicles, 🤖 No robots, 📦 No bundles filters now also exclude xref secondaries linked to those primaries
+
+### v2.05 — July 5, 2026
+- Catalog filter pills: 🚗 No vehicles · 🤖 No robots · 📦 No bundles (mini_count ≥ 4)
+- All new pills combine with existing flags and folder filter
+
+### v2.04 — July 5, 2026
+- Catalog filter pills: 🔫 No weapons · 🦶 No stance · 🧬 No species — show only tagged images missing that field
+- Combines with folder filter, colorized, and other flags
+
+### v2.03 — July 5, 2026
+- Search page: species, stance, weapons quick-pick buttons added to filter fields
+- Clicking a button fills the field and auto-submits the search; clicking again clears it
+
+### v2.02 — July 5, 2026
+- Unified thumbnail size scale across catalog, random, and history: XS=40 S=60 M=100 L=160 XL=240 XXL=360
+- All pages share `mf_thumb_size` localStorage key so size persists across pages
+- Active size button now highlights correctly on all pages (standardised to `size-btn-active`)
+
+### v2.01 — July 5, 2026
+- History page: replaced pagination with infinite scroll (IntersectionObserver, loads 50 at a time)
+- Pulsing "Loading…" indicator while fetching; "· end of history ·" when complete
+- `history_rows.erb` partial for AJAX row rendering
+
+### v2.00 — July 5, 2026
+- `/history` page: all images ordered by most recently updated, with thumbnail (S/M/L/XL), collection name, mini name, species, gender, stance, weapons, printed, painted, and relative time (2h ago, 3d ago, etc.)
+- `relative_time()` helper added to `lib/helpers.rb`
+- History nav link added to sidebar
+
 ### v1.99 — July 4, 2026
 - Stance and weapons quick-pick buttons hidden when field already has a value; only shown when blank
 

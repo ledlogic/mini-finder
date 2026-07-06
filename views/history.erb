@@ -1,0 +1,114 @@
+<div class="page-header">
+  <div>
+    <h1>History</h1>
+    <p class="page-sub" id="history-count"><%= @total %> images · recently updated first</p>
+  </div>
+  <div class="thumb-sizer" title="Thumbnail size">
+    <button class="size-btn" onclick="setHistorySize(40)" data-size="40">XS</button>
+    <button class="size-btn" onclick="setHistorySize(60)" data-size="60">S</button>
+    <button class="size-btn" onclick="setHistorySize(100)" data-size="100">M</button>
+    <button class="size-btn" onclick="setHistorySize(160)" data-size="160">L</button>
+    <button class="size-btn" onclick="setHistorySize(240)" data-size="240">XL</button>
+    <button class="size-btn" onclick="setHistorySize(360)" data-size="360">XXL</button>
+  </div>
+</div>
+
+<table class="history-table" id="history-table">
+  <thead>
+    <tr>
+      <th class="history-th-img">Preview</th>
+      <th>Collection</th>
+      <th>Name</th>
+      <th>Species</th>
+      <th>Gender</th>
+      <th>Stance</th>
+      <th>Weapons</th>
+      <th>🖨</th>
+      <th>🎨</th>
+      <th>Updated</th>
+    </tr>
+  </thead>
+  <tbody id="history-body">
+    <%= erb :history_rows, layout: false %>
+  </tbody>
+</table>
+
+<div id="history-sentinel" style="height:40px; display:flex; align-items:center; justify-content:center;">
+  <% if @page < @pages %>
+    <span class="history-loading">Loading…</span>
+  <% end %>
+</div>
+
+<script>
+(function() {
+  var currentPage  = <%= @page %>;
+  var totalPages   = <%= @pages %>;
+  var loading      = false;
+  var thumbSize    = 60;
+
+  // ── Thumb size ────────────────────────────────────────────────────────────
+  window.setHistorySize = function(size) {
+    thumbSize = size;
+    document.querySelectorAll('.history-thumb').forEach(function(img) {
+      img.style.width  = size + 'px';
+      img.style.height = size + 'px';
+    });
+    document.querySelectorAll('.size-btn').forEach(function(b) {
+      b.classList.toggle('size-btn-active', parseInt(b.dataset.size) === size);
+    });
+    try { localStorage.setItem('mf_thumb_size', size); } catch(e) {}
+  };
+
+  function applyThumbSize(container) {
+    container.querySelectorAll('.history-thumb').forEach(function(img) {
+      img.style.width  = thumbSize + 'px';
+      img.style.height = thumbSize + 'px';
+    });
+  }
+
+  // ── Load next page ────────────────────────────────────────────────────────
+  function loadMore() {
+    if (loading || currentPage >= totalPages) return;
+    loading = true;
+    var sentinel = document.getElementById('history-sentinel');
+    sentinel.innerHTML = '<span class="history-loading">Loading…</span>';
+
+    fetch('/history?page=' + (currentPage + 1), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.text(); })
+    .then(function(html) {
+      currentPage++;
+      var tbody = document.getElementById('history-body');
+      var tmp = document.createElement('tbody');
+      tmp.innerHTML = html;
+      while (tmp.firstChild) {
+        tbody.appendChild(tmp.firstChild);
+      }
+      applyThumbSize(tbody);
+      loading = false;
+      if (currentPage >= totalPages) {
+        sentinel.innerHTML = '<span class="history-end">· end of history ·</span>';
+      } else {
+        sentinel.innerHTML = '';
+      }
+    })
+    .catch(function() {
+      loading = false;
+      sentinel.innerHTML = '<span class="history-loading">Retry…</span>';
+    });
+  }
+
+  // ── Intersection observer for infinite scroll ─────────────────────────────
+  var observer = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting) loadMore();
+  }, { rootMargin: '200px' });
+  observer.observe(document.getElementById('history-sentinel'));
+
+  // ── Init saved size ───────────────────────────────────────────────────────
+  try {
+    var saved = localStorage.getItem('mf_thumb_size');
+    if (saved) setHistorySize(parseInt(saved));
+  } catch(e) {}
+})();
+</script>

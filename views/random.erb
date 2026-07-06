@@ -5,10 +5,12 @@
   </div>
   <div style="display:flex; align-items:center; gap:14px;">
     <div class="thumb-sizer" title="Card size">
-      <button class="size-btn" onclick="setRandomSize(220)" data-size="220">S</button>
-      <button class="size-btn" onclick="setRandomSize(340)" data-size="340">M</button>
-      <button class="size-btn" onclick="setRandomSize(480)" data-size="480">L</button>
-      <button class="size-btn" onclick="setRandomSize(640)" data-size="640">XL</button>
+      <button class="size-btn" onclick="setRandomSize(40)" data-size="40">XS</button>
+      <button class="size-btn" onclick="setRandomSize(60)" data-size="60">S</button>
+      <button class="size-btn" onclick="setRandomSize(100)" data-size="100">M</button>
+      <button class="size-btn" onclick="setRandomSize(160)" data-size="160">L</button>
+      <button class="size-btn" onclick="setRandomSize(240)" data-size="240">XL</button>
+      <button class="size-btn" onclick="setRandomSize(360)" data-size="360">XXL</button>
     </div>
     <a href="<%= url_random %>" class="btn-scan" style="text-decoration:none;">
       <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.5"/><circle cx="18" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="6" cy="18" r="1.5"/><circle cx="18" cy="18" r="1.5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
@@ -91,8 +93,13 @@
 })();
 
 function setRandomSize(px) {
-  localStorage.setItem('randomCardSize', px);
-  applyRandomSize(px, true);
+  document.querySelectorAll('.random-img').forEach(img => {
+    img.style.width = px + 'px'; img.style.height = px + 'px';
+  });
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.classList.toggle('size-btn-active', parseInt(btn.dataset.size) === px);
+  });
+  try { localStorage.setItem('mf_thumb_size', px); } catch(e) {}
 }
 
 function applyRandomSize(px, animate) {

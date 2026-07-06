@@ -40,6 +40,31 @@ async function cycleColorized(imageId, currentState, btn) {
   });
 }
 
+// ── Set cover + optionally mark as bundle ────────────────────────────────────
+async function setCoverAndBundle(collectionId, imageId, btn) {
+  var row      = btn.closest('tr');
+  var nameInp  = row ? row.querySelector('input[name="mini_name"]') : null;
+  var mcSel    = row ? row.querySelector('select[name="mini_count"]') : null;
+  var nameVal  = nameInp ? nameInp.value.trim().toLowerCase() : '';
+  var mcVal    = mcSel   ? mcSel.value : '';
+  var alreadyBundle = nameVal === 'bundle' || mcVal === '4+' || parseInt(mcVal) >= 4;
+
+  // Always set as cover
+  await setCover(collectionId, imageId, btn);
+
+  // If not already a bundle, ask if they want to mark it as one
+  if (!alreadyBundle) {
+    if (confirm('Also mark this image as the bundle/gallery image?
+(Sets name to "Bundle" and count to 4+)')) {
+      if (nameInp) { nameInp.value = 'Bundle'; nameInp.dispatchEvent(new Event('change')); }
+      if (mcSel)   { mcSel.value   = '4+';     mcSel.dispatchEvent(new Event('change')); }
+      // Save the row
+      var saveBtn = row ? row.querySelector('.btn-save') : null;
+      if (saveBtn) saveBtn.click();
+    }
+  }
+}
+
 // ── Set collection cover image ─────────────────────────────────────────────
 async function setCover(collectionId, imageId, btn) {
   btn.disabled = true;
@@ -136,6 +161,32 @@ function saveRow(id, ctx, btn) {
         btn.style.background = 'var(--accent)';
         row.classList.add('row-tagged');
         row.classList.remove('row-untagged');
+        // Dismiss missing-bundle alert if this row is now a bundle
+        var alertEl = document.getElementById('missing-bundle-alert');
+        if (alertEl) {
+          var nameInp = row.querySelector('input[name="mini_name"]');
+          var mcSel   = row.querySelector('select[name="mini_count"]');
+          var nameVal = nameInp ? nameInp.value.trim().toLowerCase() : '';
+          var mcVal   = mcSel  ? mcSel.value : '';
+          var isBundle = nameVal === 'bundle' || mcVal === '4+' || parseInt(mcVal) >= 4;
+          if (isBundle) {
+            alertEl.style.transition = 'opacity 0.4s';
+            alertEl.style.opacity = '0';
+            setTimeout(function() { alertEl.remove(); }, 400);
+          }
+        }
+
+        // Update incomplete highlight
+        var sp = row.querySelector('input[name="species"]');
+        var st = row.querySelector('input[name="stance"]');
+        var wp = row.querySelector('input[name="weapons"]');
+        var mc = row.querySelector('select[name="mini_count"]');
+        var isBundle = mc && (mc.value === '4+' || parseInt(mc.value) >= 4);
+        var isSecondary = row.querySelector('input[name="is_secondary"]') &&
+                          row.querySelector('input[name="is_secondary"]').checked;
+        var incomplete = !isBundle && !isSecondary &&
+          ((!sp || !sp.value.trim()) || (!st || !st.value.trim()) || (!wp || !wp.value.trim()));
+        row.classList.toggle('row-incomplete', !!incomplete);
         // Reset dirty-state baseline so button doesn't re-red
         if (row._dirtyOriginals && row._dirtyInputs) {
           row._dirtyInputs.forEach(function(inp) {
@@ -147,6 +198,41 @@ function saveRow(id, ctx, btn) {
         var xrefSelect   = row.querySelector('select[name="primary_image_id"]');
         if (xrefCheckbox && (xrefCheckbox.checked || xrefSelect && xrefSelect.value)) {
           window.location.reload();
+          return;
+        }
+        // Check if row still passes active filters; if not, fade and remove it + its xrefs
+        if (rowFailsFilters(row)) {
+          // Collect this row and any xref secondaries (rows that link to this image id)
+          var toRemove = [row];
+          document.querySelectorAll('.img-row').forEach(function(r) {
+            var xrefSel = r.querySelector('select[name="primary_image_id"]');
+            if (xrefSel && xrefSel.value == id) toRemove.push(r);
+          });
+          toRemove.forEach(function(r) {
+            r.style.transition = 'opacity 0.5s, background 0.5s';
+            r.style.opacity = '0.3';
+            r.style.background = 'rgba(239,68,68,0.06)';
+          });
+          setTimeout(function() {
+            toRemove.forEach(function(r) { r.remove(); });
+            // Remove orphaned collection-header-row if no more rows follow it
+            document.querySelectorAll('.collection-header-row').forEach(function(hr) {
+              var next = hr.nextElementSibling;
+              if (!next || next.classList.contains('collection-header-row')) hr.remove();
+            });
+            // Update the count display
+            var countEl = document.getElementById('catalog-count');
+            if (countEl) {
+              var remaining = document.querySelectorAll('.img-row').length;
+              var strong = countEl.querySelector('strong');
+              if (strong) {
+                strong.textContent = remaining;
+              } else {
+                // Plain text format — replace first number
+                countEl.textContent = countEl.textContent.replace(/^\d+/, remaining);
+              }
+            }
+          }, 600);
           return;
         }
       } else {

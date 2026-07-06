@@ -1,0 +1,39 @@
+<% @images.each do |img| %>
+  <% col = @collections[img[:collection_id]] %>
+  <% col_name = col ? (col[:name].to_s.empty? ? File.basename(col[:folder_path]) : col[:name]) : '—' %>
+  <% col_id   = col ? col[:id] : nil %>
+  <% updated  = img[:updated_at] ? Time.parse(img[:updated_at].to_s) : nil %>
+  <tr class="history-row" id="row-<%= img[:id] %>">
+    <td class="history-td-img">
+      <a href="<%= col_id ? "/collection/#{col_id}#row-#{img[:id]}" : "#" %>">
+        <img src="/image_file/<%= img[:id] %>"
+             class="history-thumb"
+             loading="lazy"
+             alt="<%= img[:filename] %>"
+             onclick="openLightbox('/image_file/<%= img[:id] %>'); event.preventDefault();">
+      </a>
+    </td>
+    <td class="history-td-col">
+      <% if col_id %>
+        <a href="/collection/<%= col_id %>" class="history-col-link"><%= col_name %></a>
+      <% else %>
+        <span class="history-dim"><%= col_name %></span>
+      <% end %>
+    </td>
+    <td class="history-td-name">
+      <% if img[:mini_name].to_s.empty? %><em class="history-dim">unnamed</em><% else %><%= img[:mini_name] %><% end %>
+    </td>
+    <td class="history-dim"><%= img[:species] %></td>
+    <td class="history-dim"><%= img[:gender] %></td>
+    <td class="history-dim"><%= img[:stance] %></td>
+    <td class="history-dim"><%= img[:weapons] %></td>
+    <td class="history-num"><%= img[:printed].to_i > 0 ? img[:printed] : '—' %></td>
+    <td class="history-num"><%= img[:painted].to_i > 0 ? img[:painted] : '—' %></td>
+    <td class="history-td-time" title="<%= updated %>">
+      <% if updated %>
+        <span class="history-rel"><%= relative_time(updated) %></span>
+        <span class="history-abs"><%= updated.strftime('%Y-%m-%d %H:%M') %></span>
+      <% end %>
+    </td>
+  </tr>
+<% end %>

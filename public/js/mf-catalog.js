@@ -181,12 +181,69 @@ function setFieldQuickpick(btn) {
   var input     = row ? row.querySelector('input[name="' + fieldName + '"]') : null;
   if (!input) return;
   input.value = value;
-  input.dispatchEvent(new Event('input'));
+  // Use 'change' not 'input' to avoid triggering autocomplete dropdown
+  input.dispatchEvent(new Event('change'));
+  closeAllAutocompletes();
   btn.closest('.species-quickpick').querySelectorAll('.btn-quickpick').forEach(function(b) {
     b.classList.toggle('btn-quickpick-active', b === btn);
   });
   // Auto-set gender to NA for non-gendered species
-  if (fieldName === 'species') applySpeciesRules(value, row);
+  if (fieldName === 'species') {
+    applySpeciesRules(value, row);
+    refreshAdaptiveButtons(value, row);
+  }
+}
+
+// ── Dynamically refresh stance/weapons buttons when species changes ───────────
+function refreshAdaptiveButtons(species, row) {
+  var sp = (species || '').toUpperCase();
+  var weaponsData = (window.MF_WEAPONS_BY_SPECIES && window.MF_WEAPONS_BY_SPECIES[sp] && window.MF_WEAPONS_BY_SPECIES[sp].length)
+    ? window.MF_WEAPONS_BY_SPECIES[sp]
+    : (window.MF_TOP_WEAPONS || []);
+  var stanceData = (window.MF_STANCE_BY_SPECIES && window.MF_STANCE_BY_SPECIES[sp] && window.MF_STANCE_BY_SPECIES[sp].length)
+    ? window.MF_STANCE_BY_SPECIES[sp]
+    : (window.MF_TOP_STANCE || []);
+  rebuildQuickpickGroup(row, 'weapons', weaponsData, sp ? sp + ' weapons:' : null);
+  rebuildQuickpickGroup(row, 'stance',  stanceData,  sp ? sp + ' stances:' : null);
+}
+
+function rebuildQuickpickGroup(row, fieldName, values, labelText) {
+  var input = row.querySelector('input[name="' + fieldName + '"]');
+  if (!input || !values || !values.length) return;
+
+  // Find a quickpick that belongs to this field — must be the immediate next sibling
+  // (not searching further, to avoid stealing another field's quickpick)
+  var container = null;
+  var next = input.nextElementSibling;
+  if (next && next.classList.contains('species-quickpick')) {
+    container = next;
+  }
+
+  if (!container) {
+    // Always insert directly after this input
+    container = document.createElement('div');
+    container.className = 'species-quickpick';
+    input.insertAdjacentElement('afterend', container);
+  }
+
+  container.innerHTML = '';
+  if (labelText) {
+    var lbl = document.createElement('span');
+    lbl.className = 'quickpick-label';
+    lbl.textContent = labelText;
+    container.appendChild(lbl);
+  }
+  var currentVal = input.value.trim().toUpperCase();
+  values.forEach(function(val) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-quickpick' + (currentVal === val ? ' btn-quickpick-active' : '');
+    b.dataset.field = fieldName;
+    b.dataset.value = val;
+    b.textContent   = val;
+    b.onclick = function() { setFieldQuickpick(b); };
+    container.appendChild(b);
+  });
 }
 
 // ── Edit page quick-pick buttons ──────────────────────────────────────────────
@@ -196,7 +253,8 @@ function editQuickpick(btn) {
   var input    = document.getElementById(targetId);
   if (!input) return;
   input.value = value;
-  input.dispatchEvent(new Event('input'));
+  input.dispatchEvent(new Event('change'));
+  closeAllAutocompletes();
   btn.closest('.species-quickpick').querySelectorAll('.btn-quickpick').forEach(function(b) {
     b.classList.remove('btn-quickpick-active');
   });
@@ -212,4 +270,60 @@ function editQuickpick(btn) {
       setTimeout(function() { genderSelect.style.background = ''; }, 1200);
     }
   }
+}
+// ── Search page quick-pick buttons ───────────────────────────────────────────
+function searchQuickpick(btn) {
+  var targetId = btn.dataset.target;
+  var value    = btn.dataset.value;
+  var input    = document.getElementById(targetId);
+  if (!input) return;
+
+  // Toggle: clicking active button clears it
+  if (input.value.toUpperCase() === value.toUpperCase()) {
+    input.value = '';
+  } else {
+    input.value = value;
+  }
+
+  // Update active state
+  btn.closest('.species-quickpick').querySelectorAll('.btn-quickpick').forEach(function(b) {
+    b.classList.toggle('btn-quickpick-active', b.dataset.value === input.value.toUpperCase());
+  });
+
+  // Auto-submit the search form
+  var form = input.closest('form');
+  if (form) form.submit();
+}
+
+// ── Check if a saved row no longer passes the active URL filters ──────────────
+function rowFailsFilters(row) {
+  var params = new URLSearchParams(window.location.search);
+
+  function fieldVal(name) {
+    var el = row.querySelector('[name="' + name + '"]');
+    return el ? el.value.trim().toUpperCase() : '';
+  }
+
+  // f_no_weapons: row fails if weapons is now set
+  if (params.get('f_no_weapons') === '1' && fieldVal('weapons') !== '') return true;
+
+  // f_no_stance: row fails if stance is now set
+  if (params.get('f_no_stance') === '1' && fieldVal('stance') !== '') return true;
+
+  // f_no_species: row fails if species is now set
+  if (params.get('f_no_species') === '1' && fieldVal('species') !== '') return true;
+
+  // f_no_vehicles: row fails if species contains VEHICLE
+  if (params.get('f_no_vehicles') === '1' && fieldVal('species').includes('VEHICLE')) return true;
+
+  // f_no_robots: row fails if species contains ROBOT
+  if (params.get('f_no_robots') === '1' && fieldVal('species').includes('ROBOT')) return true;
+
+  // f_no_bundles: row fails if mini_count >= 4
+  if (params.get('f_no_bundles') === '1') {
+    var mc = row.querySelector('[name="mini_count"]');
+    if (mc && (mc.value === '4+' || parseInt(mc.value) >= 4)) return true;
+  }
+
+  return false;
 }

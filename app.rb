@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "1.99"
+APP_VERSION = "2.23"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -470,6 +470,25 @@ end
 
 # ── 2b. Random images ───────────────────────────────────────────────────────
 
+get '/history' do
+  @per_page    = 50
+  @page        = [params[:page].to_i, 1].max
+  @total       = Images.count
+  @images      = Images
+    .order(Sequel.desc(:updated_at))
+    .limit(@per_page, (@page - 1) * @per_page)
+    .all
+  @pages       = (@total.to_f / @per_page).ceil
+  @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
+
+  # AJAX infinite scroll — return partial HTML
+  if request.xhr?
+    erb :history_rows, layout: false
+  else
+    erb :history
+  end
+end
+
 get '/statistics' do
   # Total counts
   @total_images      = Images.count
@@ -755,6 +774,23 @@ get '/search' do
 
   q = params[:q].to_s.strip
   @page_title = q.empty? ? nil : "Search: #{q}"
+
+  fallback_species = %w[HUMAN ROBOT VEHICLE ALIEN CREATURE UNDEAD BEAST]
+  fallback_stance  = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT FLYING AIMING MOUNTED]
+  fallback_weapons = ['SWORD','PISTOL','RIFLE','KNIFE','STAFF','SHIELD','BOW','AXE','MACHINE GUN']
+  db_species = Images.where(Sequel.~(species: nil)).exclude(species: '').select_map(:species)
+    .flat_map { |s| s.split(',').map(&:strip).map(&:upcase) }.reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+  db_stance  = Images.where(Sequel.~(stance: nil)).exclude(stance: '').select_map(:stance)
+    .flat_map { |s| s.split(',').map(&:strip).map(&:upcase) }.reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+  db_weapons = Images.where(Sequel.~(weapons: nil)).exclude(weapons: '').select_map(:weapons)
+    .flat_map { |w| w.split(',').map(&:strip).map(&:upcase) }.reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+  @top_species = (db_species + (fallback_species - db_species)).first(8)
+  @top_stance  = (db_stance  + (fallback_stance  - db_stance )).first(8)
+  @top_weapons = (['NONE'] + (db_weapons + (fallback_weapons - db_weapons)).reject { |w| w == 'NONE' }).first(9)
+
   erb :search
 end
 

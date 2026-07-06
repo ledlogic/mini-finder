@@ -10,6 +10,22 @@
 
 helpers do
 
+  # ─── Time helpers ────────────────────────────────────────────────────────────
+
+  def relative_time(time)
+    return '—' unless time
+    diff = Time.now - time
+    case diff.abs.to_i
+    when 0..59        then "#{diff.to_i}s ago"
+    when 60..3599     then "#{(diff / 60).to_i}m ago"
+    when 3600..86399  then "#{(diff / 3600).to_i}h ago"
+    when 86400..604799 then "#{(diff / 86400).to_i}d ago"
+    when 604800..2591999 then "#{(diff / 604800).to_i}w ago"
+    when 2592000..31535999 then "#{(diff / 2592000).to_i}mo ago"
+    else "#{(diff / 31536000).to_i}y ago"
+    end
+  end
+
   # ─── Search / scoring ────────────────────────────────────────────────────────
 
   def str_levenshtein(s, t)
@@ -127,6 +143,12 @@ helpers do
     @f_untagged        = params[:f_untagged]  == '1'
     @f_unprinted       = params[:f_unprinted] == '1'
     @f_unpainted       = params[:f_unpainted] == '1'
+    @f_no_weapons      = params[:f_no_weapons]  == '1'
+    @f_no_stance       = params[:f_no_stance]   == '1'
+    @f_no_species      = params[:f_no_species]  == '1'
+    @f_no_vehicles     = params[:f_no_vehicles] == '1'
+    @f_no_robots       = params[:f_no_robots]   == '1'
+    @f_no_bundles      = params[:f_no_bundles]  == '1'
     @colorized_catalog = params[:colorized].to_s.strip
     @colorized_catalog = '' unless %w[true false unknown].include?(@colorized_catalog)
     @page     = [params[:page].to_i, 1].max
@@ -134,8 +156,8 @@ helpers do
     @root     = settings.root_folder
     @folders  = Images.distinct.select_map(:source_folder).sort
 
-    any_flag = @f_untagged || @f_unprinted || @f_unpainted || !@colorized_catalog.empty?
-    @show_all = true if @f_unprinted || @f_unpainted || !@colorized_catalog.empty?
+    any_flag = @f_untagged || @f_unprinted || @f_unpainted || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.empty?
+    @show_all = true if @f_unprinted || @f_unpainted || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.empty?
     any_flag
   end
 
@@ -165,6 +187,42 @@ helpers do
     if @f_unpainted
       dataset = bundle_exclude.call(dataset)
       dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
+    end
+    if @f_no_weapons
+      dataset = dataset.where(Sequel.~(tagged: false))
+      dataset = dataset.where(Sequel.expr(weapons: nil) | Sequel.expr(weapons: ''))
+    end
+    if @f_no_stance
+      dataset = dataset.where(Sequel.~(tagged: false))
+      dataset = dataset.where(Sequel.expr(stance: nil) | Sequel.expr(stance: ''))
+    end
+    if @f_no_species
+      dataset = dataset.where(Sequel.~(tagged: false))
+      dataset = dataset.where(Sequel.expr(species: nil) | Sequel.expr(species: ''))
+    end
+    if @f_no_vehicles
+      vehicle_ids = Images.where(
+        Sequel.ilike(:species, '%VEHICLE%') | Sequel.ilike(:mini_name, '%vehicle%')
+      ).select_map(:id)
+      xref_vehicle_ids = Images.where(primary_image_id: vehicle_ids).select_map(:id)
+      all_vehicle_ids = (vehicle_ids + xref_vehicle_ids).uniq
+      dataset = dataset.exclude(id: all_vehicle_ids) unless all_vehicle_ids.empty?
+    end
+    if @f_no_robots
+      robot_ids = Images.where(
+        Sequel.ilike(:species, '%ROBOT%') | Sequel.ilike(:mini_name, '%robot%')
+      ).select_map(:id)
+      xref_robot_ids = Images.where(primary_image_id: robot_ids).select_map(:id)
+      all_robot_ids = (robot_ids + xref_robot_ids).uniq
+      dataset = dataset.exclude(id: all_robot_ids) unless all_robot_ids.empty?
+    end
+    if @f_no_bundles
+      bundle_ids = Images.where(
+        Sequel.expr { mini_count >= 4 } | Sequel.ilike(:mini_name, 'bundle')
+      ).select_map(:id)
+      xref_bundle_ids = Images.where(primary_image_id: bundle_ids).select_map(:id)
+      all_bundle_ids = (bundle_ids + xref_bundle_ids).uniq
+      dataset = dataset.exclude(id: all_bundle_ids) unless all_bundle_ids.empty?
     end
 
     case @status_filter
@@ -243,7 +301,7 @@ helpers do
     @top_species = (db_species + (fallback_species - db_species)).first(8)
 
     # Top stance for quick-pick buttons
-    fallback_stance = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT]
+    fallback_stance = %w[STANDING CROUCHING RUNNING KNEELING CHARGING PRONE JUMPING COMBAT FLYING AIMING MOUNTED]
     db_stance = Images
       .where(Sequel.~(stance: nil))
       .exclude(stance: '')
@@ -256,7 +314,6 @@ helpers do
     @top_stance = (db_stance + (fallback_stance - db_stance)).first(8)
 
     # Top weapons for quick-pick buttons
-    # NONE always first, then DB by frequency, then fallback core for sparse DBs
     fallback_weapons = ['SWORD', 'PISTOL', 'RIFLE', 'KNIFE', 'STAFF', 'SHIELD', 'BOW', 'AXE', 'MACHINE GUN']
     db_weapons = Images
       .where(Sequel.~(weapons: nil))
@@ -268,6 +325,42 @@ helpers do
       .sort_by { |_, v| -v }
       .map(&:first)
     @top_weapons = (['NONE'] + (db_weapons + (fallback_weapons - db_weapons)).reject { |w| w == 'NONE' }).first(9)
+
+    # Per-species weapon stats for adaptive quickpick buttons
+    @weapons_by_species = {}
+    Images
+      .where(Sequel.~(weapons: nil)).exclude(weapons: '')
+      .where(Sequel.~(species: nil)).exclude(species: '')
+      .select_map([:species, :weapons])
+      .each do |sp_raw, wp_raw|
+        sp_raw.split(',').map(&:strip).map(&:upcase).each do |sp|
+          wp_raw.split(',').map(&:strip).map(&:upcase).each do |wp|
+            @weapons_by_species[sp] ||= Hash.new(0)
+            @weapons_by_species[sp][wp] += 1
+          end
+        end
+      end
+    @weapons_by_species.transform_values! do |tally|
+      (['NONE'] + tally.sort_by { |_, v| -v }.map(&:first).reject { |w| w == 'NONE' }).first(9)
+    end
+
+    # Per-species stance stats for adaptive quickpick buttons
+    @stance_by_species = {}
+    Images
+      .where(Sequel.~(stance: nil)).exclude(stance: '')
+      .where(Sequel.~(species: nil)).exclude(species: '')
+      .select_map([:species, :stance])
+      .each do |sp_raw, st_raw|
+        sp_raw.split(',').map(&:strip).map(&:upcase).each do |sp|
+          st_raw.split(',').map(&:strip).map(&:upcase).each do |st|
+            @stance_by_species[sp] ||= Hash.new(0)
+            @stance_by_species[sp][st] += 1
+          end
+        end
+      end
+    @stance_by_species.transform_values! do |tally|
+      tally.sort_by { |_, v| -v }.map(&:first).first(8)
+    end
 
     # Check if this collection is missing a bundle/gallery image
     # (an image with mini_count >= 4 or named 'bundle')

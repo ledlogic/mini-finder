@@ -2,7 +2,8 @@
 
 /* ── Catalog Table ────────────────────────────────────────────────────────── */
 .catalog-table-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 1px solid var(--border); }
-.catalog-table { width: 100%; border-collapse: collapse; }
+.catalog-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+.catalog-table-wrap { width: 100%; overflow-x: auto; }
 .catalog-table thead { background: var(--bg3); }
 .catalog-table th {
   padding: 10px 8px;
@@ -25,6 +26,12 @@
 .row-tagged { opacity: 0.7; }
 .row-tagged:hover { opacity: 1; }
 .row-untagged { }
+.row-incomplete {
+  border-left: 3px solid rgba(251,191,36,0.6) !important;
+  background: rgba(251,191,36,0.03);
+}
+.row-incomplete:hover { background: rgba(251,191,36,0.07); }
+.row-incomplete td:first-child { border-left: none; }
 
 .col-thumb   { width: 72px; }
 .col-path    { width: 160px; }
@@ -36,7 +43,7 @@
   flex-direction: column;
   gap: 4px;
 }
-.col-actions { width: 72px; }
+.col-actions { width: 72px; min-width: 60px; }
 
 .thumb-wrap { position: relative; display: inline-block; }
 .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius); cursor: pointer; border: 1px solid var(--border); display: block; background: var(--bg3); transition: transform 0.15s; }
@@ -554,7 +561,21 @@ input.cell-input[name="mini_name"] { text-transform: capitalize; }
 
 /* ── Catalog status filter pills ──────────────────────────────────────────── */
 .status-filter-pills {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px;
+  align-items: start;
+}
+.status-pills-label {
+  grid-column: 1;
+  padding-top: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.status-pills-inner {
+  grid-column: 2;
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
   align-items: center;
 }
@@ -587,6 +608,9 @@ input.cell-input[name="mini_name"] { text-transform: capitalize; }
   letter-spacing: 0.05em;
   color: var(--text-faint);
   text-transform: uppercase;
+  grid-column: 1;
+  padding-top: 6px;
+  white-space: nowrap;
 }
 .status-pill-clear {
   padding: 5px 10px;
@@ -709,3 +733,20 @@ input.cell-input[name="mini_name"] { text-transform: capitalize; }
   text-underline-offset: 3px;
 }
 
+
+/* ── Xref secondary-of link ──────────────────────────────────────────────── */
+.secondary-of-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: inherit;
+}
+.secondary-of-link:hover { text-decoration: underline; }
+
+/* ── Adaptive quickpick label ────────────────────────────────────────────── */
+.quickpick-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  align-self: center;
+}

@@ -21,7 +21,17 @@
       </div>
       <div class="form-group">
         <label>Species</label>
-        <input type="text" name="species" value="<%= @params['species'] %>" placeholder="e.g. Elf">
+        <input type="text" name="species" id="search-species" value="<%= @params['species'] %>" placeholder="e.g. Elf" autocomplete="off">
+        <% if @top_species&.any? %>
+          <div class="species-quickpick" style="margin-top:4px;">
+            <% @top_species.each do |sp| %>
+              <button type="button"
+                      class="btn-quickpick <%= @params['species'].to_s.upcase == sp ? 'btn-quickpick-active' : '' %>"
+                      data-target="search-species" data-value="<%= sp %>"
+                      onclick="searchQuickpick(this)"><%= sp %></button>
+            <% end %>
+          </div>
+        <% end %>
       </div>
       <div class="form-group">
         <label>Gender</label>
@@ -34,11 +44,31 @@
       </div>
       <div class="form-group">
         <label>Weapons</label>
-        <input type="text" name="weapons" value="<%= @params['weapons'] %>" placeholder="e.g. Sword">
+        <input type="text" name="weapons" id="search-weapons" value="<%= @params['weapons'] %>" placeholder="e.g. Sword" autocomplete="off">
+        <% if @top_weapons&.any? %>
+          <div class="species-quickpick" style="margin-top:4px;">
+            <% @top_weapons.each do |wp| %>
+              <button type="button"
+                      class="btn-quickpick <%= @params['weapons'].to_s.upcase == wp ? 'btn-quickpick-active' : '' %>"
+                      data-target="search-weapons" data-value="<%= wp %>"
+                      onclick="searchQuickpick(this)"><%= wp %></button>
+            <% end %>
+          </div>
+        <% end %>
       </div>
       <div class="form-group">
         <label>Stance</label>
-        <input type="text" name="stance" value="<%= @params['stance'] %>" placeholder="e.g. Combat">
+        <input type="text" name="stance" id="search-stance" value="<%= @params['stance'] %>" placeholder="e.g. Combat" autocomplete="off">
+        <% if @top_stance&.any? %>
+          <div class="species-quickpick" style="margin-top:4px;">
+            <% @top_stance.each do |st| %>
+              <button type="button"
+                      class="btn-quickpick <%= @params['stance'].to_s.upcase == st ? 'btn-quickpick-active' : '' %>"
+                      data-target="search-stance" data-value="<%= st %>"
+                      onclick="searchQuickpick(this)"><%= st %></button>
+            <% end %>
+          </div>
+        <% end %>
       </div>
       <div class="form-group">
         <label>Size</label>
