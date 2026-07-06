@@ -91,6 +91,18 @@ helpers do
         end
       end
 
+      # Also score against collection name
+      col_name = row[:_collection_name].to_s.downcase
+      unless col_name.empty?
+        q.split.each do |word|
+          if col_name.include?(word)
+            score += 2.0
+            highlights[:collection_name] ||= []
+            highlights[:collection_name] << word
+          end
+        end
+      end
+
       desc = row[:description].to_s.downcase
       unless desc.empty?
         desc_words = desc.split(/\s+/)

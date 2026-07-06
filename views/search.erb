@@ -128,8 +128,9 @@
           <div class="result-body">
             <div class="result-file">
               <% _sc = @collections[img[:collection_id]] %>
+              <% _col_name = _sc ? (_sc[:name].to_s.empty? ? File.basename(img[:source_folder]) : _sc[:name]) : File.basename(img[:source_folder]) %>
               <a href="<%= _sc ? "/collection/#{_sc[:id]}#row-#{img[:id]}" : "/catalog?show_all=1&folder=#{CGI.escape(img[:source_folder])}#row-#{img[:id]}" %>"
-                 class="folder-name" title="View in collection"><%= File.basename(img[:source_folder]) %></a>
+                 class="folder-name" title="View in collection"><%= hl_field(_col_name, hl[:collection_name]) %></a>
               <span class="file-name"><%= img[:filename] %></span>
             </div>
 

@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "2.23"
+APP_VERSION = "2.24"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -761,9 +761,24 @@ get '/search' do
       params[k.to_s].to_s.strip.length > 0
     end
 
+    # Attach collection name to each row for scoring
+    col_name_map = Collections.select_hash(:id, :name)
+    q_str = params['q'].to_s.strip.downcase
+
+    # If q matches a collection name, also include images from that collection
+    if q_str.length > 0
+      matching_by_col = Collections.all.select { |c|
+        c[:name].to_s.downcase.include?(q_str)
+      }.map { |c| c[:id] }
+      if matching_by_col.any?
+        dataset = dataset.or(collection_id: matching_by_col)
+      end
+    end
+
     scored = dataset.all.map do |row|
+      row_with_col = row.merge(_collection_name: col_name_map[row[:collection_id]].to_s)
       if text_query
-        result = score_row(row, params.transform_keys(&:to_sym))
+        result = score_row(row_with_col, params.transform_keys(&:to_sym))
         result[:score] > 0 ? result.merge(row: row) : nil
       else
         { score: 1, highlights: {}, row: row }

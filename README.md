@@ -233,6 +233,10 @@ mini-finder/
 
 ## Changelog
 
+### v2.24 — July 6, 2026
+- Search now includes collection names: free-text q matches against collection name, highlighted in results
+- Images from matching collections are included even if the image itself doesn't match
+
 ### v2.23 — July 6, 2026
 - ⊙ button now sets cover AND offers to mark as bundle/gallery image (sets name to "Bundle", count to 4+) in one click
 

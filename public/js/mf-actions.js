@@ -45,22 +45,31 @@ async function setCoverAndBundle(collectionId, imageId, btn) {
   var row      = btn.closest('tr');
   var nameInp  = row ? row.querySelector('input[name="mini_name"]') : null;
   var mcSel    = row ? row.querySelector('select[name="mini_count"]') : null;
+  var saveBtn  = row ? row.querySelector('.btn-save') : null;
+
+  console.log('[setCoverAndBundle] row:', row, 'nameInp:', nameInp, 'mcSel:', mcSel, 'saveBtn:', saveBtn);
+
   var nameVal  = nameInp ? nameInp.value.trim().toLowerCase() : '';
   var mcVal    = mcSel   ? mcSel.value : '';
   var alreadyBundle = nameVal === 'bundle' || mcVal === '4+' || parseInt(mcVal) >= 4;
+
+  console.log('[setCoverAndBundle] nameVal:', nameVal, 'mcVal:', mcVal, 'alreadyBundle:', alreadyBundle);
 
   // Always set as cover
   await setCover(collectionId, imageId, btn);
 
   // If not already a bundle, ask if they want to mark it as one
   if (!alreadyBundle) {
-    if (confirm('Also mark this image as the bundle/gallery image?
-(Sets name to "Bundle" and count to 4+)')) {
+    if (confirm('Also mark this image as the bundle/gallery image?\n(Sets name to "Bundle" and count to 4+)')) {
+      console.log('[setCoverAndBundle] marking as bundle');
       if (nameInp) { nameInp.value = 'Bundle'; nameInp.dispatchEvent(new Event('change')); }
       if (mcSel)   { mcSel.value   = '4+';     mcSel.dispatchEvent(new Event('change')); }
-      // Save the row
-      var saveBtn = row ? row.querySelector('.btn-save') : null;
-      if (saveBtn) saveBtn.click();
+      if (saveBtn) {
+        console.log('[setCoverAndBundle] clicking save');
+        saveBtn.click();
+      } else {
+        console.warn('[setCoverAndBundle] no save button found!');
+      }
     }
   }
 }
