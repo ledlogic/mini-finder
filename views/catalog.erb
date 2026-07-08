@@ -518,33 +518,23 @@ window.MF_TOP_STANCE  = <%= (@top_stance  || []).to_json %>;
 </script>
 
 <script>
-(function() {
-  const saved = localStorage.getItem('thumbSize');
-  if (saved) applyThumbSize(parseInt(saved), false);
-})();
-
 function setThumbSize(px) {
-  document.querySelectorAll('.catalog-thumb').forEach(img => {
+  document.querySelectorAll('.thumb').forEach(img => {
     img.style.width = px + 'px'; img.style.height = px + 'px';
   });
-  document.querySelectorAll('.size-btn').forEach(btn => {
+  var col = document.querySelector('.col-thumb');
+  if (col) col.style.width = (px + 12) + 'px';
+  document.querySelectorAll('.size-btn').forEach(function(btn) {
     btn.classList.toggle('size-btn-active', parseInt(btn.dataset.size) === px);
   });
   try { localStorage.setItem('mf_thumb_size', px); } catch(e) {}
 }
 
-function applyThumbSize(px, animate) {
-  document.querySelectorAll('.thumb').forEach(t => {
-    if (animate) t.style.transition = 'width 0.2s, height 0.2s';
-    t.style.width  = px + 'px';
-    t.style.height = px + 'px';
-  });
-  const col = document.querySelector('.col-thumb');
-  if (col) col.style.width = (px + 12) + 'px';
-  document.querySelectorAll('.size-btn').forEach(btn => {
-    btn.classList.toggle('size-btn-active', parseInt(btn.dataset.size) === px);
-  });
-}
+(function() {
+  var saved = null;
+  try { saved = localStorage.getItem('mf_thumb_size'); } catch(e) {}
+  if (saved) setThumbSize(parseInt(saved));
+})();
 
 function useSuggestion(id, name) {
   const input = document.getElementById('name-input-' + id);

@@ -233,6 +233,9 @@ mini-finder/
 
 ## Changelog
 
+### v2.25 — July 7, 2026
+- Fixed catalog thumbnail size control: was targeting wrong CSS class (.catalog-thumb vs .thumb) and wrong localStorage key (thumbSize vs mf_thumb_size); unified into single setThumbSize function
+
 ### v2.24 — July 6, 2026
 - Search now includes collection names: free-text q matches against collection name, highlighted in results
 - Images from matching collections are included even if the image itself doesn't match
