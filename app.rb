@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "2.47"
+APP_VERSION = "2.55"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -582,7 +582,7 @@ get '/statistics' do
     .flat_map { |s| s.split(',').map(&:strip) }
     .reject(&:empty?)
     .tally
-    .sort_by { |k, _| k }
+    .sort_by { |k, _| k.to_s.scan(/\d+/).first.to_i }
 
   # Field coverage for tagged images (excluding bundles and secondaries)
   tagged_images = Images
@@ -833,6 +833,20 @@ get '/search' do
   @top_weapons = (['NONE'] + (db_weapons + (fallback_weapons - db_weapons)).reject { |w| w == 'NONE' }).first(9)
 
   erb :search
+end
+
+# ── Delete a collection (and all its images from DB) ────────────────────────
+post '/collections/:id/delete' do
+  col = Collections.where(id: params[:id].to_i).first
+  halt 404, 'Collection not found' unless col
+
+  # Delete all images in this collection from DB (files stay on disk)
+  image_count = Images.where(collection_id: col[:id]).count
+  Images.where(collection_id: col[:id]).delete
+  Collections.where(id: col[:id]).delete
+
+  puts "[delete] Removed collection #{col[:id]} (#{col[:name]}) and #{image_count} image records"
+  redirect '/collections?deleted=1'
 end
 
 # ── Serve source PDF for a collection ────────────────────────────────────────

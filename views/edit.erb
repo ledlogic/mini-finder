@@ -62,16 +62,18 @@
         <div class="form-group">
           <label>Gender</label>
           <div class="multi-check">
+            <label class="check-label">
+              <input type="radio" name="gender" value="" <%= @image[:gender].to_s.empty? ? 'checked' : '' %>>
+              —
+            </label>
             <% ['M','F','NA'].each do |g| %>
               <label class="check-label">
-                <input type="checkbox" name="gender_<%= g %>" value="<%= g %>"
-                  <%= @image[:gender].to_s.split(',').map(&:strip).include?(g) ? 'checked' : '' %>
-                  onchange="syncGenderField()">
+                <input type="radio" name="gender" value="<%= g %>"
+                  <%= @image[:gender].to_s.strip == g ? 'checked' : '' %>>
                 <%= g %>
               </label>
             <% end %>
           </div>
-          <input type="hidden" name="gender" id="gender-hidden" value="<%= @image[:gender] %>">
         </div>
       </div>
 
@@ -183,7 +185,7 @@
               <input type="radio" name="mini_size" value="" <%= @image[:mini_size].to_s.empty? ? 'checked' : '' %>>
               —
             </label>
-            <% ['10mm','20mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
+            <% ['10mm','20mm','25mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
               <label class="check-label">
                 <input type="radio" name="mini_size" value="<%= s %>"
                   <%= @image[:mini_size].to_s.strip == s ? 'checked' : '' %>>
@@ -199,7 +201,18 @@
         <textarea name="description" rows="3" placeholder="e.g. Female cyborg warrior with katana, crouching on rooftop. Red LED eyes. Detailed armour plating."><%= @image[:description] %></textarea>
       </div>
 
-      
+      <div class="form-actions">
+        <button type="submit" class="btn btn-save-edit">💾 Save changes</button>
+        <% col = Collections.where(id: @image[:collection_id]).first %>
+        <% if col %>
+          <a href="/collection/<%= col[:id] %>#row-<%= @image[:id] %>" class="btn btn-cancel-edit">Cancel</a>
+        <% else %>
+          <a href="/catalog#row-<%= @image[:id] %>" class="btn btn-cancel-edit">Cancel</a>
+        <% end %>
+      </div>
+
+    </form>
+  </div>
 
 <script>
 async function detectEditName(id) {
@@ -244,9 +257,6 @@ function useEditDetected(inputId, value, chip) {
   chip.classList.add('detect-chip-active');
 }
 
-function syncGenderField() {
-  const vals = ['M','F','NA'].filter(v => document.querySelector(`input[name=gender_${v}]`).checked);
-  document.getElementById('gender-hidden').value = vals.join(',');
-}
+
 
 </script>

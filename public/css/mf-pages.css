@@ -45,7 +45,6 @@
 .check-label { display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-dim); user-select: none; flex: 1; border: 1px solid var(--border); padding: 5px 4px; transition: background 0.12s, color 0.12s, border-color 0.12s; }
 .check-label:first-child { border-radius: var(--radius) 0 0 var(--radius); }
 .check-label:last-child  { border-radius: 0 var(--radius) var(--radius) 0; }
-.check-label:not(:first-child) { border-left: none; }
 .check-label:hover { border-color: var(--accent); color: var(--accent); }
 .check-label:has(input:checked) { background: rgba(0,212,255,0.12); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .check-label input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
@@ -330,7 +329,20 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin: 0 0 14px 0;
+  margin: 0 -20px 14px -20px;
+  padding: 0 20px 10px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.stats-card-title {
+  font-family: var(--font-head);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 -20px 14px -20px;
+  padding: 0 20px 10px 20px;
+  border-bottom: 1px solid var(--border);
 }
 .stats-note {
   font-size: 0.7rem;
@@ -523,3 +535,44 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
 }
+
+/* ── Sortable stats table headers ────────────────────────────────────────── */
+.sortable-stats th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.sortable-stats th:hover { color: var(--accent); }
+.sortable-stats th.sort-active { color: var(--accent); }
+.sort-col { text-align: left; }
+
+/* ── Edit page form actions ──────────────────────────────────────────────── */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.btn-save-edit {
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-save-edit:hover { opacity: 0.85; }
+.btn-cancel-edit {
+  color: var(--text-faint);
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  transition: color 0.15s;
+}
+.btn-cancel-edit:hover { color: var(--text); }

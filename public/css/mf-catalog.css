@@ -777,3 +777,21 @@ input.cell-input[name="mini_name"] { text-transform: capitalize; }
   max-width: 180px;
 }
 .col-folder-inline-select:focus { outline: none; border-color: var(--accent); }
+
+/* ── Collection delete button ────────────────────────────────────────────── */
+.col-info-delete {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.col-info-delete:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239,68,68,0.06);
+}

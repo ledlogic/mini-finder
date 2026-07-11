@@ -187,6 +187,12 @@
           Open PDF
         </a>
       <% end %>
+      <% if active_col %>
+        <form action="/collections/<%= active_col[:id] %>/delete" method="post" style="display:inline;"
+              onsubmit="return confirm('Delete collection <%= active_col[:name].to_s.empty? ? File.basename(@folder_filter) : active_col[:name] %>?\nThis removes it from the database only — files stay on disk.\n\nAre you sure?')">
+          <button type="submit" class="col-info-delete" title="Delete this collection from database">🗑 Delete</button>
+        </form>
+      <% end %>
     </div>
   </div>
 <% end %>
@@ -462,7 +468,7 @@
                 <span class="count-icon">📐</span>
                 <select name="mini_size" class="count-mini-select" autocomplete="off">
                   <option value="">—</option>
-                  <% ['10mm','20mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
+                  <% ['10mm','20mm','25mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
                     <option value="<%= s %>" <%= img[:mini_size] == s ? 'selected' : '' %>><%= s %></option>
                   <% end %>
                 </select>

@@ -8,7 +8,7 @@
 <div class="stats-grid">
 
   <%# ── Overview ── %>
-  <div class="stats-card stats-card-wide">
+  <div class="stats-card">
     <h2 class="stats-title">Overview</h2>
     <div class="stats-row-group">
       <div class="stats-row">
@@ -19,6 +19,13 @@
         <a href="/collections" class="stats-label stats-link">Collections</a>
         <span class="stats-value"><%= @total_collections %></span>
       </div>
+    </div>
+  </div>
+
+  <%# ── Tagged ── %>
+  <div class="stats-card">
+    <h2 class="stats-title">Tagged</h2>
+    <div class="stats-row-group">
       <div class="stats-row">
         <a href="/catalog?show_all=1" class="stats-label stats-link">Tagged</a>
         <span class="stats-value"><%= @total_tagged %> <span class="stats-pct">(<%= @total_images > 0 ? (@total_tagged * 100 / @total_images) : 0 %>%)</span></span>
@@ -99,8 +106,11 @@
     <% if @by_species.empty? %>
       <p class="stats-empty">No species data yet</p>
     <% else %>
-      <table class="stats-table">
-        <thead><tr><th>Species</th><th>#</th></tr></thead>
+      <table class="stats-table sortable-stats" data-sort="count">
+        <thead><tr>
+          <th class="sort-col" onclick="sortStatsTable(this, 'alpha')" title="Sort alphabetically">Species ↕</th>
+          <th onclick="sortStatsTable(this, 'count')" title="Sort by count"># ↕</th>
+        </tr></thead>
         <tbody>
           <% @by_species.each do |s, count| %>
             <tr>
@@ -131,15 +141,25 @@
   <%# ── Size ── %>
   <div class="stats-card">
     <h2 class="stats-title">Mini Size</h2>
-    <div class="stats-row-group">
-      <% @by_size.each do |s, count| %>
-        <div class="stats-row">
-          <a href="/search?mini_size=<%= CGI.escape(s) %>" class="stats-label stats-link"><%= s %></a>
-          <span class="stats-value"><%= count %></span>
-        </div>
-      <% end %>
-      <% if @by_size.empty? %><p class="stats-empty">No size data yet</p><% end %>
-    </div>
+    <% if @by_size.empty? %>
+      <p class="stats-empty">No size data yet</p>
+    <% else %>
+      <table class="stats-table sortable-stats" id="size-table" data-sort="numeric">
+        <thead><tr>
+          <th class="sort-col" onclick="sortSizeTable(this)" title="Sort alphabetically">Size ↕</th>
+          <th onclick="sortSizeTableByCount(this)" title="Sort by count"># ↕</th>
+        </tr></thead>
+        <tbody>
+          <% @by_size.each do |s, count| %>
+            <tr data-mm="<%= s.to_s.scan(/\d+/).first.to_i %>">
+              <td><a href="/search?mini_size=<%= CGI.escape(s) %>" class="stats-link"><%= s %></a></td>
+              <td><%= count %></td>
+              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   </div>
 
   <%# ── Weapons ── %>
@@ -148,15 +168,16 @@
     <% if @by_weapons.empty? %>
       <p class="stats-empty">No weapons data yet</p>
     <% else %>
-      <table class="stats-table">
-        <thead><tr><th>Weapon</th><th>#</th></tr></thead>
+      <table class="stats-table sortable-stats" data-sort="count">
+        <thead><tr>
+          <th class="sort-col" onclick="sortStatsTable(this, 'alpha')" title="Sort alphabetically">Weapon ↕</th>
+          <th onclick="sortStatsTable(this, 'count')" title="Sort by count"># ↕</th>
+        </tr></thead>
         <tbody>
           <% @by_weapons.each do |w, count| %>
             <tr>
               <td><a href="/search?weapons=<%= CGI.escape(w) %>" class="stats-link"><%= w %></a></td>
               <td><%= count %></td>
-              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
-              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
               <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
             </tr>
           <% end %>
@@ -171,8 +192,11 @@
     <% if @by_stance.empty? %>
       <p class="stats-empty">No stance data yet</p>
     <% else %>
-      <table class="stats-table">
-        <thead><tr><th>Stance</th><th>#</th></tr></thead>
+      <table class="stats-table sortable-stats" data-sort="count">
+        <thead><tr>
+          <th class="sort-col" onclick="sortStatsTable(this, 'alpha')" title="Sort alphabetically">Stance ↕</th>
+          <th onclick="sortStatsTable(this, 'count')" title="Sort by count"># ↕</th>
+        </tr></thead>
         <tbody>
           <% @by_stance.each do |s, count| %>
             <tr>
@@ -189,7 +213,7 @@
 <% if @field_coverage&.any? %>
 <div class="stats-grid">
   <div class="stats-card stats-card-wide">
-    <h3 class="stats-card-title">Field Coverage</h3>
+    <h2 class="stats-title">Field Coverage</h2>
     <p class="stats-note">Tagged images · excl. bundles &amp; secondaries (<%= @field_coverage.first&.dig(:total) || 0 %> images)</p>
     <table class="stats-table">
       <thead>
@@ -216,3 +240,67 @@
   </div>
 </div>
 <% end %>
+
+<script>
+function sortSizeTable(th) {
+  var table = document.getElementById('size-table');
+  var tbody = table.querySelector('tbody');
+  var rows  = Array.from(tbody.querySelectorAll('tr'));
+  var currentMode = table.dataset.sort;
+  var newMode = currentMode === 'numeric' ? 'alpha' : 'numeric';
+  table.dataset.sort = newMode;
+  rows.sort(function(a, b) {
+    if (newMode === 'numeric') {
+      return parseInt(a.dataset.mm || 0) - parseInt(b.dataset.mm || 0);
+    } else {
+      return a.cells[0].textContent.trim().localeCompare(b.cells[0].textContent.trim());
+    }
+  });
+  rows.forEach(function(r) { tbody.appendChild(r); });
+  table.querySelectorAll('th').forEach(function(h) { h.classList.remove('sort-active'); });
+  th.classList.add('sort-active');
+}
+
+function sortSizeTableByCount(th) {
+  var table = document.getElementById('size-table');
+  var tbody = table.querySelector('tbody');
+  var rows  = Array.from(tbody.querySelectorAll('tr'));
+  table.dataset.sort = 'count';
+  rows.sort(function(a, b) {
+    return parseInt(b.cells[1].textContent.trim()) - parseInt(a.cells[1].textContent.trim());
+  });
+  rows.forEach(function(r) { tbody.appendChild(r); });
+  table.querySelectorAll('th').forEach(function(h) { h.classList.remove('sort-active'); });
+  th.classList.add('sort-active');
+}
+
+function sortStatsTable(th, mode) {
+  var table = th.closest('table');
+  var tbody = table.querySelector('tbody');
+  var rows  = Array.from(tbody.querySelectorAll('tr'));
+  var currentMode = table.dataset.sort;
+  // Toggle: if already this mode, flip between count and alpha
+  var newMode = (currentMode === mode) ? (mode === 'count' ? 'alpha' : 'count') : mode;
+  table.dataset.sort = newMode;
+
+  rows.sort(function(a, b) {
+    if (newMode === 'alpha') {
+      var at = a.cells[0].textContent.trim();
+      var bt = b.cells[0].textContent.trim();
+      return at.localeCompare(bt);
+    } else {
+      var an = parseInt(a.cells[1].textContent.trim()) || 0;
+      var bn = parseInt(b.cells[1].textContent.trim()) || 0;
+      return bn - an;
+    }
+  });
+
+  rows.forEach(function(r) { tbody.appendChild(r); });
+
+  // Update all th indicators
+  table.querySelectorAll('th').forEach(function(h) {
+    h.classList.remove('sort-active');
+  });
+  th.classList.add('sort-active');
+}
+</script>

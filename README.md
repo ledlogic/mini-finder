@@ -233,6 +233,32 @@ mini-finder/
 
 ## Changelog
 
+### v2.55 — July 8, 2026
+- Added 25mm to size options across edit, catalog, and bulk tagger
+
+### v2.54 — July 8, 2026
+- Collection info bar: 🗑 Delete button removes the collection and its image records from DB (files stay on disk)
+- Confirm dialog warns before deletion; redirects to collections page with toast confirmation
+
+### v2.53 — July 8, 2026
+- Edit page: gender changed from checkboxes to radio buttons (— / M / F / NA)
+
+### v2.52 — July 8, 2026
+- Edit page: restored missing Save button and form close tag; added Cancel link back to collection
+
+### v2.51 — July 8, 2026
+- Statistics Mini Size: default sort numeric ascending (10mm→100mm); click Size column to toggle alpha; click # to sort by count
+
+### v2.50 — July 8, 2026
+- Statistics tables (species, weapons, stance): default sorted by count; click name column header to sort alphabetically, click again to toggle back
+- Fixed duplicate % columns in weapons table
+
+### v2.49 — July 8, 2026
+- Statistics: Tagged/Untagged split into its own card; Field Coverage in its own grid row with consistent stats-title style
+
+### v2.48 — July 8, 2026
+- Statistics card headers: underline now spans full card width using negative margin bleed
+
 ### v2.47 — July 8, 2026
 - Replaced ◌ (narrow symbol) with ❓ emoji for colorized unknown across statistics, catalog, random, and search pages
 
