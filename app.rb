@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "2.25"
+APP_VERSION = "2.47"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -50,6 +50,12 @@ Images      = DB[:images]
 
 # Fix any chained secondary links — defined in lib/db_helpers.rb
 db_fix_chained_secondaries
+
+# Migrate legacy mini_size values (S/M/L → mm)
+db_migrate_mini_sizes
+
+# Normalise weapons and species to uppercase
+db_normalise_case
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -78,7 +84,7 @@ MIN_OCR_WIDTH = 400
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
 get '/' do
-  redirect '/catalog'
+  redirect '/collections'
 end
 
 # Silence Chrome DevTools auto-probe (Chrome 136+)
@@ -206,12 +212,11 @@ post '/images/:id' do
 
   update_fields = {
     mini_name:        params[:mini_name].to_s.strip.split.map(&:capitalize).join(' '),
-    species:          params[:species].to_s.strip,
+    species:          params[:species].to_s.strip.upcase,
     gender:           params[:gender].to_s.strip,
     weapons:          params[:weapons].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
     mini_size:        params[:mini_size].to_s.strip,
-    notes:            params[:notes].to_s.strip,
     description:      params[:description].to_s.strip,
     mini_count:       [params[:mini_count].to_i, 1].max,
     tagged:           params[:mini_name].to_s.strip.length > 0,
@@ -348,7 +353,6 @@ post '/collections/:id' do
   halt 404 unless Collections.where(id: id).first
   Collections.where(id: id).update(
     name:       params[:name].to_s.strip.upcase,
-    notes:      params[:notes].to_s.strip,
     updated_at: Time.now
   )
   redirect "/collections?saved=#{id}"
@@ -440,12 +444,11 @@ post '/edit/:id' do
 
   update_fields = {
     mini_name:        params[:mini_name].to_s.strip.split.map(&:capitalize).join(' '),
-    species:          params[:species].to_s.strip,
+    species:          params[:species].to_s.strip.upcase,
     gender:           params[:gender].to_s.strip,
     weapons:          params[:weapons].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
     mini_size:        params[:mini_size].to_s.strip,
-    notes:            params[:notes].to_s.strip,
     description:      params[:description].to_s.strip,
     mini_count:       [params[:mini_count].to_i, 1].max,
     tagged:           params[:mini_name].to_s.strip.length > 0,
@@ -465,7 +468,8 @@ post '/edit/:id' do
 
   Images.where(id: id).update(update_fields)
   session[:changes_since_backup] = (session[:changes_since_backup].to_i + 1)
-  redirect "/catalog#row-#{id}"
+  col = Collections.where(id: row[:collection_id]).first
+  redirect col ? "/collection/#{col[:id]}#row-#{id}" : "/catalog#row-#{id}"
 end
 
 # ── 2b. Random images ───────────────────────────────────────────────────────
@@ -579,6 +583,28 @@ get '/statistics' do
     .reject(&:empty?)
     .tally
     .sort_by { |k, _| k }
+
+  # Field coverage for tagged images (excluding bundles and secondaries)
+  tagged_images = Images
+    .where(tagged: true)
+    .where(primary_image_id: nil)
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .all
+  total_tagged = tagged_images.size
+
+  def field_filled?(val)
+    return false if val.nil?
+    return false if val.is_a?(String) && val.strip.empty?
+    return false if val.is_a?(Integer) && val == 0
+    true
+  end
+
+  coverage_fields = %i[species gender stance weapons mini_size description mini_count]
+  @field_coverage = coverage_fields.map do |field|
+    filled = tagged_images.count { |r| field_filled?(r[field]) }
+    pct    = total_tagged > 0 ? (filled.to_f / total_tagged * 100).round(1) : 0.0
+    { field: field, filled: filled, total: total_tagged, pct: pct }
+  end.sort_by { |f| f[:pct] }
 
   erb :statistics
 end

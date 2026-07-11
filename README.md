@@ -233,6 +233,81 @@ mini-finder/
 
 ## Changelog
 
+### v2.47 — July 8, 2026
+- Replaced ◌ (narrow symbol) with ❓ emoji for colorized unknown across statistics, catalog, random, and search pages
+
+### v2.46 — July 8, 2026
+- Startup migration `db_normalise_case` forces all weapons and species to uppercase in existing DB rows
+- Save routes now enforce uppercase on species (weapons was already upcased)
+
+### v2.45 — July 8, 2026
+- Statistics: field coverage section moved into a full-width stats-card with consistent styling
+
+### v2.44 — July 8, 2026
+- Statistics page: all counts now show % (colorized, tagged/untagged, printed/unpainted, and all breakdown tables)
+
+### v2.43 — July 8, 2026
+- Statistics page: field coverage section shows % fill rate per field with colour-coded bar (red <25%, amber <60%, green ≥60%)
+- Covers: species, gender, stance, weapons, mini_size, description, mini_count across tagged non-bundle images
+
+### v2.42 — July 8, 2026
+- Removed notes field from all UI, routes, and search scoring (0% usage); DB column left intact
+- Added field_usage_report.rb and check_notes_field.rb scripts
+
+### v2.41 — July 7, 2026
+- Edit page size radios styled as equal-width segmented button strip; radio input hidden, label is the clickable area
+
+### v2.40 — July 7, 2026
+- Edit page save now redirects to the collection (not catalog)
+- Nav reordered: Collections · History · Search · Catalog · Random · Bulk Tag · Statistics
+- Root / now redirects to /collections
+
+### v2.39 — July 7, 2026
+- Edit page: 🗂 folder chip is now a clickable link to the collection, anchored to the image row
+
+### v2.38 — July 7, 2026
+- Added 75mm to mini size options
+
+### v2.37 — July 7, 2026
+- Added 50mm to mini size options
+
+### v2.36 — July 7, 2026
+- Startup migration now converts existing 30mm → 25mm (M was initially mapped to 30mm, corrected to 25mm)
+
+### v2.35 — July 7, 2026
+- Catalog rows aligned to top instead of middle
+
+### v2.34 — July 7, 2026
+- Collection info bar now has ‹ prev / dropdown / next › folder navigation; toolbar folder dropdown hidden in collection view
+- Dropdown shows all collections with folder name and collection name; selecting navigates directly to that collection
+
+### v2.33 — July 7, 2026
+- Thumbnail size control moved from button group into a dropdown inside the Preview column header
+
+### v2.32 — July 7, 2026
+- Edit page mini size field changed from checkboxes to radio buttons (single selection only)
+
+### v2.31 — July 7, 2026
+- Mini size dropdown: removed combo options, single values only: 10mm · 20mm · 30mm · 40mm · 60mm · 80mm · 100mm
+
+### v2.30 — July 7, 2026
+- Startup migration `db_migrate_mini_sizes` converts existing S→20mm, M→30mm, L→40mm, S,M→20mm,30mm etc. in the DB
+- Statistics page will now show mm values instead of S/M/L after restart
+
+### v2.29 — July 7, 2026
+- Mini size values updated to: 10mm · 20mm · 30mm · 40mm · 60mm · 80mm · 100mm
+
+### v2.28 — July 7, 2026
+- Description and notes fields moved into the Stance/Weapons column, appearing below the weapons quickpick buttons
+- Column header updated to "Stance / Weapons / Notes"
+
+### v2.27 — July 7, 2026
+- Display size buttons restored to S/M/L/XL/XXL (display only, not data)
+- Mini size data field changed to mm base sizes: 25mm · 30mm · 40mm · 50mm · 75mm (M=30mm); multi-select combos updated throughout catalog, edit, and bulk tagger
+
+### v2.26 — July 7, 2026
+- Thumbnail size buttons now use miniature base sizes: 20mm · 25mm · 32mm · 40mm · 50mm · 60mm · 75mm · 100mm (replaces XS/S/M/L/XL/XXL)
+
 ### v2.25 — July 7, 2026
 - Fixed catalog thumbnail size control: was targeting wrong CSS class (.catalog-thumb vs .thumb) and wrong localStorage key (thumbSize vs mf_thumb_size); unified into single setThumbSize function
 

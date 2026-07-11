@@ -56,7 +56,7 @@
           [:f_no_bundles,  '📦 No bundles',  @f_no_bundles],
           [:colorized_color,   '🎨 Color',   @colorized_catalog == 'true'],
           [:colorized_grey,    '⬜ Grey',    @colorized_catalog == 'false'],
-          [:colorized_unknown, '◌ Unknown',  @colorized_catalog == 'unknown'],
+          [:colorized_unknown, '❓ Unknown',  @colorized_catalog == 'unknown'],
         ]
         flags.each do |key, label, active|
           toggled = base_params.dup
@@ -84,7 +84,9 @@
       </div>
     </div>
 
-    <%# ── Folder filter dropdown ── %>
+    <%# ── Folder filter dropdown (only on full catalog, not collection view) ── %>
+    <% unless @folder_filter.empty? %><%# hidden in collection view — use info bar nav instead %><% end %>
+    <% if @folder_filter.empty? %>
     <form action="/catalog" method="get" class="folder-filter-form">
       <input type="hidden" name="show_all"    value="<%= @show_all ? '1' : '0' %>">
       <input type="hidden" name="f_untagged"  value="<%= @f_untagged  ? '1' : '' %>">
@@ -105,15 +107,8 @@
         <a href="/catalog<%= @show_all ? '?show_all=1' : '' %>" class="clear-filter" title="Clear filter">✕</a>
       <% end %>
     </form>
+    <% end %><%# end @folder_filter.empty? %>
 
-    <div class="thumb-sizer" title="Thumbnail size">
-      <button class="size-btn" onclick="setThumbSize(40)" data-size="40">XS</button>
-      <button class="size-btn" onclick="setThumbSize(60)" data-size="60">S</button>
-      <button class="size-btn" onclick="setThumbSize(100)" data-size="100">M</button>
-      <button class="size-btn" onclick="setThumbSize(160)" data-size="160">L</button>
-      <button class="size-btn" onclick="setThumbSize(240)" data-size="240">XL</button>
-      <button class="size-btn" onclick="setThumbSize(360)" data-size="360">XXL</button>
-    </div>
 
     <% if @total == 0 && !@show_all %>
       <span class="badge badge-ok">✓ All tagged</span>
@@ -127,10 +122,31 @@
   <div class="collection-info-bar">
     <div class="collection-info-left">
       <svg viewBox="0 0 24 24" class="col-info-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      <% if active_col %>
-        <a href="/collections#col-<%= active_col[:id] %>" class="col-info-folder" title="Go to collection">⬡ <%= File.basename(@folder_filter) %></a>
+      <%# ── Folder nav: prev / dropdown / next ── %>
+      <%
+        _sorted_cols = Collections.order(:release_month, :name).all
+        _cur_idx     = _sorted_cols.index { |c| c[:folder_path] == @folder_filter }
+        _prev_col    = _cur_idx && _cur_idx > 0                       ? _sorted_cols[_cur_idx - 1] : nil
+        _next_col    = _cur_idx && _cur_idx < _sorted_cols.length - 1 ? _sorted_cols[_cur_idx + 1] : nil
+      %>
+      <% if _prev_col %>
+        <a href="/collection/<%= _prev_col[:id] %>" class="col-nav-btn" title="← <%= File.basename(_prev_col[:folder_path]) %>">‹</a>
       <% else %>
-        <span class="col-info-folder"><%= File.basename(@folder_filter) %></span>
+        <span class="col-nav-btn col-nav-disabled">‹</span>
+      <% end %>
+      <form action="/" method="get" class="col-folder-inline-form" onsubmit="return false;">
+        <select class="col-folder-inline-select" onchange="if(this.value) window.location='/collection/'+this.value">
+          <% _sorted_cols.each do |c| %>
+            <option value="<%= c[:id] %>" <%= c[:folder_path] == @folder_filter ? 'selected' : '' %>>
+              <%= File.basename(c[:folder_path]) %><%= c[:name].to_s.empty? ? '' : " — #{c[:name]}" %>
+            </option>
+          <% end %>
+        </select>
+      </form>
+      <% if _next_col %>
+        <a href="/collection/<%= _next_col[:id] %>" class="col-nav-btn" title="→ <%= File.basename(_next_col[:folder_path]) %>">›</a>
+      <% else %>
+        <span class="col-nav-btn col-nav-disabled">›</span>
       <% end %>
       <% if active_col %>
         <a href="/collection/<%= active_col[:id] %>"
@@ -221,10 +237,20 @@
     </colgroup>
     <thead>
       <tr>
-        <th>Preview</th>
+        <th style="white-space:nowrap;">
+          <select id="thumb-size-select" class="count-mini-select"
+                  onchange="setThumbSize(parseInt(this.value))"
+                  title="Thumbnail size">
+            <option value="40">S</option>
+            <option value="60">M</option>
+            <option value="100">L</option>
+            <option value="160">XL</option>
+            <option value="240">XXL</option>
+          </select>
+        </th>
         <th><%= @folder_filter.empty? ? "Folder / File" : "File" %></th>
         <th>Name / Species / Gender</th>
-        <th>Stance / Weapons</th>
+        <th>Stance / Weapons / Notes</th>
         <th title="Size / Minis / Printed / Painted">🖨</th>
         <th></th>
       </tr>
@@ -296,9 +322,6 @@
               <% end %>
               <span class="file-name"><%= img[:filename] %></span>
               <% if img[:image_size] %><span class="img-size-badge"><%= img[:image_size] %></span><% end %>
-              <textarea name="description" class="cell-input cell-desc-inline"
-                        rows="2"
-                        placeholder="description…"><%= img[:description] %></textarea>
               <%# ── Cross-reference: link this image as a secondary view ── %>
               <% if true %>
               <div class="xref-row">
@@ -427,6 +450,10 @@
                   <% end %>
                 </div>
               <% end %>
+              <textarea name="description" class="cell-input cell-desc-inline"
+                        rows="2"
+                        placeholder="description…"><%= img[:description] %></textarea>
+
             </div>
           </td>
           <td class="cell-count">
@@ -435,7 +462,7 @@
                 <span class="count-icon">📐</span>
                 <select name="mini_size" class="count-mini-select" autocomplete="off">
                   <option value="">—</option>
-                  <% ['S','M','L','S,M','M,L','S,M,L'].each do |s| %>
+                  <% ['10mm','20mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
                     <option value="<%= s %>" <%= img[:mini_size] == s ? 'selected' : '' %>><%= s %></option>
                   <% end %>
                 </select>
@@ -519,21 +546,21 @@ window.MF_TOP_STANCE  = <%= (@top_stance  || []).to_json %>;
 
 <script>
 function setThumbSize(px) {
-  document.querySelectorAll('.thumb').forEach(img => {
+  document.querySelectorAll('.thumb').forEach(function(img) {
     img.style.width = px + 'px'; img.style.height = px + 'px';
   });
   var col = document.querySelector('.col-thumb');
   if (col) col.style.width = (px + 12) + 'px';
-  document.querySelectorAll('.size-btn').forEach(function(btn) {
-    btn.classList.toggle('size-btn-active', parseInt(btn.dataset.size) === px);
-  });
+  var sel = document.getElementById('thumb-size-select');
+  if (sel) sel.value = px;
   try { localStorage.setItem('mf_thumb_size', px); } catch(e) {}
 }
 
 (function() {
   var saved = null;
   try { saved = localStorage.getItem('mf_thumb_size'); } catch(e) {}
-  if (saved) setThumbSize(parseInt(saved));
+  var px = saved ? parseInt(saved) : 60;
+  setThumbSize(px);
 })();
 
 function useSuggestion(id, name) {

@@ -15,6 +15,14 @@
 .edit-image-panel {}
 .edit-image { width: 100%; max-width: 340px; border-radius: var(--radius-lg); border: 1px solid var(--border); display: block; }
 .edit-meta-info { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.meta-chip-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+.meta-chip-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .meta-chip { display: inline-block; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; color: var(--text-dim); }
 .status-tagged { border-color: var(--ok) !important; color: var(--ok) !important; }
 .status-untagged { border-color: var(--border2); }
@@ -33,9 +41,15 @@
 .form-group input:focus,
 .form-group textarea:focus { outline: none; border-color: var(--accent); background: rgba(0,212,255,0.03); }
 .form-group textarea { resize: vertical; }
-.multi-check { display: flex; gap: 16px; margin-top: 4px; }
-.check-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-dim); user-select: none; }
-.check-label input { accent-color: var(--accent); width: 15px; height: 15px; }
+.multi-check { display: flex; gap: 0; margin-top: 4px; width: 100%; }
+.check-label { display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-dim); user-select: none; flex: 1; border: 1px solid var(--border); padding: 5px 4px; transition: background 0.12s, color 0.12s, border-color 0.12s; }
+.check-label:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.check-label:last-child  { border-radius: 0 var(--radius) var(--radius) 0; }
+.check-label:not(:first-child) { border-left: none; }
+.check-label:hover { border-color: var(--accent); color: var(--accent); }
+.check-label:has(input:checked) { background: rgba(0,212,255,0.12); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.check-label input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
+.check-label input[type="radio"] { display: none; }
 
 .form-actions { display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 .btn-primary {

@@ -208,6 +208,52 @@ end
 
 # ─── Fix chained secondary links on startup ───────────────────────────────────
 
+def db_migrate_mini_sizes
+  # Migrate legacy S/M/L mini_size values to mm equivalents
+  # M=30mm, S=20mm, L=40mm (best approximations)
+  mapping = {
+    'S'     => '20mm',
+    'M'     => '30mm',
+    'L'     => '40mm',
+    'S,M'   => '20mm,25mm',
+    'M,L'   => '25mm,40mm',
+    'S,M,L' => '20mm,25mm,40mm',
+  }
+  updated = 0
+  mapping.each do |old_val, new_val|
+    n = DB[:images].where(mini_size: old_val).update(mini_size: new_val, updated_at: Time.now)
+    updated += n if n.is_a?(Integer)
+  end
+  puts "Mini size migration: #{updated} image(s) updated (S→20mm, M→25mm, L→40mm)" if updated > 0
+
+  # Follow-up: shift 30mm -> 25mm (M was initially mapped to 30mm, now corrected to 25mm)
+  n2 = DB[:images].where(mini_size: '30mm').update(mini_size: '25mm', updated_at: Time.now)
+  puts "Mini size migration: #{n2} image(s) updated (30mm→25mm)" if n2.to_i > 0
+end
+
+def db_normalise_case
+  # Force weapons and species to uppercase in all existing rows
+  weapons_updated = 0
+  DB[:images].where(Sequel.~(weapons: nil)).exclude(weapons: '').each do |row|
+    upcased = row[:weapons].split(',').map { |w| w.strip.upcase }.join(', ')
+    if upcased != row[:weapons]
+      DB[:images].where(id: row[:id]).update(weapons: upcased, updated_at: Time.now)
+      weapons_updated += 1
+    end
+  end
+  puts "Case normalisation: #{weapons_updated} weapons row(s) upcased" if weapons_updated > 0
+
+  species_updated = 0
+  DB[:images].where(Sequel.~(species: nil)).exclude(species: '').each do |row|
+    upcased = row[:species].split(',').map { |s| s.strip.upcase }.join(', ')
+    if upcased != row[:species]
+      DB[:images].where(id: row[:id]).update(species: upcased, updated_at: Time.now)
+      species_updated += 1
+    end
+  end
+  puts "Case normalisation: #{species_updated} species row(s) upcased" if species_updated > 0
+end
+
 def db_fix_chained_secondaries
   fixed = 0
   Images.where(Sequel.~(primary_image_id: nil)).each do |img|

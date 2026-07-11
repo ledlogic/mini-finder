@@ -72,7 +72,7 @@ helpers do
     end
 
     unless q.empty?
-      text_fields = %i[mini_name species weapons stance notes]
+      text_fields = %i[mini_name species weapons stance]
       text_fields.each do |field|
         cell = row[field].to_s.downcase
         q.split.each do |word|

@@ -94,7 +94,7 @@
           <option value=""       <%= @params['colorized'].to_s.empty?        ? 'selected' : '' %>>Any</option>
           <option value="true"   <%= @params['colorized'] == 'true'          ? 'selected' : '' %>>🎨 Colorized</option>
           <option value="false"  <%= @params['colorized'] == 'false'         ? 'selected' : '' %>>⬜ Grey</option>
-          <option value="unknown"<%= @params['colorized'] == 'unknown'       ? 'selected' : '' %>>◌ Unknown</option>
+          <option value="unknown"<%= @params['colorized'] == 'unknown'       ? 'selected' : '' %>>❓ Unknown</option>
         </select>
       </div>
     </div>
@@ -185,12 +185,6 @@
                 <td class="desc-cell"><%= hl_field(img[:description], hl[:description]) %></td>
               </tr>
               <% end %>
-              <% if img[:notes].to_s.strip.length > 0 %>
-              <tr>
-                <th>Notes</th>
-                <td><%= hl_field(img[:notes], hl[:notes]) %></td>
-              </tr>
-              <% end %>
             </table>
 
             <% if hl.any? %>
@@ -221,7 +215,7 @@
                         title="Mark as grey/uncolored">⬜</button>
                 <button onclick="setColorized(<%= img[:id] %>, 'null',  this)"
                         class="btn-col-set <%= col.nil?     ? 'btn-col-active' : '' %>"
-                        title="Mark as unknown">◌</button>
+                        title="Mark as unknown">❓</button>
               </div>
             </div>
           </div>
