@@ -103,10 +103,11 @@
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--radius-lg); overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex; flex-direction: column;
 }
 .result-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
 
-.result-image-wrap { display: block; position: relative; cursor: pointer; overflow: hidden; aspect-ratio: 1; background: var(--bg3); text-decoration: none; }
+.result-image-wrap { display: block; position: relative; cursor: pointer; overflow: hidden; background: var(--bg3); text-decoration: none; width: 240px; height: 240px; flex-shrink: 0; margin: 0; }
 .result-image { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; }
 .result-image-wrap:hover .result-image { transform: scale(1.04); }
 .score-badge {

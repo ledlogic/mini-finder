@@ -201,6 +201,7 @@ def db_setup_schema
     "ALTER TABLE collections ADD COLUMN cover_image_id INTEGER",
     "ALTER TABLE images ADD COLUMN primary_image_id INTEGER",
     "ALTER TABLE images ADD COLUMN colorized BOOLEAN DEFAULT NULL",
+    "ALTER TABLE images ADD COLUMN armour TEXT",
   ].each do |sql|
     begin; DB.run(sql); rescue Sequel::DatabaseError; end
   end

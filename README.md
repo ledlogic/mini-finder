@@ -233,6 +233,36 @@ mini-finder/
 
 ## Changelog
 
+### v2.65 — July 8, 2026
+- New field: armour (TEXT, uppercase) — added to DB schema, catalog row, edit page, search form/results/scoring, and save routes
+
+### v2.64 — July 8, 2026
+- Random grid: tighter gap (8px) at large sizes; grid minmax uses exact image px so 3×XXXL fits correctly
+
+### v2.63 — July 8, 2026
+- Added XXXL (326px) size option across catalog, random, and history pages
+
+### v2.62 — July 8, 2026
+- Random page size selector now reflowing the grid layout as well as the images; removed stale applyRandomSize function
+
+### v2.61 — July 8, 2026
+- Fixed random page size selector: was targeting .random-img but images use .result-image
+
+### v2.60 — July 8, 2026
+- Stub cards (not scanned months) now have a ✕ dismiss button; dismissed stubs are hidden permanently via localStorage
+
+### v2.59 — July 8, 2026
+- Empty collections show a prominent red "🗑 Delete empty" button instead of the subtle icon
+
+### v2.58 — July 8, 2026
+- Collections page: 🗑 delete button on every card; redirects back to same year filter after deletion
+
+### v2.57 — July 8, 2026
+- Collections page: hides collections with 0 images (empty DB records with no scanned images)
+
+### v2.56 — July 8, 2026
+- Collections stubs now start from the earliest existing collection month (not before 2022), hiding empty pre-subscription months like Feb/Mar/May 2021
+
 ### v2.55 — July 8, 2026
 - Added 25mm to size options across edit, catalog, and bulk tagger
 

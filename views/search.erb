@@ -45,6 +45,10 @@
       <div class="form-group">
         <label>Weapons</label>
         <input type="text" name="weapons" id="search-weapons" value="<%= @params['weapons'] %>" placeholder="e.g. Sword" autocomplete="off">
+      </div>
+      <div class="filter-group">
+        <label>Armour</label>
+        <input type="text" name="armour" id="search-armour" value="<%= @params['armour'] %>" placeholder="e.g. Heavy" autocomplete="off">
         <% if @top_weapons&.any? %>
           <div class="species-quickpick" style="margin-top:4px;">
             <% @top_weapons.each do |wp| %>
@@ -151,7 +155,9 @@
               </tr>
               <tr>
                 <th>Weapons</th>
+                <th>Armour</th>
                 <td><%= hl_field(img[:weapons], hl[:weapons]) %></td>
+                <td><%= hl_field(img[:armour], hl[:armour]) %></td>
               </tr>
               <tr>
                 <th>Stance</th>

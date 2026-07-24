@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "2.55"
+APP_VERSION = "2.65"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -215,6 +215,7 @@ post '/images/:id' do
     species:          params[:species].to_s.strip.upcase,
     gender:           params[:gender].to_s.strip,
     weapons:          params[:weapons].to_s.strip.upcase,
+    armour:           params[:armour].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
     mini_size:        params[:mini_size].to_s.strip,
     description:      params[:description].to_s.strip,
@@ -293,6 +294,9 @@ get '/collections' do
     @collections = @collections.select { |c| c[:release_month].to_s.start_with?(@year_filter) }
   end
 
+  # Hide collections with no images (empty/unscanned records)
+  @collections = @collections.select { |c| (@counts[c[:id]] || 0) > 0 }
+
   # Apply status filter
   if @filter == 'unprinted'
     @collections = @collections.select { |c| (@stats[c[:id]] || {})[:printed].to_i == 0 }
@@ -316,7 +320,11 @@ get '/collections' do
   @stubs = []
   if @filter.empty?
     existing_months = Collections.select_map(:release_month).compact.to_set
-    stub_start = @year_filter.empty? ? Date.new(2022, 1, 1) : Date.new(@year_filter.to_i, 1, 1)
+    # Find the earliest existing collection month so stubs don't precede it
+    earliest_month = Collections.where(Sequel.~(release_month: nil)).min(:release_month)
+    earliest_date  = earliest_month ? Date.parse(earliest_month + '-01') : Date.new(2022, 1, 1)
+    default_start  = [earliest_date, Date.new(2022, 1, 1)].max
+    stub_start = @year_filter.empty? ? default_start : [Date.new(@year_filter.to_i, 1, 1), earliest_date].max
     stub_end   = @year_filter.empty? ? Date.today.prev_month : [Date.new(@year_filter.to_i, 12, 1), Date.today.prev_month].min
     d = stub_start
     while d <= stub_end
@@ -447,6 +455,7 @@ post '/edit/:id' do
     species:          params[:species].to_s.strip.upcase,
     gender:           params[:gender].to_s.strip,
     weapons:          params[:weapons].to_s.strip.upcase,
+    armour:           params[:armour].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
     mini_size:        params[:mini_size].to_s.strip,
     description:      params[:description].to_s.strip,
@@ -744,7 +753,7 @@ get '/search' do
   @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
 
   @colorized_filter = params[:colorized].to_s
-  has_query = %i[q mini_name species gender weapons stance mini_size mini_count collection].any? do |k|
+  has_query = %i[q mini_name species gender weapons armour stance mini_size mini_count collection].any? do |k|
     params[k.to_s].to_s.strip.length > 0
   end
   has_query ||= !@colorized_filter.empty?
@@ -783,7 +792,7 @@ get '/search' do
 
     # If only colorized filter is set (no text/field query), skip scoring
     # and just return all matching rows with a flat score of 1
-    text_query = %i[q mini_name species gender weapons stance mini_size mini_count collection].any? do |k|
+    text_query = %i[q mini_name species gender weapons armour stance mini_size mini_count collection].any? do |k|
       params[k.to_s].to_s.strip.length > 0
     end
 
@@ -846,7 +855,8 @@ post '/collections/:id/delete' do
   Collections.where(id: col[:id]).delete
 
   puts "[delete] Removed collection #{col[:id]} (#{col[:name]}) and #{image_count} image records"
-  redirect '/collections?deleted=1'
+  back = request.referer.to_s.include?('year=') ? request.referer : '/collections?deleted=1'
+  redirect back.include?('?') ? back + '&deleted=1' : back + '?deleted=1'
 end
 
 # ── Serve source PDF for a collection ────────────────────────────────────────

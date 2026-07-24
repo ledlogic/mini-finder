@@ -252,6 +252,7 @@
             <option value="100">L</option>
             <option value="160">XL</option>
             <option value="240">XXL</option>
+            <option value="326">XXXL</option>
           </select>
         </th>
         <th><%= @folder_filter.empty? ? "Folder / File" : "File" %></th>
@@ -438,6 +439,7 @@
                 </div>
               <% end %>
               <input type="text" name="weapons" class="cell-input cell-input-upper" autocomplete="off" value="<%= img[:weapons] %>" placeholder="weapons…">
+              <input type="text" name="armour" class="cell-input cell-input-upper" autocomplete="off" value="<%= img[:armour] %>" placeholder="armour…">
               <% if @top_weapons&.any? && (img[:weapons].to_s.strip.empty? || @f_no_weapons) %>
                 <%
                   # Use per-species weapon list if species is known and we have stats for it

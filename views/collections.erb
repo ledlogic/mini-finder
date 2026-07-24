@@ -178,6 +178,19 @@
               No PDF found
             </span>
           <% end %>
+          <%
+            _del_name = col[:name].to_s.empty? ? File.basename(col[:folder_path]) : col[:name]
+            _del_msg  = "Delete #{_del_name.gsub('"', '&quot;')} from the database?\nFiles stay on disk."
+            _is_empty = (@counts[col[:id]] || 0) == 0
+          %>
+          <form action="/collections/<%= col[:id] %>/delete" method="post" style="display:inline;"
+                onsubmit="return confirm(<%= _del_msg.to_json %>)">
+            <% if _is_empty %>
+              <button type="submit" class="col-delete-btn col-delete-btn-empty" title="Delete empty collection">🗑 Delete empty</button>
+            <% else %>
+              <button type="submit" class="col-delete-btn" title="Delete this collection from database">🗑</button>
+            <% end %>
+          </form>
         </div>
       </form>
     </div>
@@ -187,10 +200,11 @@
   <% (@stubs || []).each do |ym| %>
     <% year, mon = ym.split('-').map(&:to_i) %>
     <% mon_name = MONTH_NAMES[mon - 1].capitalize rescue ym %>
-    <div class="collection-card col-stub">
+    <div class="collection-card col-stub" id="stub-<%= ym %>">
       <div class="col-stub-header">
         <span class="col-stub-month"><%= mon_name %> <%= year %></span>
         <span class="col-stub-badge">not scanned</span>
+        <button type="button" class="col-stub-dismiss" onclick="dismissStub('<%= ym %>')" title="Hide this stub">✕</button>
       </div>
       <div class="col-stub-actions">
         <a href="<%= url_mmf_search(ym) %>" class="col-stub-mmf" target="_blank" title="Search MMF for <%= mon_name %> <%= year %>">
@@ -203,6 +217,32 @@
 </div>
 
 <% end %>
+
+<script>
+function dismissStub(ym) {
+  var el = document.getElementById('stub-' + ym);
+  if (el) {
+    el.style.transition = 'opacity 0.3s';
+    el.style.opacity = '0';
+    setTimeout(function() { el.remove(); }, 300);
+  }
+  try {
+    var dismissed = JSON.parse(localStorage.getItem('mf_dismissed_stubs') || '[]');
+    if (!dismissed.includes(ym)) dismissed.push(ym);
+    localStorage.setItem('mf_dismissed_stubs', JSON.stringify(dismissed));
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    var dismissed = JSON.parse(localStorage.getItem('mf_dismissed_stubs') || '[]');
+    dismissed.forEach(function(ym) {
+      var el = document.getElementById('stub-' + ym);
+      if (el) el.remove();
+    });
+  } catch(e) {}
+});
+</script>
 
 <div id="lightbox" class="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
