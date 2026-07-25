@@ -120,10 +120,10 @@ function buildDropdown(input, query) {
 
   // If the query is very close (dist <= 1) to a confirmed name, suppress everything else
   const veryClose = confirmedNames.find(n => levenshtein(query, n) <= 1);
-  if (veryClose) {
-    // Only keep the near-exact confirmed match; drop warns and suggested
-    items.length = 0;
-    items.push({ type: 'confirmed', name: veryClose, score: 3 });
+  if (veryClose && query.toLowerCase() === veryClose.toLowerCase()) {
+    // Exact match — close the dropdown, user is done
+    closeAllAutocompletes();
+    return;
   } else {
     // Sort: warns first, then confirmed (blue) above suggested (grey), then by score desc
     const typeOrder = { warn: 0, confirmed: 1, suggested: 2 };
@@ -139,6 +139,7 @@ function buildDropdown(input, query) {
 
   items.slice(0, 10).forEach((item, idx) => {
     const li = document.createElement('li');
+    li.dataset.name = item.name;
 
     if (item.type === 'warn') {
       li.className = 'autocomplete-item autocomplete-warn';
@@ -310,9 +311,9 @@ function attachAutocomplete(input) {
       const activeItem = activeDropdown.querySelector('.autocomplete-active');
       if (activeItem) {
         e.preventDefault();
-        // Extract plain name from the item
-        const nameEl = activeItem.querySelector('strong') || activeItem;
-        input.value = nameEl.textContent.trim();
+        // Use data-name attribute if present, else fall back to textContent
+        const name = activeItem.dataset.name || (activeItem.querySelector('strong') || activeItem).textContent.trim();
+        input.value = name;
         input.dispatchEvent(new Event('input'));
         closeAllAutocompletes();
       }

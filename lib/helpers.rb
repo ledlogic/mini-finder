@@ -155,6 +155,7 @@ helpers do
     @f_untagged        = params[:f_untagged]  == '1'
     @f_unprinted       = params[:f_unprinted] == '1'
     @f_unpainted       = params[:f_unpainted] == '1'
+    @f_no_size         = params[:f_no_size]     == '1'
     @f_no_weapons      = params[:f_no_weapons]  == '1'
     @f_no_stance       = params[:f_no_stance]   == '1'
     @f_no_species      = params[:f_no_species]  == '1'
@@ -168,8 +169,8 @@ helpers do
     @root     = settings.root_folder
     @folders  = Images.distinct.select_map(:source_folder).sort
 
-    any_flag = @f_untagged || @f_unprinted || @f_unpainted || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.empty?
-    @show_all = true if @f_unprinted || @f_unpainted || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.empty?
+    any_flag = @f_untagged || @f_unprinted || @f_unpainted || @f_no_size || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.empty?
+    @show_all = true if @f_unprinted || @f_unpainted || @f_no_size || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.empty?
     any_flag
   end
 
@@ -199,6 +200,12 @@ helpers do
     if @f_unpainted
       dataset = bundle_exclude.call(dataset)
       dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil))
+    end
+    if @f_no_size
+      dataset = dataset.where(Sequel.~(tagged: false))
+      dataset = dataset.where(Sequel.expr(mini_size: nil) | Sequel.expr(mini_size: ''))
+      dataset = dataset.where(primary_image_id: nil)
+      dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
     end
     if @f_no_weapons
       dataset = dataset.where(Sequel.~(tagged: false))
@@ -290,9 +297,22 @@ helpers do
     primary_ids = @images.map { |img| img[:primary_image_id] }.compact.uniq
     @primary_lookup = primary_ids.empty? ? {} :
       Images.where(id: primary_ids).select_hash(:id, :mini_name)
+    # Full row lookup for displaying primary name/species/gender on secondaries
+    @primary_lookup_full = primary_ids.empty? ? {} :
+      Images.where(id: primary_ids).each_with_object({}) { |row, h| h[row[:id]] = row }
 
     @unlinked_colorized_count = if !@folder_filter.empty?
       Images.where(source_folder: @folder_filter, colorized: true, primary_image_id: nil)
+            .exclude(Sequel.ilike(:mini_name, 'bundle'))
+            .count
+    else
+      0
+    end
+
+    # Count tagged minis missing a size, excluding bundles and secondaries
+    @missing_size_count = if !@folder_filter.empty?
+      Images.where(source_folder: @folder_filter, tagged: true, primary_image_id: nil)
+            .where(Sequel.expr(mini_size: nil) | Sequel.expr(mini_size: ''))
             .exclude(Sequel.ilike(:mini_name, 'bundle'))
             .count
     else
@@ -337,6 +357,16 @@ helpers do
       .sort_by { |_, v| -v }
       .map(&:first)
     @top_weapons = (['NONE'] + (db_weapons + (fallback_weapons - db_weapons)).reject { |w| w == 'NONE' }).first(9)
+
+    # Top armour for quick-pick buttons
+    fallback_armour = ['NONE', 'HEAVY', 'MEDIUM', 'LIGHT', 'UNARMOURED', 'POWERED', 'CHAINMAIL', 'PLATE']
+    db_armour = Images
+      .where(Sequel.~(armour: nil)).exclude(armour: '')
+      .select_map(:armour)
+      .flat_map { |a| a.split(',').map(&:strip).map(&:upcase) }
+      .reject(&:empty?)
+      .tally.sort_by { |_, v| -v }.map(&:first)
+    @top_armour = (['NONE'] + (db_armour + (fallback_armour - db_armour)).reject { |a| a == 'NONE' }).first(9)
 
     # Per-species weapon stats for adaptive quickpick buttons
     @weapons_by_species = {}
@@ -390,6 +420,8 @@ helpers do
 
   # Sort image rows: cover → bundles (alpha) → primaries (alpha),
   # each followed by their secondaries (alpha). Orphans appended last.
+  ORIENTATION_ORDER = { 'FRONT' => 0, 'BACK' => 1, 'LEFT' => 2, 'RIGHT' => 3, 'TOP' => 4, 'BOTTOM' => 5 }.freeze
+
   def catalog_sort_images(all_rows, cover_ids)
     by_primary = Hash.new { |h, k| h[k] = [] }
     primaries_and_unlinked = []
@@ -408,20 +440,20 @@ helpers do
     }
     primaries_and_unlinked = covers +
                              bundles.sort_by { |img| img[:mini_name].to_s.downcase } +
-                             rest.sort_by    { |img| img[:mini_name].to_s.downcase }
+                             rest.sort_by    { |img| [img[:mini_name].to_s.downcase, ORIENTATION_ORDER[img[:orientation].to_s.upcase] || 99, img[:filename].to_s.downcase] }
 
     ordered = []
     primaries_and_unlinked.each do |img|
       ordered << img
       if by_primary.key?(img[:id])
-        ordered.concat(by_primary[img[:id]].sort_by { |s| s[:mini_name].to_s.downcase })
+        ordered.concat(by_primary[img[:id]].sort_by { |s| [ORIENTATION_ORDER[s[:orientation].to_s.upcase] || 99, s[:mini_name].to_s.downcase] })
       end
     end
 
     linked_ids = primaries_and_unlinked.map { |img| img[:id] }
     by_primary.each do |primary_id, secs|
       next if linked_ids.include?(primary_id)
-      ordered.concat(secs)
+      ordered.concat(secs.sort_by { |s| [ORIENTATION_ORDER[s[:orientation].to_s.upcase] || 99, s[:mini_name].to_s.downcase] })
     end
 
     ordered

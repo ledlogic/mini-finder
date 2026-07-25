@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "2.65"
+APP_VERSION = "2.95"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -63,6 +63,7 @@ FIELD_WEIGHTS = {
   mini_name: 4.0,
   species:   3.0,
   weapons:   2.0,
+  armour:    2.0,
   stance:    1.5,
   gender:    1.0,
   mini_size: 1.0
@@ -211,11 +212,12 @@ post '/images/:id' do
   end
 
   update_fields = {
-    mini_name:        params[:mini_name].to_s.strip.split.map(&:capitalize).join(' '),
+    mini_name:        params[:mini_name].to_s.strip.upcase,
     species:          params[:species].to_s.strip.upcase,
     gender:           params[:gender].to_s.strip,
     weapons:          params[:weapons].to_s.strip.upcase,
     armour:           params[:armour].to_s.strip.upcase,
+    orientation:      params[:orientation].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
     mini_size:        params[:mini_size].to_s.strip,
     description:      params[:description].to_s.strip,
@@ -423,6 +425,15 @@ get '/edit/:id' do
     .tally.sort_by { |_, v| -v }.map(&:first)
   @top_weapons = (['NONE'] + (db_weapons + (fallback_weapons - db_weapons)).reject { |w| w == 'NONE' }).first(9)
 
+  fallback_armour = ['NONE', 'HEAVY', 'MEDIUM', 'LIGHT', 'UNARMOURED', 'POWERED', 'CHAINMAIL', 'PLATE']
+  db_armour = Images
+    .where(Sequel.~(armour: nil)).exclude(armour: '')
+    .select_map(:armour)
+    .flat_map { |a| a.split(',').map(&:strip).map(&:upcase) }
+    .reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+  @top_armour = (['NONE'] + (db_armour + (fallback_armour - db_armour)).reject { |a| a == 'NONE' }).first(9)
+
   erb :edit
 end
 
@@ -451,11 +462,12 @@ post '/edit/:id' do
   end
 
   update_fields = {
-    mini_name:        params[:mini_name].to_s.strip.split.map(&:capitalize).join(' '),
+    mini_name:        params[:mini_name].to_s.strip.upcase,
     species:          params[:species].to_s.strip.upcase,
     gender:           params[:gender].to_s.strip,
     weapons:          params[:weapons].to_s.strip.upcase,
     armour:           params[:armour].to_s.strip.upcase,
+    orientation:      params[:orientation].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
     mini_size:        params[:mini_size].to_s.strip,
     description:      params[:description].to_s.strip,
@@ -753,7 +765,7 @@ get '/search' do
   @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
 
   @colorized_filter = params[:colorized].to_s
-  has_query = %i[q mini_name species gender weapons armour stance mini_size mini_count collection].any? do |k|
+  has_query = %i[q mini_name species gender weapons armour stance mini_size mini_count collection unprinted unpainted tagged untagged no_bundles no_vehicles no_robots].any? do |k|
     params[k.to_s].to_s.strip.length > 0
   end
   has_query ||= !@colorized_filter.empty?
@@ -780,6 +792,22 @@ get '/search' do
     when 'unknown' then dataset = dataset.where(colorized: nil)
     end
 
+    # Status filters
+    dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil)) if params['unprinted'] == '1'
+    dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil)) if params['unpainted'] == '1'
+    dataset = dataset.where(tagged: true)  if params['tagged']   == '1'
+    dataset = dataset.where(tagged: false) if params['untagged'] == '1'
+    if params['no_bundles'] == '1'
+      dataset = dataset.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+      dataset = dataset.exclude(Sequel.ilike(:mini_name, 'bundle'))
+    end
+    if params['no_vehicles'] == '1'
+      dataset = dataset.exclude(Sequel.ilike(:species, '%VEHICLE%'))
+    end
+    if params['no_robots'] == '1'
+      dataset = dataset.exclude(Sequel.ilike(:species, '%ROBOT%'))
+    end
+
     # Filter by mini count if set
     mc_filter = params['mini_count'].to_s.strip
     unless mc_filter.empty?
@@ -799,6 +827,10 @@ get '/search' do
     # Attach collection name to each row for scoring
     col_name_map = Collections.select_hash(:id, :name)
     q_str = params['q'].to_s.strip.downcase
+
+    # When mini_name field filter is set, pre-filter with ilike (case-insensitive)
+    mn_filter = params['mini_name'].to_s.strip
+    dataset = dataset.where(Sequel.ilike(:mini_name, "%#{mn_filter}%")) unless mn_filter.empty?
 
     # If q matches a collection name, also include images from that collection
     if q_str.length > 0
@@ -842,6 +874,129 @@ get '/search' do
   @top_weapons = (['NONE'] + (db_weapons + (fallback_weapons - db_weapons)).reject { |w| w == 'NONE' }).first(9)
 
   erb :search
+end
+
+# ── About page (renders README.md) ──────────────────────────────────────────
+get '/about' do
+  readme_path = File.join(File.dirname(__FILE__), 'README.md')
+  @readme_html = if File.exist?(readme_path)
+    md = File.read(readme_path)
+    html = []
+    in_pre    = false
+    in_ul     = false
+    in_table  = false
+    table_buf = []
+
+    flush_ul = lambda do
+      if in_ul
+        html << '</ul>'
+        in_ul = false
+      end
+    end
+    flush_table = lambda do
+      if in_table && table_buf.any?
+        rows = table_buf.map { |r| r.split('|').map(&:strip).reject(&:empty?) }
+        html << '<table class="about-table">'
+        rows.each_with_index do |cells, i|
+          next if cells.all? { |c| c.match?(/^[-:]+$/) }
+          tag = i == 0 ? 'th' : 'td'
+          html << '<tr>' + cells.map { |c| "<#{tag}>#{c}</#{tag}>" }.join + '</tr>'
+        end
+        html << '</table>'
+        table_buf = []
+        in_table  = false
+      end
+    end
+
+    inline = lambda do |line|
+      # Extract backtick code spans BEFORE HTML escaping to preserve content
+      codes = []
+      line = line.gsub(/`([^`]+)`/) { codes << $1; " CODE#{codes.length - 1} " }
+      line = CGI.escapeHTML(line)
+      line = line.gsub(/\*\*(.+?)\*\*/, '<strong>\1</strong>')
+      line = line.gsub(/\*(.+?)\*/, '<em>\1</em>')
+      line = line.gsub(/\[([^\]]+)\]\(([^)]+)\)/, '<a href=""></a>')
+      # Restore code spans with their content escaped
+      line = line.gsub(/ CODE(\d+) /) { "<code>#{CGI.escapeHTML(codes[$1.to_i])}</code>" }
+      line
+    end
+
+    md.each_line do |raw|
+      line = raw.rstrip
+
+      # Code fences
+      if line.match?(/^```/)
+        flush_ul.call; flush_table.call
+        if in_pre
+          html << '</code></pre>'
+          in_pre = false
+        else
+          lang = line.sub(/^```/, '').strip
+          html << "<pre><code#{lang.empty? ? '' : " class=\"lang-#{lang}\""}>"
+          in_pre = true
+        end
+        next
+      end
+
+      if in_pre
+        html << CGI.escapeHTML(line)
+        next
+      end
+
+      # Tables
+      if line.match?(/^\|/)
+        flush_ul.call
+        in_table = true
+        table_buf << line
+        next
+      elsif in_table
+        flush_table.call
+      end
+
+      # Blank line
+      if line.strip.empty?
+        flush_ul.call
+        html << ''
+        next
+      end
+
+      # Headings
+      if (m = line.match(/^### (.+)$/))
+        flush_ul.call
+        html << "<h3>#{inline.call(m[1])}</h3>"
+      elsif (m = line.match(/^## (.+)$/))
+        flush_ul.call
+        html << "<h2>#{inline.call(m[1])}</h2>"
+      elsif (m = line.match(/^# (.+)$/))
+        flush_ul.call
+        html << "<h1>#{inline.call(m[1])}</h1>"
+      # HR
+      elsif line.match?(/^---+$/)
+        flush_ul.call
+        html << '<hr>'
+      # List items
+      elsif (m = line.match(/^[*\-] (.+)$/))
+        html << '<ul>' unless in_ul
+        in_ul = true
+        html << "<li>#{inline.call(m[1])}</li>"
+      # Blockquote
+      elsif (m = line.match(/^> (.+)$/))
+        flush_ul.call
+        html << "<blockquote>#{inline.call(m[1])}</blockquote>"
+      # Paragraph
+      else
+        flush_ul.call
+        html << "<p>#{inline.call(line)}</p>"
+      end
+    end
+    flush_ul.call; flush_table.call
+    html.join("
+")
+  else
+    '<p>README.md not found.</p>'
+  end
+  @page_title = 'About'
+  erb :about
 end
 
 # ── Delete a collection (and all its images from DB) ────────────────────────

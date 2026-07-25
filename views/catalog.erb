@@ -5,6 +5,7 @@
   base_params[:f_untagged]  = '1'             if @f_untagged
   base_params[:f_unprinted] = '1'             if @f_unprinted
   base_params[:f_unpainted] = '1'             if @f_unpainted
+  base_params[:f_no_size]     = '1'           if @f_no_size
   base_params[:f_no_weapons]  = '1'           if @f_no_weapons
   base_params[:f_no_stance]   = '1'           if @f_no_stance
   base_params[:f_no_species]  = '1'           if @f_no_species
@@ -24,8 +25,8 @@
       <% else %>
         <%= @total %> image<%= @total == 1 ? '' : 's' %>
       <% end %>
-      <% if @f_untagged || @f_unprinted || @f_unpainted || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.to_s.empty? %>
-        &nbsp;·&nbsp; <a href="/catalog?<%= url_query(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted,:f_no_weapons,:f_no_stance,:f_no_species,:f_no_vehicles,:f_no_robots,:f_no_bundles,:colorized].include?(k)}) %>">Clear filters</a>
+      <% if @f_untagged || @f_unprinted || @f_unpainted || @f_no_size || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.to_s.empty? %>
+        &nbsp;·&nbsp; <a href="/catalog?<%= url_query(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted,:f_no_size,:f_no_weapons,:f_no_stance,:f_no_species,:f_no_vehicles,:f_no_robots,:f_no_bundles,:colorized].include?(k)}) %>">Clear filters</a>
       <% end %>
       <% unless @folder_filter.empty? %>
         &nbsp;·&nbsp; <a href="/catalog?<%= url_query(base_params.reject{|k,_| k == :folder}) %>">All folders</a>
@@ -48,6 +49,7 @@
           [:f_untagged,   '○ Untagged',    @f_untagged],
           [:f_unprinted,  '🖨 Unprinted',  @f_unprinted],
           [:f_unpainted,  '🎨 Unpainted',  @f_unpainted],
+          [:f_no_size,    '📐 No size',    @f_no_size],
           [:f_no_weapons, '🔫 No weapons', @f_no_weapons],
           [:f_no_stance,  '🦶 No stance',  @f_no_stance],
           [:f_no_species,  '🧬 No species',  @f_no_species],
@@ -77,7 +79,7 @@
           <%= label %>
         </a>
       <% end %>
-      <% if @f_untagged || @f_unprinted || @f_unpainted || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.to_s.empty? %>
+      <% if @f_untagged || @f_unprinted || @f_unpainted || @f_no_size || @f_no_weapons || @f_no_stance || @f_no_species || @f_no_vehicles || @f_no_robots || @f_no_bundles || !@colorized_catalog.to_s.empty? %>
         <a href="/catalog?<%= url_query(base_params.reject{|k,_| [:f_untagged,:f_unprinted,:f_unpainted,:colorized].include?(k)}) %>"
            class="status-pill-clear">✕ clear</a>
       <% end %>
@@ -224,6 +226,21 @@
 </div>
 <% end %>
 
+<% if @missing_size_count.to_i > 0 && !@folder_filter.empty? %>
+<div class="xref-alert" style="margin-bottom:12px; border-color:rgba(251,191,36,0.4); background:rgba(251,191,36,0.04);">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span>
+    <strong><%= @missing_size_count %></strong>
+    tagged mini<%= @missing_size_count == 1 ? '' : 's' %> in this collection without a base size set.
+  </span>
+  <% _alert_col3 = @collections.values.find { |c| c[:folder_path] == @folder_filter } %>
+  <% _size_url = _alert_col3 ? "/collection/#{_alert_col3[:id]}?f_no_size=1" : "/catalog?show_all=1&folder=#{CGI.escape(@folder_filter)}&f_no_size=1" %>
+  <a href="<%= _size_url %>" class="xref-alert-link" style="border-color:rgba(251,191,36,0.5); color:#f59e0b;">
+    Set sizes →
+  </a>
+</div>
+<% end %>
+
 <% if @images.empty? %>
   <div class="empty-state">
     <p>No images found. Use <strong>Scan Folder</strong> to discover images.</p>
@@ -256,8 +273,8 @@
           </select>
         </th>
         <th><%= @folder_filter.empty? ? "Folder / File" : "File" %></th>
-        <th>Name / Species / Gender</th>
-        <th>Stance / Weapons / Notes</th>
+        <th>META</th>
+        <th>BUILD</th>
         <th title="Size / Minis / Printed / Painted">🖨</th>
         <th></th>
       </tr>
@@ -298,7 +315,7 @@
                            img[:stance].to_s.strip.empty?  ||
                            img[:weapons].to_s.strip.empty?)
         %>
-        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %> <%= is_secondary ? 'row-is-secondary' : '' %> <%= _incomplete ? 'row-incomplete' : '' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
+        <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %> <%= is_secondary ? 'row-is-secondary' : '' %> <%= _incomplete ? 'row-incomplete' : '' %> <%= _is_bundle ? 'row-is-bundle' : '' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
           <% _ctx = url_query({folder: @folder_filter, show_all: (@show_all ? '1' : ''), f_untagged: (@f_untagged ? '1' : ''), f_unprinted: (@f_unprinted ? '1' : ''), f_unpainted: (@f_unpainted ? '1' : ''), colorized: @colorized_catalog}) %>
           <td class="cell-thumb">
             <div class="thumb-wrap">
@@ -371,7 +388,7 @@
             <% unless is_secondary %>
               <div style="display:flex; gap:4px; align-items:center;">
                 <input type="text" name="mini_name" class="cell-input" autocomplete="off"
-                       value="<%= img[:mini_name] %>"
+                       value="<%= CGI.escapeHTML(img[:mini_name].to_s) %>"
                        placeholder="name…"
                        id="name-input-<%= img[:id] %>"
                        style="min-width:0; flex:1;">
@@ -388,7 +405,15 @@
                   </button>
                 <% end %>
               </div>
-              <input type="text" name="species" class="cell-input" autocomplete="off" value="<%= img[:species] %>" placeholder="species…">
+              <% if !img[:mini_name].to_s.empty? %>
+                <button type="button" class="btn-copy-sibling"
+                        data-id="<%= img[:id] %>"
+                        title="Copy species/gender/stance/weapons from another <%= img[:mini_name] %> in this collection"
+                        onclick="copySibling(<%= img[:id] %>)">
+                  ⤵ copy sibling
+                </button>
+              <% end %>
+              <input type="text" name="species" class="cell-input" autocomplete="off" value="<%= CGI.escapeHTML(img[:species].to_s) %>" placeholder="species…">
               <% if @top_species&.any? %>
                 <div class="species-quickpick">
                   <% @top_species.each do |sp| %>
@@ -404,22 +429,40 @@
                   <option value="<%= g %>" <%= img[:gender] == g ? 'selected' : '' %>><%= g %></option>
                 <% end %>
               </select>
-              <% if !img[:mini_name].to_s.empty? %>
-                <button type="button" class="btn-copy-sibling"
-                        data-id="<%= img[:id] %>"
-                        title="Copy species/gender/stance/weapons from another <%= img[:mini_name] %> in this collection"
-                        onclick="copySibling(<%= img[:id] %>)">
-                  ⤵ copy sibling
-                </button>
-              <% end %>
             <% else %>
-              <span class="secondary-name-hidden" title="Linked images don't need their own name">—</span>
+              <%
+                _primary_row = @primary_lookup_full && img[:primary_image_id] ? @primary_lookup_full[img[:primary_image_id]] : nil
+              %>
+              <% if _primary_row %>
+                <span class="secondary-primary-label" title="Primary: <%= _primary_row[:mini_name] %>">
+                  <span class="secondary-primary-name"><%= _primary_row[:mini_name] %></span>
+                  <% if _primary_row[:species].to_s.strip.length > 0 %>
+                    <span class="secondary-primary-meta"><%= _primary_row[:species] %></span>
+                  <% end %>
+                  <% if _primary_row[:gender].to_s.strip.length > 0 %>
+                    <span class="secondary-primary-meta"><%= _primary_row[:gender] %></span>
+                  <% end %>
+                </span>
+              <% else %>
+                <span class="secondary-name-hidden">—</span>
+              <% end %>
+            <% end %>
+            <%# Orientation visible for all rows incl. secondaries — different views of same mini %>
+            <input type="text" name="orientation" class="cell-input cell-input-upper orientation-input" autocomplete="off" value="<%= CGI.escapeHTML(img[:orientation].to_s) %>" placeholder="orientation…">
+            <% if img[:orientation].to_s.strip.empty? %>
+              <div class="species-quickpick">
+                <% %w[FRONT BACK LEFT RIGHT TOP BOTTOM].each do |or_val| %>
+                  <button type="button" class="btn-quickpick"
+                          data-field="orientation" data-value="<%= or_val %>"
+                          onclick="setFieldQuickpick(this)"><%= or_val %></button>
+                <% end %>
+              </div>
             <% end %>
             </div>
           </td>
           <td>
             <div class="cell-stack">
-              <input type="text" name="stance" class="cell-input" autocomplete="off" value="<%= img[:stance] %>" placeholder="stance…">
+              <input type="text" name="stance" class="cell-input" autocomplete="off" value="<%= CGI.escapeHTML(img[:stance].to_s) %>" placeholder="stance…">
               <% if @top_stance&.any? && (img[:stance].to_s.strip.empty? || @f_no_stance) %>
                 <%
                   _sp_st = img[:species].to_s.split(',').map(&:strip).map(&:upcase).first
@@ -438,8 +481,7 @@
                   <% end %>
                 </div>
               <% end %>
-              <input type="text" name="weapons" class="cell-input cell-input-upper" autocomplete="off" value="<%= img[:weapons] %>" placeholder="weapons…">
-              <input type="text" name="armour" class="cell-input cell-input-upper" autocomplete="off" value="<%= img[:armour] %>" placeholder="armour…">
+              <input type="text" name="weapons" class="cell-input cell-input-upper" autocomplete="off" value="<%= CGI.escapeHTML(img[:weapons].to_s) %>" placeholder="weapons…">
               <% if @top_weapons&.any? && (img[:weapons].to_s.strip.empty? || @f_no_weapons) %>
                 <%
                   # Use per-species weapon list if species is known and we have stats for it
@@ -458,6 +500,16 @@
                   <% end %>
                 </div>
               <% end %>
+              <input type="text" name="armour" class="cell-input cell-input-upper" autocomplete="off" value="<%= CGI.escapeHTML(img[:armour].to_s) %>" placeholder="armour…">
+              <% if @top_armour&.any? && img[:armour].to_s.strip.empty? %>
+                <div class="species-quickpick">
+                  <% @top_armour.each do |ar| %>
+                    <button type="button" class="btn-quickpick <%= img[:armour].to_s.split(',').map(&:strip).map(&:upcase).include?(ar) ? 'btn-quickpick-active' : '' %>"
+                            data-field="armour" data-value="<%= ar %>"
+                            onclick="setFieldQuickpick(this)"><%= ar %></button>
+                  <% end %>
+                </div>
+              <% end %>
               <textarea name="description" class="cell-input cell-desc-inline"
                         rows="2"
                         placeholder="description…"><%= img[:description] %></textarea>
@@ -470,7 +522,7 @@
                 <span class="count-icon">📐</span>
                 <select name="mini_size" class="count-mini-select" autocomplete="off">
                   <option value="">—</option>
-                  <% ['10mm','20mm','25mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
+                  <% ['NA','10mm','20mm','25mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
                     <option value="<%= s %>" <%= img[:mini_size] == s ? 'selected' : '' %>><%= s %></option>
                   <% end %>
                 </select>

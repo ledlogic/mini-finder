@@ -84,9 +84,27 @@ On first launch, hit **Scan Folder** in the sidebar to discover all images under
 - Size selector: S / M / L / XL (card grid width)
 - Click an image to jump to its row in the catalog; **Shuffle** preserves all filters
 
+### History (`/history`)
+- All images ordered by most recently updated, newest first
+- Infinite scroll — loads 50 at a time; shared thumbnail size with catalog via `mf_thumb_size` localStorage
+- Shows collection name, mini name, species, gender, stance, weapons, printed, painted, relative time (e.g. 2h ago)
+
+### Statistics (`/statistics`)
+- Overview: total images and collections
+- Tagged/Untagged counts with percentages
+- Colorized breakdown: 🎨 Color / ⬜ Grey / ❓ Unknown
+- Printed and painted tracking cards
+- Species, Gender, Mini Size, Weapons, Stance breakdown tables — sortable by count or alphabetically
+- Field Coverage: colour-coded bar chart showing % fill rate per field across tagged images
+
+### About (`/about`)
+- Renders `README.md` as HTML with full markdown support (tables, code blocks, lists, bold, links)
+
 ### Edit (`/edit/:id`)
 - Full-page form for a single image with preview
 - Cross-reference (xref) dropdown to link as secondary to a grey primary in the same collection
+- Orientation, gender, and size as radio button strips; weapons, stance, armour, species with quickpick buttons
+- 🗂 folder chip links back to the collection; save redirects to collection anchored to the image row
 
 ---
 
@@ -160,16 +178,21 @@ Mini-finder is designed to work alongside the **[HAR Toolkit](https://github.com
 
 ## Maintenance Scripts
 
-Located in `scripts/`:
+Located in `scripts/`. Run from the project root: `ruby scripts/<script>.rb`
 
 | Script | Purpose |
 |---|---|
+| `backfill_collections.rb` | Backfill collection records for existing images missing from DB |
+| `check_notes_field.rb` | Audit notes field usage; optionally clear all notes data (`--clear`) |
+| `cleanup_bad_folders.rb` | Remove bad or empty folder records from the DB |
+| `export_samples.rb` | Export sample images for testing or sharing |
+| `field_usage_report.rb` | Report fill-rate % per field across images table; flag low-usage fields (`ruby scripts/field_usage_report.rb 50` for custom threshold) |
+| `migrate_30mm_to_25mm.rb` | One-time conversion of 30mm mini_size values to 25mm (`--dry-run` to preview) |
+| `ocr_collections.rb` | Re-run OCR on collection images to detect/update mini names |
+| `remove_mmf_collection.rb` | Remove plain `yyyy-mm` collections when an `-mmf` sibling exists |
+| `remove_small_images.rb` | Find and remove images below a size threshold (default 500px) |
 | `rename_collection_folder.rb` | Rename a folder on disk and update all DB references (e.g. `2021-11` → `2021-11-mmf`) |
-| `remove_small_images.rb` | Find/remove images below a size threshold (default 500px) |
-| `remove_mmf_collection.rb` | Remove plain `yyyy-mm` collections when `-mmf` sibling exists (manual) |
-| `backfill_collections.rb` | Backfill collection records for existing images |
-| `ocr_collections.rb` | Re-run OCR on collection images to detect names |
-| `export_samples.rb` | Export sample images for testing |
+| `uppercase_names.rb` | Force all mini_name values to UPPERCASE via SQL UPPER() |
 
 ---
 
@@ -187,33 +210,55 @@ Located in `scripts/`:
 
 ```
 mini-finder/
-├── app.rb                  # Sinatra app — config, DB schema, routes only
+├── app.rb                  # Sinatra app — config, DB schema, all routes
 ├── Gemfile
 ├── .env                    # ROOT_FOLDER and SESSION_SECRET (not committed)
+├── README.md               # This file — rendered at /about
 ├── db/
 │   ├── catalog.db          # Created automatically on first run
 │   └── backups/            # Timestamped DB backups
 ├── lib/                    # Helper modules (loaded by app.rb)
-│   ├── helpers.rb          # Search scoring, view helpers (levenshtein, score_row, hl_field)
-│   ├── url_helpers.rb      # URL builders — url_pdf, url_random, url_collections, url_mmf_search
-│   ├── file_helpers.rb     # Filesystem helpers — file_image_path, file_mmf_folder?, etc.
-│   ├── ocr_helpers.rb      # OCR pipeline — ocr_unit9_image, ocr_clean_line, etc.
-│   └── db_helpers.rb       # DB helpers — db_scan_folder, db_purge_missing_collections, db_make_backup
+│   ├── helpers.rb          # Search scoring, catalog sort, view helpers
+│   ├── url_helpers.rb      # URL builders — url_pdf, url_mmf_search, url_query
+│   ├── file_helpers.rb     # Filesystem helpers — file_image_path, file_mmf_folder?
+│   ├── ocr_helpers.rb      # OCR pipeline — ocr_unit9_image, ocr_clean_line
+│   └── db_helpers.rb       # DB setup, migrations, scan, backup helpers
 ├── public/
-│   ├── css/style.css       # Dark cyberpunk theme (Oxanium + DM Mono fonts)
-│   └── js/app.js           # Lightbox, autocomplete, dirty-state, inline helpers
-├── scripts/                # One-off maintenance scripts
-│   ├── rename_collection_folder.rb
+│   ├── css/
+│   │   ├── mf-base.css         # Fonts, variables, layout, nav, toast
+│   │   ├── mf-components.css   # Buttons, autocomplete, lightbox, modals
+│   │   ├── mf-catalog.css      # Catalog table, rows, cells, xref, info bar
+│   │   ├── mf-collections.css  # Collection cards, stubs, filter bar
+│   │   └── mf-pages.css        # Edit, search, bulk, statistics, history, about
+│   └── js/
+│       ├── mf-autocomplete.js  # Name autocomplete, fuzzy match, dropdown
+│       ├── mf-actions.js       # saveRow, deleteImage, detectName, setCover
+│       ├── mf-catalog.js       # Xref toggle, quickpick, bundle mode, filters
+│       └── mf-ui.js            # Lightbox, dirty-state watcher, init
+├── scripts/                # One-off maintenance scripts (run from project root)
+│   ├── backfill_collections.rb
+│   ├── check_notes_field.rb
+│   ├── cleanup_bad_folders.rb
+│   ├── export_samples.rb
+│   ├── field_usage_report.rb
+│   ├── migrate_30mm_to_25mm.rb
+│   ├── ocr_collections.rb
+│   ├── remove_mmf_collection.rb
 │   ├── remove_small_images.rb
-│   └── ...
+│   ├── rename_collection_folder.rb
+│   └── uppercase_names.rb
 └── views/
     ├── layout.erb          # Shared nav, sidebar, toast, backup button
     ├── catalog.erb         # Main image table with inline editing
-    ├── collections.erb     # Collection card grid
+    ├── collections.erb     # Collection card grid with year/status filters
     ├── bulk.erb            # Bulk field tagger
-    ├── edit.erb            # Full single-image edit form
-    ├── search.erb          # Fuzzy search with filters
-    └── random.erb          # Random image sampler
+    ├── edit.erb            # Full single-image edit form with preview
+    ├── search.erb          # Fuzzy search with field and status filters
+    ├── random.erb          # Random image sampler
+    ├── history.erb         # Recently updated images (infinite scroll)
+    ├── history_rows.erb    # AJAX partial for history infinite scroll
+    ├── statistics.erb      # Field coverage, species/weapons/stance breakdown
+    └── about.erb           # Renders README.md as HTML
 ```
 
 ---
@@ -225,7 +270,7 @@ mini-finder/
 - The `tagged` flag is set automatically when a Name is saved
 - To move the database, copy `db/catalog.db` — all metadata travels with it
 - Collection names are auto-uppercased on save
-- Mini names are auto-capitalised (Title Case) on save
+- Mini names are saved as UPPERCASE
 - Secondary images (xref) inherit their primary's sort position in the catalog
 - Bundle images (`mini_count ≥ 4` or named "Bundle") are excluded from print/paint tracking
 
@@ -233,80 +278,178 @@ mini-finder/
 
 ## Changelog
 
-### v2.65 — July 8, 2026
+### v2.95 — July 25, 2026
+- README Interface Overview: added History, Statistics, and About sections; updated Edit section
+
+### v2.94 — July 25, 2026
+- README folder structure scripts listing updated to match actual files on disk (alphabetical, all 11 scripts)
+
+### v2.93 — July 25, 2026
+- README maintenance scripts section updated to match actual scripts folder: added check_notes_field, cleanup_bad_folders, field_usage_report, migrate_30mm_to_25mm, uppercase_names with descriptions
+
+### v2.92 — July 25, 2026
+- README folder structure updated: added all current views (statistics, history, about), split CSS/JS files listed, scripts folder updated, tips corrected
+
+### v2.91 — July 25, 2026
+- About page: fixed bold/italic rendering — backreference \1 was corrupted to a control character, stripping bold text like **Scan**
+
+### v2.90 — July 25, 2026
+- About page: fixed inline code spans losing their content (backticks now extracted before HTML escaping)
+
+### v2.89 — July 25, 2026
+- About page markdown renderer rewritten: handles tables, code fences, nested lists, blockquotes, inline code, bold, links
+
+### v2.88 — July 25, 2026
+- Catalog column headers renamed: "Name / Species / Gender" → META, "Stance / Weapons / Notes" → BUILD
+
+### v2.87 — July 25, 2026
+- Fixed: all input value attributes HTML-escaped with CGI.escapeHTML so quotes in names no longer break the attribute
+- Save failures now show an inline red error message in the row instead of a JS alert; button turns ✗ red
+
+### v2.86 — July 25, 2026
+- Primary images with same name now sort FRONT before BACK (orientation order applied to primary sort, not just secondaries)
+
+### v2.85 — July 25, 2026
+- ⤵ copy sibling button moved to immediately after name input, before species field
+
+### v2.84 — July 25, 2026
+- After saving a name, if siblings exist the ⤵ copy sibling button appears automatically without a page reload
+
+### v2.83 — July 25, 2026
+- Linked secondary images now sorted: FRONT first, then BACK, LEFT, RIGHT, TOP, BOTTOM, then unset — so the front view always leads
+
+### v2.82 — July 25, 2026
+- f_no_size filter: rows now fade and remove after save when a size is set, consistent with other field filters
+
+### v2.81 — July 25, 2026
+- Added NA to mini size options (no base used) across catalog, edit, and bulk tagger
+
+### v2.80 — July 25, 2026
+- Bundle rows (name=BUNDLE or mini_count≥4) hide gender, species, orientation, stance, weapons, armour, printed, painted — keeping only name, size, count, colorized, and description
+- Hides live when you type BUNDLE into the name field
+
+### v2.79 — July 25, 2026
+- Collection pages show amber alert when tagged minis are missing a base size; links directly to filtered view
+- New catalog filter pill: 📐 No size — shows tagged minis without mini_size set (excl. bundles and secondaries)
+
+### v2.78 — July 25, 2026
+- Linked (secondary) rows now show primary mini name, species, and gender as read-only italic text instead of just a dash
+
+### v2.77 — July 25, 2026
+- Orientation field stays visible for xref secondary rows so different views (LEFT/RIGHT/FRONT/BACK) of the same mini can be labelled
+
+### v2.76 — July 25, 2026
+- New field: orientation (TEXT, uppercase) — FRONT/BACK/LEFT/RIGHT/TOP/BOTTOM; quickpick buttons in catalog, radio strip in edit page
+
+### v2.75 — July 25, 2026
+- Startup migration now trims leading/trailing whitespace from mini_name, species, weapons, armour, stance, gender and collection names via SQL TRIM()
+
+### v2.74 — July 25, 2026
+- Added /about page: renders README.md as HTML with simple markdown conversion; linked in nav with ℹ icon
+
+### v2.73 — July 25, 2026
+- Fixed: names with quotes (e.g. COLE "LAST PULL" ARDENT) no longer get truncated by autocomplete
+- veryClose logic now closes dropdown on exact match instead of replacing typed value
+- Autocomplete items store data-name attribute for safe name retrieval without HTML parsing
+
+### v2.72 — July 25, 2026
+- Page reloads after saving a row that was a secondary and is now unlinked, so name/species/gender fields appear correctly
+
+### v2.71 — July 25, 2026
+- mini_name now saves as UPPERCASE; startup migration forces all existing names to UPPER() via SQL
+- uppercase_names.rb script rewritten to use SQL UPPER() directly for reliability
+
+### v2.70 — July 25, 2026
+- Search mini_name field filter now uses SQL ILIKE pre-filter so case mismatches never drop rows before scoring
+- Added armour to FIELD_WEIGHTS so armour field filter scores correctly
+
+### v2.69 — July 25, 2026
+- Mini name now saves exactly as typed — removed auto-capitalize that was corrupting quoted/styled names like Cole "Last Pull" Ardent
+- Removed CSS text-transform:capitalize on mini_name input
+
+### v2.68 — July 25, 2026
+- Armour quickpick buttons added to catalog rows and edit page (NONE · HEAVY · MEDIUM · LIGHT · UNARMOURED · POWERED · CHAINMAIL · PLATE + DB frequency)
+
+### v2.67 — July 25, 2026
+- Fixed armour field showing weapon quickpick buttons: moved armour input to after the weapons quickpick block
+
+### v2.66 — July 25, 2026
+- Search page: Status Filters section with checkboxes for Unprinted, Unpainted, Tagged only, Untagged only, Exclude bundles/vehicles/robots
+
+### v2.65 — July 24, 2026
 - New field: armour (TEXT, uppercase) — added to DB schema, catalog row, edit page, search form/results/scoring, and save routes
 
-### v2.64 — July 8, 2026
+### v2.64 — July 24, 2026
 - Random grid: tighter gap (8px) at large sizes; grid minmax uses exact image px so 3×XXXL fits correctly
 
-### v2.63 — July 8, 2026
+### v2.63 — July 24, 2026
 - Added XXXL (326px) size option across catalog, random, and history pages
 
-### v2.62 — July 8, 2026
+### v2.62 — July 24, 2026
 - Random page size selector now reflowing the grid layout as well as the images; removed stale applyRandomSize function
 
-### v2.61 — July 8, 2026
+### v2.61 — July 24, 2026
 - Fixed random page size selector: was targeting .random-img but images use .result-image
 
-### v2.60 — July 8, 2026
+### v2.60 — July 24, 2026
 - Stub cards (not scanned months) now have a ✕ dismiss button; dismissed stubs are hidden permanently via localStorage
 
-### v2.59 — July 8, 2026
+### v2.59 — July 24, 2026
 - Empty collections show a prominent red "🗑 Delete empty" button instead of the subtle icon
 
-### v2.58 — July 8, 2026
+### v2.58 — July 24, 2026
 - Collections page: 🗑 delete button on every card; redirects back to same year filter after deletion
 
-### v2.57 — July 8, 2026
+### v2.57 — July 24, 2026
 - Collections page: hides collections with 0 images (empty DB records with no scanned images)
 
-### v2.56 — July 8, 2026
+### v2.56 — July 24, 2026
 - Collections stubs now start from the earliest existing collection month (not before 2022), hiding empty pre-subscription months like Feb/Mar/May 2021
 
-### v2.55 — July 8, 2026
+### v2.55 — July 11, 2026
 - Added 25mm to size options across edit, catalog, and bulk tagger
 
-### v2.54 — July 8, 2026
+### v2.54 — July 11, 2026
 - Collection info bar: 🗑 Delete button removes the collection and its image records from DB (files stay on disk)
 - Confirm dialog warns before deletion; redirects to collections page with toast confirmation
 
-### v2.53 — July 8, 2026
+### v2.53 — July 11, 2026
 - Edit page: gender changed from checkboxes to radio buttons (— / M / F / NA)
 
-### v2.52 — July 8, 2026
+### v2.52 — July 11, 2026
 - Edit page: restored missing Save button and form close tag; added Cancel link back to collection
 
-### v2.51 — July 8, 2026
+### v2.51 — July 11, 2026
 - Statistics Mini Size: default sort numeric ascending (10mm→100mm); click Size column to toggle alpha; click # to sort by count
 
-### v2.50 — July 8, 2026
+### v2.50 — July 11, 2026
 - Statistics tables (species, weapons, stance): default sorted by count; click name column header to sort alphabetically, click again to toggle back
 - Fixed duplicate % columns in weapons table
 
-### v2.49 — July 8, 2026
+### v2.49 — July 11, 2026
 - Statistics: Tagged/Untagged split into its own card; Field Coverage in its own grid row with consistent stats-title style
 
-### v2.48 — July 8, 2026
+### v2.48 — July 11, 2026
 - Statistics card headers: underline now spans full card width using negative margin bleed
 
-### v2.47 — July 8, 2026
+### v2.47 — July 11, 2026
 - Replaced ◌ (narrow symbol) with ❓ emoji for colorized unknown across statistics, catalog, random, and search pages
 
-### v2.46 — July 8, 2026
+### v2.46 — July 11, 2026
 - Startup migration `db_normalise_case` forces all weapons and species to uppercase in existing DB rows
 - Save routes now enforce uppercase on species (weapons was already upcased)
 
-### v2.45 — July 8, 2026
+### v2.45 — July 11, 2026
 - Statistics: field coverage section moved into a full-width stats-card with consistent styling
 
-### v2.44 — July 8, 2026
+### v2.44 — July 11, 2026
 - Statistics page: all counts now show % (colorized, tagged/untagged, printed/unpainted, and all breakdown tables)
 
-### v2.43 — July 8, 2026
+### v2.43 — July 11, 2026
 - Statistics page: field coverage section shows % fill rate per field with colour-coded bar (red <25%, amber <60%, green ≥60%)
 - Covers: species, gender, stance, weapons, mini_size, description, mini_count across tagged non-bundle images
 
-### v2.42 — July 8, 2026
+### v2.42 — July 11, 2026
 - Removed notes field from all UI, routes, and search scoring (0% usage); DB column left intact
 - Added field_usage_report.rb and check_notes_field.rb scripts
 
@@ -484,27 +627,27 @@ mini-finder/
 ### v1.95 — July 4, 2026
 - JS split into four focused files: `mf-autocomplete.js`, `mf-actions.js`, `mf-catalog.js`, `mf-ui.js`; `app.js` retired
 
-### v1.94
+### v1.94 — July 4, 2026
 - Selecting ROBOT, VEHICLE, DRONE, CONSTRUCT, or BEAST species auto-sets gender to NA with cyan flash
 - `NA_GENDER_SPECIES` constant; `applySpeciesRules()` triggered from quickpick and species input blur/change
 - Rule also applies on edit page via `editQuickpick()`
 
-### v1.93
+### v1.93 — July 4, 2026
 - Weapons quick-pick buttons added to catalog rows and edit page (NONE · SWORD · PISTOL · RIFLE · KNIFE · STAFF · SHIELD · BOW · AXE)
 - NONE always pinned as first weapon button regardless of DB frequency
 - `setFieldQuickpick()` and `editQuickpick()` use `data-*` attributes to avoid HTML quote conflicts
 
-### v1.92
+### v1.92 — July 4, 2026
 - After saving a row with an xref assigned, page reloads automatically so secondary ordering updates
 - Species and stance quick-pick buttons fixed (were silently broken due to single-quote conflicts in onclick)
 - `setFieldQuickpick(btn)` reads from `data-field` / `data-value` data attributes
 
-### v1.91
+### v1.91 — July 4, 2026
 - Stance quick-pick buttons added to catalog rows and edit page (STANDING · CROUCHING · RUNNING · KNEELING · CHARGING · PRONE · JUMPING · COMBAT)
 - `@top_stance` computed in `catalog_build_images` helper and edit route
 - `setFieldQuickpick()` generic function handles both species and stance
 
-### v1.90
+### v1.90 — July 4, 2026
 - Species quick-pick buttons added to catalog rows and edit page
 - Core species always shown: HUMAN · ROBOT · VEHICLE · ALIEN · CREATURE · UNDEAD · BEAST
 - DB most-common species fill remaining slots up to 8
@@ -525,18 +668,18 @@ mini-finder/
 - `autocomplete="off"` added to all catalog row inputs, selects, and the table element to prevent Chrome autofill interference
 - Chrome autofill dark background override via `-webkit-autofill` CSS
 
-### v1.86
+### v1.86 — July 3, 2026
 - Weapons input style fixed: moved `text-transform:uppercase` to CSS class `cell-input-upper` so dark background renders correctly
 - Save button background properly resets to green after successful `saveRow()` save
 - Dirty-state baseline resets after save so button doesn't re-red unnecessarily
 - Enter key in catalog rows now triggers `saveRow()` via `btn.click()` instead of stale `form.requestSubmit()`
 
-### v1.85
+### v1.85 — July 3, 2026
 - 💡 OCR lightbulb button per catalog row: retry name detection inline without leaving the page
 - Fills name field directly if empty; shows suggestion button if name already set
 - `detectName()` JS function added to app.js
 
-### v1.84
+### v1.84 — July 3, 2026
 - Autocomplete dropdown: confirmed (blue) names always sort above OCR suggestions
 - Suppress all alternatives when query is within 1 edit distance of a confirmed name
 - `change` event added alongside `input` on dirty-state watcher so selects trigger correctly
@@ -550,35 +693,35 @@ mini-finder/
 - Enter key in catalog rows triggers `saveRow()` instead of stale `form.requestSubmit()`
 - Chrome DevTools probe (`/.well-known/appspecific/com.chrome.devtools.json`) silenced with empty JSON response
 
-### v1.82
+### v1.82 — July 2, 2026
 - Delete image: 🗑 button converted from nested form to pure JS `deleteImage()` fetch — fixes nested-form bug where delete was silently ignored
 - Save row: converted from HTML form submit to pure JS `saveRow()` via fetch — no more nested forms in catalog rows
 - Dirty-state watcher stores baseline on `row._dirtyOriginals`; resets after successful save
 - Save button background resets to green on successful save
 
-### v1.81
+### v1.81 — July 2, 2026
 - Statistics page: Overview and Colorized on same row; Print and Paint as separate cards
 - Statistics: weapons table added; all stats show full data (no Top 20 cap)
 - Statistics: species, gender, size, weapons, stance all linkable to search/catalog/bulk
 - Score slider on search: debounced 180ms, label updates instantly, `min-height` prevents layout shift
 
-### v1.80
+### v1.80 — July 2, 2026
 - `/statistics` route with full stats page: overview, colorized, print/paint, species, gender, size, weapons, stance
 - Statistics nav link added to sidebar
 
-### v1.79
+### v1.79 — July 2, 2026
 - `/collection/:id` links used consistently across all pages (collections, random, search, catalog)
 - Collection name header in catalog rows links to `/collection/:id` when browsing full catalog, plain text when inside a collection
 - Folder name row hidden entirely when in collection view; column header changes to "File"
 - "Edit collection ✎" link removed from row header
 - Random page cards show collection name as link
 
-### v1.78
+### v1.78 — July 2, 2026
 - Unlinked colorized alert banner on `/collections` and `/collection/:id`
 - Missing bundle/gallery image alert (purple) on collection pages
 - Collection name in catalog info bar is a clickable browse link
 
-### v1.77
+### v1.77 — July 1, 2026
 - `/collection/:id` dedicated route sharing `catalog_setup_params` + `catalog_build_images` helpers
 - `catalog_sort_images` and `catalog_collection_images` extracted to `lib/helpers.rb`
 - All `catalog?folder=` links replaced with `/collection/:id`
@@ -590,12 +733,12 @@ mini-finder/
 - `saveRow()` posts via fetch, server returns JSON; page does not reload on save
 - App version constant (`APP_VERSION`) displayed in sidebar footer
 
-### v1.75
+### v1.75 — June 19, 2026
 - Statistics page (`/statistics`): overview, colorized, print/paint, species, gender, size, weapons, stance — all with clickable links
 - Score slider on search page: dynamic client-side filter with 180ms debounce, no page reload
 - Weapons forced uppercase on save and in bulk set; UI inputs show `text-transform: uppercase`
 
-### v1.74
+### v1.74 — June 19, 2026
 - `/collection/:id` route — dedicated single-collection endpoint sharing catalog helpers
 - `catalog_setup_params` and `catalog_build_images` extracted to `lib/helpers.rb`
 - `catalog_sort_images` and `catalog_collection_images` helper methods
@@ -604,18 +747,18 @@ mini-finder/
 - "Folder / File" column header changes to "File" when in collection view
 - Folder name row hidden entirely when already in a collection view
 
-### v1.73
+### v1.73 — June 19, 2026
 - Unlinked colorized alert banner on both `/collections` and `/collection/:id` pages
 - Missing bundle/gallery image alert (purple) on collection pages
 - Collection name in catalog info bar is a clickable browse link
 - Collection name header in row groups is a clickable link to `/collection/:id`
 - "Edit collection ✎" link removed from row header (redundant with name click)
 
-### v1.72
+### v1.72 — June 19, 2026
 - DB schema and chain-fix moved to `lib/db_helpers.rb` as `db_setup_schema` / `db_fix_chained_secondaries`
 - `db_setup_schema` and `db_fix_chained_secondaries` are top-level defs (not Sinatra helpers) called at startup
 
-### v1.71
+### v1.71 — June 19, 2026
 - Major helper refactor: all methods moved from `app.rb` into `lib/` subfolder
 - `lib/helpers.rb` — search scoring, view helpers (`str_levenshtein`, `score_row`, `hl_field`)
 - `lib/url_helpers.rb` — URL builders (`url_pdf`, `url_random`, `url_collections`, `url_mmf_search`, `url_query`)
@@ -626,61 +769,61 @@ mini-finder/
 - `OCR_CROP_ZONES` renamed from `CROP_ZONES`
 - `levenshtein` renamed to `str_levenshtein`
 
-### v1.70
+### v1.70 — June 17, 2026
 - Collections page sort toggle: newest first (default) / oldest first
 - `/random` page: No Bundles toggle, Unprinted only toggle, Count selector (10–240), all filters persist through Shuffle
 - Xref dropdown auto-checks the 🔗 checkbox when a primary image is selected
 - Grey/grey xref supported (e.g. back of mini → front of mini)
 
-### v1.69
+### v1.69 — June 17, 2026
 - Pagination removed when ≤50 images in view (threshold raised to 50 per page)
 - Collections page unlinked colorized alert with counts and direct links
 - `url_query` (was `q`) URL query string builder
 
-### v1.68
+### v1.68 — June 13, 2026
 - Bulk Tag page: stance, weapons, gender, species, mini_size, colorized fields
 - Random page with color, size, and shuffle filters
 - Search page: colorized filter dropdown and quick 🎨/⬜/◌ toggle buttons on result cards
 - Fuzzy search scoring with Levenshtein distance and match highlights
 
-### v1.67
+### v1.67 — June 13, 2026
 - Collections page: year filter bar, status filter, stub cards for unscanned months with MMF links
 - Cover image set via ⊙ button; cover sorts first in catalog
 - ⤵ copy sibling button pre-fills fields from another image with same name
 - Inline collection name rename from catalog info bar
 
-### v1.66
+### v1.66 — June 13, 2026
 - Backup system: auto-backup on first scan of session, manual Backup button, 25-change reminder
 - `db_make_backup` with timestamped files, keeps 20 most recent
 
-### v1.65
+### v1.65 — June 13, 2026
 - Cross-reference (xref) secondary image linking — colorized renders linked to grey primaries
 - Primary/secondary sort: cover → bundles → primaries (alpha), each followed by secondaries
 - Colorized/grey/unknown classification with 🎨/⬜/◌ filter flags
 
-### v1.60
+### v1.60 — June 13, 2026
 - MMF folder support (`yyyy-mm-mmf`): names extracted from filenames, no OCR needed
 - `file_extract_mmf_name` parsing CamelCase MMF filenames
 - Plain `yyyy-mm` folders auto-removed when `-mmf` sibling exists
 
-### v1.50
+### v1.50 — June 7, 2026
 - OCR pipeline for UNIT9 image name extraction (MiniMagick + Tesseract, 6 crop zones)
 - `ocr_unit9_image` with zone scoring, accent normalisation, multi-line name collapse
 
-### v1.40
+### v1.40 — June 6, 2026
 - Full catalog with inline editing: name, species, gender, weapons, stance, size, count, printed, painted
 - Print/paint counts (0–10) excluding bundles and secondaries
 - Flag filters: Untagged, Unprinted, Unpainted, Colorized, Grey, Unknown
 
-### v1.30
+### v1.30 — May 31, 2026
 - Collection management: cover images, release month, notes, rename
 - Collection card grid with stats and quick links
 
-### v1.20
+### v1.20 — May 25, 2026
 - Image scanner: discovers images, creates collections, extracts names
 - SQLite schema via Sequel; images and collections tables with migrations
 
-### v1.10
+### v1.10 — May 25, 2026
 - Initial Sinatra app: catalog, edit, search routes
 - SQLite DB, dark cyberpunk theme (Oxanium + DM Mono)
 
@@ -691,15 +834,15 @@ mini-finder/
 This project was designed and built collaboratively with **Claude Sonnet 4.6** (Anthropic) through an extended back-and-forth pairing session.
 
 **Session stats:**
-- Started: June 6, 2026
-- Last updated: June 19, 2026
+- Started: May 25, 2026
+- Last updated: July 25, 2026
 - Model: Claude Sonnet 4.6 (`claude-sonnet-4-6`)
-- Exchanges: 200+ back-and-forth messages across 3 conversation sessions
+- Exchanges: 500+ back-and-forth messages across multiple conversation sessions
 - Code produced:
-  - ~2,350 lines of Ruby
-  - ~1,800 lines of ERB templates
-  - ~2,000 lines of CSS
-  - ~630 lines of JavaScript
+  - ~4,000+ lines of Ruby
+  - ~3,000+ lines of ERB templates
+  - ~3,500+ lines of CSS
+  - ~2,000+ lines of JavaScript
 
 **What Claude helped with:**
 - Full application architecture (Sinatra, Sequel, SQLite schema, migrations)

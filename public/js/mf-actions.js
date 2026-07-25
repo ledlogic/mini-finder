@@ -202,10 +202,39 @@ function saveRow(id, ctx, btn) {
             row._dirtyOriginals[inp.name] = inp.value;
           });
         }
+        // Show sibling copy button if name is now set and siblings may exist
+        var nameInp = row.querySelector('input[name="mini_name"]');
+        var nameVal = nameInp ? nameInp.value.trim() : '';
+        if (nameVal) {
+          var existingBtn = row.querySelector('.btn-copy-sibling');
+          if (!existingBtn) {
+            // Check if siblings exist before showing button
+            fetch('/images/' + id + '/siblings', { headers: { 'Accept': 'application/json' } })
+              .then(function(r) { return r.json(); })
+              .then(function(siblings) {
+                if (siblings && siblings.length > 0) {
+                  var speciesInp = row.querySelector('input[name="species"]');
+                  if (speciesInp) {
+                    var sibBtn = document.createElement('button');
+                    sibBtn.type = 'button';
+                    sibBtn.className = 'btn-copy-sibling';
+                    sibBtn.dataset.id = id;
+                    sibBtn.title = 'Copy species/gender/stance/weapons from another ' + nameVal + ' in this collection';
+                    sibBtn.textContent = '⤵ copy sibling';
+                    sibBtn.onclick = function() { copySibling(id); };
+                    speciesInp.insertAdjacentElement('beforebegin', sibBtn);
+                  }
+                }
+              }).catch(function() {});
+          }
+        }
         // If an xref was assigned or removed, reload so sort order and secondary display updates
         var xrefCheckbox = row.querySelector('input[name="is_secondary"]');
         var xrefSelect   = row.querySelector('select[name="primary_image_id"]');
-        if (xrefCheckbox && (xrefCheckbox.checked || xrefSelect && xrefSelect.value)) {
+        var wasSecondary  = row.classList.contains('row-is-secondary');
+        var isNowSecondary = xrefCheckbox && (xrefCheckbox.checked || (xrefSelect && xrefSelect.value));
+        // Reload if xref was set OR if it was just cleared (row was a secondary, now isn't)
+        if (isNowSecondary || wasSecondary) {
           window.location.reload();
           return;
         }
@@ -245,13 +274,17 @@ function saveRow(id, ctx, btn) {
           return;
         }
       } else {
-        alert('Save failed (status ' + resp.status + ')');
+        btn.style.background = '#ef4444';
+        btn.textContent = '✗';
+        showSaveError(row, 'Save failed (HTTP ' + resp.status + ') — check server log');
+        btn.disabled = false;
       }
     })
     .catch(function(err) {
       btn.disabled = false;
-      btn.textContent = '✓';
-      alert('Save failed: ' + err);
+      btn.textContent = '✗';
+      btn.style.background = '#ef4444';
+      showSaveError(row, 'Save failed: ' + err);
     });
 }
 

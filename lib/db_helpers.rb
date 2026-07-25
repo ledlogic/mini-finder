@@ -202,6 +202,7 @@ def db_setup_schema
     "ALTER TABLE images ADD COLUMN primary_image_id INTEGER",
     "ALTER TABLE images ADD COLUMN colorized BOOLEAN DEFAULT NULL",
     "ALTER TABLE images ADD COLUMN armour TEXT",
+    "ALTER TABLE images ADD COLUMN orientation TEXT",
   ].each do |sql|
     begin; DB.run(sql); rescue Sequel::DatabaseError; end
   end
@@ -233,6 +234,15 @@ def db_migrate_mini_sizes
 end
 
 def db_normalise_case
+  # Trim leading/trailing whitespace from all key text fields
+  %w[mini_name species weapons armour stance gender orientation].each do |field|
+    DB.run("UPDATE images SET #{field} = TRIM(#{field}), updated_at = datetime('now') WHERE #{field} IS NOT NULL AND #{field} != TRIM(#{field})")
+  end
+  DB.run("UPDATE collections SET name = TRIM(name) WHERE name IS NOT NULL AND name != TRIM(name)")
+
+  # Force mini_name to uppercase
+  DB.run("UPDATE images SET mini_name = UPPER(TRIM(mini_name)), updated_at = datetime('now') WHERE mini_name IS NOT NULL AND mini_name != '' AND mini_name != UPPER(TRIM(mini_name))")
+
   # Force weapons and species to uppercase in all existing rows
   weapons_updated = 0
   DB[:images].where(Sequel.~(weapons: nil)).exclude(weapons: '').each do |row|

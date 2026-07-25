@@ -103,6 +103,40 @@
       </div>
     </div>
   </details>
+
+  <details class="field-filters" <%= (@params.any? { |k,v| %w[unprinted unpainted tagged].include?(k) && v.to_s.strip.length > 0 }) ? 'open' : '' %>>
+    <summary>Status Filters</summary>
+    <div style="display:flex; flex-wrap:wrap; gap:10px; padding:12px 0;">
+      <label class="search-check-label">
+        <input type="checkbox" name="unprinted" value="1" <%= @params['unprinted'] == '1' ? 'checked' : '' %>>
+        🖨 Unprinted only
+      </label>
+      <label class="search-check-label">
+        <input type="checkbox" name="unpainted" value="1" <%= @params['unpainted'] == '1' ? 'checked' : '' %>>
+        🎨 Unpainted only
+      </label>
+      <label class="search-check-label">
+        <input type="checkbox" name="tagged" value="1" <%= @params['tagged'] == '1' ? 'checked' : '' %>>
+        ✓ Tagged only
+      </label>
+      <label class="search-check-label">
+        <input type="checkbox" name="untagged" value="1" <%= @params['untagged'] == '1' ? 'checked' : '' %>>
+        ○ Untagged only
+      </label>
+      <label class="search-check-label">
+        <input type="checkbox" name="no_bundles" value="1" <%= @params['no_bundles'] == '1' ? 'checked' : '' %>>
+        📦 Exclude bundles
+      </label>
+      <label class="search-check-label">
+        <input type="checkbox" name="no_vehicles" value="1" <%= @params['no_vehicles'] == '1' ? 'checked' : '' %>>
+        🚗 Exclude vehicles
+      </label>
+      <label class="search-check-label">
+        <input type="checkbox" name="no_robots" value="1" <%= @params['no_robots'] == '1' ? 'checked' : '' %>>
+        🤖 Exclude robots
+      </label>
+    </div>
+  </details>
 </form>
 
 <% if @query_made %>

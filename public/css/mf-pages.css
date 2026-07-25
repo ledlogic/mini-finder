@@ -577,3 +577,49 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   transition: color 0.15s;
 }
 .btn-cancel-edit:hover { color: var(--text); }
+
+/* ── Search status filter checkboxes ─────────────────────────────────────── */
+.search-check-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.83rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  user-select: none;
+}
+.search-check-label:hover { border-color: var(--accent); color: var(--accent); }
+.search-check-label:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(0,212,255,0.08);
+  color: var(--accent);
+  font-weight: 600;
+}
+.search-check-label input { accent-color: var(--accent); }
+
+/* ── About page ──────────────────────────────────────────────────────────── */
+.about-body {
+  max-width: 860px;
+  line-height: 1.7;
+}
+.about-body h1 { font-size: 1.4rem; margin: 24px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.about-body h2 { font-size: 1.1rem; margin: 20px 0 6px; color: var(--accent); }
+.about-body h3 { font-size: 0.9rem; margin: 16px 0 4px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.about-body p  { margin: 0 0 10px; color: var(--text-dim); font-size: 0.88rem; }
+.about-body ul { margin: 4px 0 10px 20px; }
+.about-body li { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 2px; }
+.about-body code { font-family: var(--font-mono); font-size: 0.82rem; background: var(--bg3); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
+.about-body pre { background: var(--bg3); border-radius: var(--radius); padding: 12px; overflow-x: auto; margin: 8px 0; }
+.about-body pre code { background: none; padding: 0; color: var(--text); }
+.about-body strong { color: var(--text); }
+
+/* ── About page table ─────────────────────────────────────────────────────── */
+.about-table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85rem; }
+.about-table th, .about-table td { border: 1px solid var(--border); padding: 6px 12px; text-align: left; }
+.about-table th { background: var(--bg3); color: var(--accent); font-family: var(--font-mono); font-size: 0.78rem; }
+.about-body hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.about-body blockquote { border-left: 3px solid var(--accent); margin: 10px 0; padding: 6px 14px; color: var(--text-dim); font-style: italic; }

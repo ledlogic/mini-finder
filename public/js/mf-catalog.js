@@ -126,10 +126,17 @@ function toggleXrefSelect(imageId, checked) {
   row.classList.toggle('row-is-secondary', checked);
 
   // Name/species/gender are now all in one .cell-name-td cell
+  // Orientation stays visible for secondaries (different view of same mini)
   const nameCell = row.querySelector('.cell-name-td');
   if (nameCell) {
     nameCell.querySelectorAll('input, select, button:not(.btn-suggestion)').forEach(el => {
+      if (el.classList.contains('orientation-input')) return; // keep orientation visible
       el.style.display = checked ? 'none' : '';
+    });
+    // Also keep the orientation quickpick visible
+    nameCell.querySelectorAll('.species-quickpick').forEach(function(qp) {
+      var hasOrientation = qp.querySelector('[data-field="orientation"]');
+      if (!hasOrientation) qp.style.display = checked ? 'none' : '';
     });
     const suggestion = nameCell.querySelector('.btn-suggestion');
     if (suggestion) suggestion.style.display = checked ? 'none' : '';
@@ -304,6 +311,12 @@ function rowFailsFilters(row) {
     return el ? el.value.trim().toUpperCase() : '';
   }
 
+  // f_no_size: row fails if mini_size is now set
+  if (params.get('f_no_size') === '1') {
+    var sizeEl = row.querySelector('select[name="mini_size"]');
+    if (sizeEl && sizeEl.value !== '') return true;
+  }
+
   // f_no_weapons: row fails if weapons is now set
   if (params.get('f_no_weapons') === '1' && fieldVal('weapons') !== '') return true;
 
@@ -327,3 +340,20 @@ function rowFailsFilters(row) {
 
   return false;
 }
+
+// ── Toggle bundle mode when name is set to BUNDLE ────────────────────────────
+function applyBundleMode(nameInput) {
+  var row = nameInput.closest('tr');
+  if (!row) return;
+  var isBundle = nameInput.value.trim().toUpperCase() === 'BUNDLE';
+  row.classList.toggle('row-is-bundle', isBundle);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Apply on page load for any already-named bundle rows
+  document.querySelectorAll('input[name="mini_name"]').forEach(function(inp) {
+    applyBundleMode(inp);
+    inp.addEventListener('input', function() { applyBundleMode(inp); });
+    inp.addEventListener('change', function() { applyBundleMode(inp); });
+  });
+});

@@ -44,6 +44,23 @@
         <div id="edit-detect-result" class="col-detect-result" style="margin-top:6px;"></div>
       </div>
 
+      <div class="form-group">
+        <label>Orientation</label>
+        <div class="multi-check">
+          <label class="check-label">
+            <input type="radio" name="orientation" value="" <%= @image[:orientation].to_s.empty? ? 'checked' : '' %>>
+            —
+          </label>
+          <% %w[FRONT BACK LEFT RIGHT TOP BOTTOM].each do |or_val| %>
+            <label class="check-label">
+              <input type="radio" name="orientation" value="<%= or_val %>"
+                <%= @image[:orientation].to_s.strip.upcase == or_val ? 'checked' : '' %>>
+              <%= or_val %>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label>Species <span class="hint">comma-separated</span></label>
@@ -95,6 +112,16 @@
       <div class="form-group">
         <label>Armour <span class="hint">comma-separated · uppercase</span></label>
         <input type="text" name="armour" id="edit-armour" value="<%= @image[:armour] %>" class="cell-input-upper" placeholder="e.g. HEAVY, CHAINMAIL, NONE" autocomplete="off">
+        <% if @top_armour&.any? && @image[:armour].to_s.strip.empty? %>
+          <div class="species-quickpick" style="margin-top:6px;">
+            <% @top_armour.each do |ar| %>
+              <button type="button"
+                      class="btn-quickpick <%= @image[:armour].to_s.split(',').map(&:strip).map(&:upcase).include?(ar) ? 'btn-quickpick-active' : '' %>"
+                      data-target="edit-armour" data-value="<%= ar %>"
+                      onclick="editQuickpick(this)"><%= ar %></button>
+            <% end %>
+          </div>
+        <% end %>
       </div>
 
       <div class="form-row">
@@ -190,7 +217,7 @@
               <input type="radio" name="mini_size" value="" <%= @image[:mini_size].to_s.empty? ? 'checked' : '' %>>
               —
             </label>
-            <% ['10mm','20mm','25mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
+            <% ['NA','10mm','20mm','25mm','30mm','40mm','50mm','60mm','75mm','80mm','100mm'].each do |s| %>
               <label class="check-label">
                 <input type="radio" name="mini_size" value="<%= s %>"
                   <%= @image[:mini_size].to_s.strip == s ? 'checked' : '' %>>

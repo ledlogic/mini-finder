@@ -69,7 +69,7 @@
 }
 .cell-input:focus { outline: none; border-color: var(--accent); background: rgba(0,212,255,0.04); }
 .cell-input::placeholder { color: var(--text-faint); opacity: 0.45; }
-input.cell-input[name="mini_name"] { text-transform: capitalize; }
+/* mini_name: no text-transform — user controls capitalisation */
 .cell-input-upper { text-transform: uppercase; }
 
 .cell-select {
@@ -794,4 +794,38 @@ input.cell-input[name="mini_name"] { text-transform: capitalize; }
   border-color: #ef4444;
   color: #ef4444;
   background: rgba(239,68,68,0.06);
+}
+
+/* ── Secondary row primary info display ──────────────────────────────────── */
+.secondary-primary-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 0;
+}
+.secondary-primary-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.secondary-primary-meta {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
+
+/* ── Bundle rows: hide fields that don't apply ───────────────────────────── */
+.row-is-bundle .cell-name-td select[name="gender"],
+.row-is-bundle .cell-name-td input[name="species"],
+.row-is-bundle .cell-name-td .species-quickpick,
+.row-is-bundle .orientation-input,
+.row-is-bundle td:nth-child(4) input[name="stance"],
+.row-is-bundle td:nth-child(4) input[name="weapons"],
+.row-is-bundle td:nth-child(4) input[name="armour"],
+.row-is-bundle td:nth-child(4) .species-quickpick,
+.row-is-bundle td:nth-child(4) .btn-copy-sibling,
+.row-is-bundle .count-row[title="Printed"],
+.row-is-bundle .count-row[title="Painted"] {
+  display: none !important;
 }

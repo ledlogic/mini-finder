@@ -108,3 +108,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('scroll', closeAllAutocompletes, { passive: true });
 });
+
+// ── Inline save error banner ──────────────────────────────────────────────────
+function showSaveError(row, msg) {
+  // Remove any existing error for this row
+  var existing = row.querySelector('.save-error-msg');
+  if (existing) existing.remove();
+
+  var el = document.createElement('div');
+  el.className = 'save-error-msg';
+  el.textContent = '⚠ ' + msg;
+  el.style.cssText = 'color:#ef4444; font-size:0.72rem; font-family:var(--font-mono); padding:3px 0; margin-top:2px;';
+
+  // Insert in the actions cell
+  var actionsCell = row.querySelector('.cell-actions') || row.cells[row.cells.length - 1];
+  if (actionsCell) actionsCell.appendChild(el);
+
+  // Auto-dismiss after 8 seconds
+  setTimeout(function() { el.remove(); }, 8000);
+}
