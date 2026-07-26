@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "2.95"
+APP_VERSION = "3.03"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -590,6 +590,18 @@ get '/statistics' do
     .select_map(:stance)
   @by_stance = stance_raw
     .flat_map { |s| s.split(',').map(&:strip) }
+    .reject(&:empty?)
+    .tally
+    .sort_by { |_, v| -v }
+
+  # Armour breakdown
+  armour_raw = Images
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .where(Sequel.~(armour: nil))
+    .exclude(armour: '')
+    .select_map(:armour)
+  @by_armour = armour_raw
+    .flat_map { |a| a.split(',').map(&:strip) }
     .reject(&:empty?)
     .tally
     .sort_by { |_, v| -v }

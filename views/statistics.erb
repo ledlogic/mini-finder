@@ -37,6 +37,10 @@
     </div>
   </div>
 
+  </div>
+</div>
+
+<div class="stats-grid">
   <%# ── Colorized ── %>
   <div class="stats-card">
     <h2 class="stats-title">Colorized</h2>
@@ -62,7 +66,7 @@
 
   <%# ── Printed ── %>
   <div class="stats-card">
-    <h2 class="stats-title">🖨 Printed</h2>
+    <h2 class="stats-title">Printed</h2>
     <p class="stats-note">Excludes bundles &amp; secondaries (<%= @total_trackable %> trackable)</p>
     <div class="stats-row-group">
       <div class="stats-row">
@@ -82,7 +86,7 @@
 
   <%# ── Painted ── %>
   <div class="stats-card">
-    <h2 class="stats-title">🎨 Painted</h2>
+    <h2 class="stats-title">Painted</h2>
     <p class="stats-note">Excludes bundles &amp; secondaries (<%= @total_trackable %> trackable)</p>
     <div class="stats-row-group">
       <div class="stats-row">
@@ -100,6 +104,10 @@
     </div>
   </div>
 
+  </div>
+</div>
+
+<div class="stats-grid">
   <%# ── Species ── %>
   <div class="stats-card stats-card-wide">
     <h2 class="stats-title">Species</h2>
@@ -110,6 +118,7 @@
         <thead><tr>
           <th class="sort-col" onclick="sortStatsTable(this, 'alpha')" title="Sort alphabetically">Species ↕</th>
           <th onclick="sortStatsTable(this, 'count')" title="Sort by count"># ↕</th>
+          <th>%</th>
         </tr></thead>
         <tbody>
           <% @by_species.each do |s, count| %>
@@ -148,6 +157,7 @@
         <thead><tr>
           <th class="sort-col" onclick="sortSizeTable(this)" title="Sort alphabetically">Size ↕</th>
           <th onclick="sortSizeTableByCount(this)" title="Sort by count"># ↕</th>
+          <th>%</th>
         </tr></thead>
         <tbody>
           <% @by_size.each do |s, count| %>
@@ -172,6 +182,7 @@
         <thead><tr>
           <th class="sort-col" onclick="sortStatsTable(this, 'alpha')" title="Sort alphabetically">Weapon ↕</th>
           <th onclick="sortStatsTable(this, 'count')" title="Sort by count"># ↕</th>
+          <th>%</th>
         </tr></thead>
         <tbody>
           <% @by_weapons.each do |w, count| %>
@@ -196,6 +207,7 @@
         <thead><tr>
           <th class="sort-col" onclick="sortStatsTable(this, 'alpha')" title="Sort alphabetically">Stance ↕</th>
           <th onclick="sortStatsTable(this, 'count')" title="Sort by count"># ↕</th>
+          <th>%</th>
         </tr></thead>
         <tbody>
           <% @by_stance.each do |s, count| %>
@@ -208,12 +220,39 @@
         </tbody>
       </table>
     <% end %>
+  </div>
+
+  <%# ── Armour ── %>
+  <div class="stats-card stats-card-wide">
+    <h2 class="stats-title">Armour</h2>
+    <% if @by_armour.nil? || @by_armour.empty? %>
+      <p class="stats-empty">No armour data yet</p>
+    <% else %>
+      <table class="stats-table sortable-stats" data-sort="count">
+        <thead><tr>
+          <th class="sort-col" onclick="sortStatsTable(this, 'alpha')" title="Sort alphabetically">Armour ↕</th>
+          <th onclick="sortStatsTable(this, 'count')" title="Sort by count"># ↕</th>
+          <th>%</th>
+        </tr></thead>
+        <tbody>
+          <% @by_armour.each do |a, count| %>
+            <tr>
+              <td><a href="/search?armour=<%= CGI.escape(a) %>" class="stats-link"><%= a %></a></td>
+              <td><%= count %></td>
+              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+
 </div><%# close stats-grid %>
 
 <% if @field_coverage&.any? %>
-<div class="stats-grid">
-  <div class="stats-card stats-card-wide">
-    <h2 class="stats-title">Field Coverage</h2>
+<div style="margin-top: 24px;">
+  <div class="stats-card" style="border-radius: var(--radius-lg); background: var(--bg2); border: 1px solid var(--border); padding: 20px;">
+    <h2 class="stats-title" style="margin: 0 -20px 14px -20px; padding: 0 20px 10px 20px; border-bottom: 1px solid var(--border);">Field Coverage</h2>
     <p class="stats-note">Tagged images · excl. bundles &amp; secondaries (<%= @field_coverage.first&.dig(:total) || 0 %> images)</p>
     <table class="stats-table">
       <thead>

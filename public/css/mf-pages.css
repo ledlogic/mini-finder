@@ -315,6 +315,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 18px;
+  margin-top: 24px;
 }
 .stats-card {
   background: var(--bg2);
@@ -323,6 +324,7 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
   padding: 18px 20px;
 }
 .stats-card-wide { grid-column: span 2; }
+.stats-grid-full { grid-template-columns: 1fr !important; }
 .stats-title {
   font-family: var(--font-head);
   font-size: 0.8rem;

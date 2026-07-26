@@ -278,6 +278,30 @@ mini-finder/
 
 ## Changelog
 
+### v3.03 — July 25, 2026
+- Statistics: added 24px margin above Field Coverage section to match grid row spacing
+
+### v3.02 — July 25, 2026
+- Statistics: added 24px vertical margin between grid rows
+
+### v3.01 — July 25, 2026
+- Statistics: Colorized/Printed/Painted moved to their own grid row; removed 🖨 and 🎨 icons from Printed/Painted card titles
+
+### v3.00 — July 25, 2026
+- Fixed: Armour was rendering inside the Stances card due to missing closing </div> on stance section
+
+### v2.99 — July 25, 2026
+- Statistics: Field Coverage now uses a plain block div instead of a grid so it truly spans the full width below all other cards
+
+### v2.98 — July 25, 2026
+- Statistics: Field Coverage moved to its own full-width single-column row so it no longer breaks out of its box
+
+### v2.97 — July 25, 2026
+- Statistics page: added Armour breakdown section (sortable by count or alpha, links to search)
+
+### v2.96 — July 25, 2026
+- Statistics breakdown tables: added % column header so header row spans full width
+
 ### v2.95 — July 25, 2026
 - README Interface Overview: added History, Statistics, and About sections; updated Edit section
 
