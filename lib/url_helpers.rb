@@ -11,6 +11,28 @@ helpers do
     h.reject { |_, v| v.to_s.empty? }.map { |k, v| "#{k}=#{CGI.escape(v.to_s)}" }.join('&')
   end
 
+  # Returns the current filter query string (all active catalog filters)
+  # Use this for any prev/next/page link that should preserve filters
+  def catalog_filter_qs(extra = {})
+    parts = {}
+    parts[:show_all]      = '1'                if @show_all
+    parts[:folder]        = @folder_filter      unless @folder_filter.to_s.empty?
+    parts[:f_untagged]    = '1'                if @f_untagged
+    parts[:f_unprinted]   = '1'                if @f_unprinted
+    parts[:f_unpainted]   = '1'                if @f_unpainted
+    parts[:f_no_size]     = '1'                if @f_no_size
+    parts[:f_no_weapons]  = '1'                if @f_no_weapons
+    parts[:f_no_stance]   = '1'                if @f_no_stance
+    parts[:f_no_species]  = '1'                if @f_no_species
+    parts[:f_no_vehicles] = '1'                if @f_no_vehicles
+    parts[:f_no_robots]   = '1'                if @f_no_robots
+    parts[:f_no_bundles]  = '1'                if @f_no_bundles
+    parts[:colorized]     = @colorized_catalog  unless @colorized_catalog.to_s.empty?
+    parts.merge!(extra)
+    qs = url_query(parts)
+    qs.empty? ? '' : '?' + qs
+  end
+
   # App route URL for streaming a collection PDF
   def url_pdf(collection_id)
     "/pdf/#{collection_id}"

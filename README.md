@@ -278,6 +278,28 @@ mini-finder/
 
 ## Changelog
 
+### v3.10 — July 25, 2026
+- History page: collection name link and mini name link both anchor to the specific row (#row-:id) instead of the top of the collection
+
+### v3.09 — July 25, 2026
+- Search page: weapons quickpick moved under weapons field (was incorrectly under armour); armour quickpick buttons added under armour field
+
+### v3.08 — July 25, 2026
+- Startup migration: all colorized (color render) images have mini_size set to NA — color renders don't use a physical base
+
+### v3.07 — July 25, 2026
+- Added `catalog_filter_qs` helper to url_helpers.rb — single source of truth for all catalog filter params
+- Prev/next collection nav and pagination both use this helper, ensuring all filters are always preserved
+
+### v3.06 — July 25, 2026
+- Pagination Prev/Next now carries all active filters (was only carrying f_untagged/f_unprinted/f_unpainted, missing colorized/f_no_weapons/f_no_robots etc.)
+
+### v3.05 — July 25, 2026
+- Collection ‹/› prev/next navigation and dropdown now preserve active filters (show_all, f_no_weapons, colorized, etc.)
+
+### v3.04 — July 25, 2026
+- Colorized images: selecting 🎨 color clears the mini size field instantly (live in UI and on save) — color renders don't use a physical base
+
 ### v3.03 — July 25, 2026
 - Statistics: added 24px margin above Field Coverage section to match grid row spacing
 

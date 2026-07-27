@@ -131,13 +131,14 @@
         _prev_col    = _cur_idx && _cur_idx > 0                       ? _sorted_cols[_cur_idx - 1] : nil
         _next_col    = _cur_idx && _cur_idx < _sorted_cols.length - 1 ? _sorted_cols[_cur_idx + 1] : nil
       %>
+      <% _filter_qs = catalog_filter_qs %>
       <% if _prev_col %>
-        <a href="/collection/<%= _prev_col[:id] %>" class="col-nav-btn" title="← <%= File.basename(_prev_col[:folder_path]) %>">‹</a>
+        <a href="/collection/<%= _prev_col[:id] %><%= _filter_qs %>" class="col-nav-btn" title="← <%= File.basename(_prev_col[:folder_path]) %>">‹</a>
       <% else %>
         <span class="col-nav-btn col-nav-disabled">‹</span>
       <% end %>
       <form action="/" method="get" class="col-folder-inline-form" onsubmit="return false;">
-        <select class="col-folder-inline-select" onchange="if(this.value) window.location='/collection/'+this.value">
+        <select class="col-folder-inline-select" onchange="if(this.value) window.location='/collection/'+this.value+'<%= _filter_qs %>'">
           <% _sorted_cols.each do |c| %>
             <option value="<%= c[:id] %>" <%= c[:folder_path] == @folder_filter ? 'selected' : '' %>>
               <%= File.basename(c[:folder_path]) %><%= c[:name].to_s.empty? ? '' : " — #{c[:name]}" %>
@@ -146,7 +147,7 @@
         </select>
       </form>
       <% if _next_col %>
-        <a href="/collection/<%= _next_col[:id] %>" class="col-nav-btn" title="→ <%= File.basename(_next_col[:folder_path]) %>">›</a>
+        <a href="/collection/<%= _next_col[:id] %><%= _filter_qs %>" class="col-nav-btn" title="→ <%= File.basename(_next_col[:folder_path]) %>">›</a>
       <% else %>
         <span class="col-nav-btn col-nav-disabled">›</span>
       <% end %>
@@ -577,8 +578,7 @@
 
 <% if @pages > 1 %>
   <div class="pagination">
-    <% flag_str = "#{@f_untagged ? 'f_untagged=1&' : ''}#{@f_unprinted ? 'f_unprinted=1&' : ''}#{@f_unpainted ? 'f_unpainted=1&' : ''}" %>
-  <% base = "/catalog?#{@show_all ? 'show_all=1&' : ''}#{@folder_filter.empty? ? '' : "folder=#{CGI.escape(@folder_filter)}&"}#{flag_str}" %>
+    <% _cqs = catalog_filter_qs; base = '/catalog' + (_cqs.empty? ? '?' : _cqs + '&') %>
     <% if @page > 1 %>
       <a href="<%= base %>page=<%= @page - 1 %>" class="page-btn">← Prev</a>
     <% end %>

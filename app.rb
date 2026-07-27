@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "3.03"
+APP_VERSION = "3.10"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -219,7 +219,7 @@ post '/images/:id' do
     armour:           params[:armour].to_s.strip.upcase,
     orientation:      params[:orientation].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
-    mini_size:        params[:mini_size].to_s.strip,
+    mini_size:        (params[:colorized] == 'true') ? '' : params[:mini_size].to_s.strip,
     description:      params[:description].to_s.strip,
     mini_count:       [params[:mini_count].to_i, 1].max,
     tagged:           params[:mini_name].to_s.strip.length > 0,
@@ -469,7 +469,7 @@ post '/edit/:id' do
     armour:           params[:armour].to_s.strip.upcase,
     orientation:      params[:orientation].to_s.strip.upcase,
     stance:           params[:stance].to_s.strip,
-    mini_size:        params[:mini_size].to_s.strip,
+    mini_size:        (params[:colorized] == 'true') ? '' : params[:mini_size].to_s.strip,
     description:      params[:description].to_s.strip,
     mini_count:       [params[:mini_count].to_i, 1].max,
     tagged:           params[:mini_name].to_s.strip.length > 0,
@@ -774,6 +774,19 @@ get '/search' do
   @params     = params
   @results    = []
   @query_made = false
+
+  # Quickpick buttons for search filters
+  @top_weapons = (['NONE'] + Images.where(Sequel.~(weapons: nil)).exclude(weapons: '')
+    .select_map(:weapons).flat_map { |w| w.split(',').map(&:strip) }.reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+    .reject { |w| w == 'NONE' }).first(9)
+
+  fallback_armour = ['NONE', 'HEAVY', 'MEDIUM', 'LIGHT', 'UNARMOURED', 'POWERED', 'CHAINMAIL', 'PLATE']
+  db_armour = Images.where(Sequel.~(armour: nil)).exclude(armour: '')
+    .select_map(:armour).flat_map { |a| a.split(',').map(&:strip) }.reject(&:empty?)
+    .tally.sort_by { |_, v| -v }.map(&:first)
+  @top_armour = (['NONE'] + (db_armour + (fallback_armour - db_armour)).reject { |a| a == 'NONE' }).first(9)
+
   @collections = Collections.all.each_with_object({}) { |c, h| h[c[:id]] = c }
 
   @colorized_filter = params[:colorized].to_s

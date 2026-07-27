@@ -625,3 +625,6 @@ mark.hl-fuzzy { background: rgba(168,85,247,0.2); color: var(--accent3); border-
 .about-table th { background: var(--bg3); color: var(--accent); font-family: var(--font-mono); font-size: 0.78rem; }
 .about-body hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .about-body blockquote { border-left: 3px solid var(--accent); margin: 10px 0; padding: 6px 14px; color: var(--text-dim); font-style: italic; }
+
+.history-name-link { color: var(--text); text-decoration: none; }
+.history-name-link:hover { color: var(--accent); }
