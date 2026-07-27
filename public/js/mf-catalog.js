@@ -357,3 +357,20 @@ document.addEventListener('DOMContentLoaded', function() {
     inp.addEventListener('change', function() { applyBundleMode(inp); });
   });
 });
+
+// ── Clear size when colorized is set to color ─────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('select[name="colorized"]').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+      if (sel.value === 'true') {
+        var row = sel.closest('tr');
+        if (!row) return;
+        var sizeSelect = row.querySelector('select[name="mini_size"]');
+        if (sizeSelect) {
+          sizeSelect.value = '';
+          sizeSelect.dispatchEvent(new Event('change'));
+        }
+      }
+    });
+  });
+});
