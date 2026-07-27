@@ -45,10 +45,6 @@
       <div class="form-group">
         <label>Weapons</label>
         <input type="text" name="weapons" id="search-weapons" value="<%= @params['weapons'] %>" placeholder="e.g. Sword" autocomplete="off">
-      </div>
-      <div class="filter-group">
-        <label>Armour</label>
-        <input type="text" name="armour" id="search-armour" value="<%= @params['armour'] %>" placeholder="e.g. Heavy" autocomplete="off">
         <% if @top_weapons&.any? %>
           <div class="species-quickpick" style="margin-top:4px;">
             <% @top_weapons.each do |wp| %>
@@ -56,6 +52,20 @@
                       class="btn-quickpick <%= @params['weapons'].to_s.upcase == wp ? 'btn-quickpick-active' : '' %>"
                       data-target="search-weapons" data-value="<%= wp %>"
                       onclick="searchQuickpick(this)"><%= wp %></button>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+      <div class="form-group">
+        <label>Armour</label>
+        <input type="text" name="armour" id="search-armour" value="<%= @params['armour'] %>" placeholder="e.g. Heavy" autocomplete="off">
+        <% if @top_armour&.any? %>
+          <div class="species-quickpick" style="margin-top:4px;">
+            <% @top_armour.each do |ar| %>
+              <button type="button"
+                      class="btn-quickpick <%= @params['armour'].to_s.upcase == ar ? 'btn-quickpick-active' : '' %>"
+                      data-target="search-armour" data-value="<%= ar %>"
+                      onclick="searchQuickpick(this)"><%= ar %></button>
             <% end %>
           </div>
         <% end %>
