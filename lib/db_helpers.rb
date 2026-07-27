@@ -234,6 +234,10 @@ def db_migrate_mini_sizes
 end
 
 def db_normalise_case
+  # Color images don't use a physical base — clear their size
+  n_col = DB.run("UPDATE images SET mini_size = 'NA', updated_at = datetime('now') WHERE colorized = 1 AND mini_size IS NOT NULL AND mini_size != '' AND mini_size != 'NA'")
+  puts "Normalise: colorized images mini_size set to NA" if DB[:images].where(colorized: true).exclude(mini_size: 'NA').count > 0
+
   # Trim leading/trailing whitespace from all key text fields
   %w[mini_name species weapons armour stance gender orientation].each do |field|
     DB.run("UPDATE images SET #{field} = TRIM(#{field}), updated_at = datetime('now') WHERE #{field} IS NOT NULL AND #{field} != TRIM(#{field})")
