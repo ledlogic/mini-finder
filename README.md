@@ -278,6 +278,80 @@ mini-finder/
 
 ## Changelog
 
+### v3.34 — July 25, 2026
+- Search: free-text query (q field) now also searches filenames — e.g. "september" matches files like "september22.jpg"
+
+### v3.33 — July 25, 2026
+- Random No Robots / No Drones: now also excludes xref secondaries linked to robot/drone primaries
+
+### v3.32 — July 25, 2026
+- Random page: added 🚁 No Drones filter button
+
+### v3.31 — July 25, 2026
+- Random page: added 🤖 No Robots filter button
+
+### v3.30 — July 25, 2026
+- Growth table: removed Painted column
+
+### v3.29 — July 25, 2026
+- Growth chart: removed Painted line from plot
+
+### v3.28 — July 25, 2026
+- Growth table: removed % Painted column
+
+### v3.27 — July 25, 2026
+- Growth table: removed Total column
+
+### v3.26 — July 25, 2026
+- Growth chart: added + markers at each data point
+
+### v3.25 — July 25, 2026
+- Growth table: period values link to collection when exactly one collection matches; shows count in parens when multiple collections share a period
+
+### v3.24 — July 25, 2026
+- Growth: Printed and Painted now only counted for printable (grey) images — fixes > 100% issue
+
+### v3.23 — July 25, 2026
+- Growth chart: removed Released line and column (same value as Printable); chart now shows Printable · Printed · Painted
+
+### v3.22 — July 25, 2026
+- Growth: release date now extracted directly from folder name (e.g. 2021-11-mmf → 2021-11-02) — folder name is the authoritative source as requested
+
+### v3.21 — July 25, 2026
+- Growth: fixed printable/released bucketing to use collection release_month instead of image created_at — 2021 images now correctly appear in 2021 columns regardless of when they were scanned
+
+### v3.20 — July 25, 2026
+- Growth: base image query aligned with statistics trackable definition (non-bundle, non-secondary, mini_count < 4) so totals match
+
+### v3.19 — July 25, 2026
+- Growth chart: removed Total line, chart now shows Released · Printable · Printed · Painted
+
+### v3.18 — July 25, 2026
+- Growth: Released now uses collection release_month field (e.g. 2021-12 → Dec 2, 2021) instead of earliest image created_at
+
+### v3.17 — July 25, 2026
+- Growth page: added Released line (printable images per collection, keyed to collection release date) and Printable line (grey non-bundle non-secondary images)
+- % Printed and % Painted now calculated against Printable count, not Total
+
+### v3.16 — July 25, 2026
+- Growth page: added Daily and Weekly resolution options (Daily=YYYY-MM-DD, Weekly=ISO week YYYY-Www)
+
+### v3.15 — July 25, 2026
+- Growth page: resolution toggle — Monthly / Quarterly / Yearly grouping
+
+### v3.14 — July 25, 2026
+- All percentage calculations now use float division (100.0) with .round(1) — fixes truncation errors like 45% showing instead of 45.8%
+
+### v3.13 — July 25, 2026
+- Growth chart: removed fill under total line, now shows clean lines only
+
+### v3.12 — July 25, 2026
+- New /growth page: line chart showing cumulative total minis, printed, and painted over time by month; also shows data table with % columns
+
+### v3.11 — July 25, 2026
+- Random page: added 🖨 Printed only filter button (complements existing Unprinted only)
+- Search page: added 🖨 Printed only and 🎨 Painted only status filter checkboxes
+
 ### v3.10 — July 25, 2026
 - History page: collection name link and mini name link both anchor to the specific row (#row-:id) instead of the top of the collection
 

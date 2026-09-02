@@ -73,6 +73,15 @@ helpers do
 
     unless q.empty?
       text_fields = %i[mini_name species weapons stance armour]
+      # Also search filename with lower weight
+      fname = row[:filename].to_s.downcase
+      q.split.each do |word|
+        if fname.include?(word)
+          score += 0.5
+          highlights[:filename] ||= []
+          highlights[:filename] << word
+        end
+      end
       text_fields.each do |field|
         cell = row[field].to_s.downcase
         q.split.each do |word|

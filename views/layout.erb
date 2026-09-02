@@ -71,6 +71,10 @@
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Statistics
       </a></li>
+      <li><a href="/growth" class="<%= request.path_info == '/growth' ? 'active' : '' %>">
+        <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Growth
+      </a></li>
       <li><a href="/about" class="<%= request.path_info == '/about' ? 'active' : '' %>">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         About

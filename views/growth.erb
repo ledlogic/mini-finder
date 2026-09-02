@@ -1,0 +1,167 @@
+<div class="page-header">
+  <div>
+    <h1>Growth</h1>
+    <p class="page-sub">Cumulative minis added and printed over time</p>
+  </div>
+</div>
+
+<% if @growth_data.empty? %>
+  <div class="empty-state"><p>No data yet — scan some folders first.</p></div>
+<% else %>
+
+<div class="col-year-bar" style="margin-bottom:16px;">
+  <span class="bulk-label">Resolution:</span>
+  <a href="/growth?resolution=day"     class="col-year-btn <%= @resolution == 'day'     ? 'col-year-active' : '' %>">Daily</a>
+  <a href="/growth?resolution=week"    class="col-year-btn <%= @resolution == 'week'    ? 'col-year-active' : '' %>">Weekly</a>
+  <a href="/growth?resolution=month"   class="col-year-btn <%= @resolution == 'month'   ? 'col-year-active' : '' %>">Monthly</a>
+  <a href="/growth?resolution=quarter" class="col-year-btn <%= @resolution == 'quarter' ? 'col-year-active' : '' %>">Quarterly</a>
+  <a href="/growth?resolution=year"    class="col-year-btn <%= @resolution == 'year'    ? 'col-year-active' : '' %>">Yearly</a>
+</div>
+
+<div class="growth-chart-wrap">
+  <canvas id="growth-chart"></canvas>
+</div>
+
+<div class="growth-table-wrap">
+  <table class="stats-table" style="max-width:520px;">
+    <thead>
+      <tr>
+        <th>Period</th>
+
+        <th style="text-align:right; color:#64748b;">Printable</th>
+        <th style="text-align:right; color:#22c55e;">Printed</th>
+
+        <th style="text-align:right;">% Printed</th>
+
+      </tr>
+    </thead>
+    <tbody>
+      <% @growth_data.each do |row| %>
+        <tr>
+          <td style="font-family:var(--font-mono); font-size:0.8rem;">
+            <% if row[:col_link] %>
+              <a href="<%= row[:col_link] %>" style="color:var(--accent); text-decoration:none;" title="Open collection"><%= row[:month] %></a>
+            <% else %>
+              <%= row[:month] %><% if row[:col_count].to_i > 1 %> <span style="color:var(--text-faint); font-size:0.7rem;">(<%= row[:col_count] %>)</span><% end %>
+            <% end %>
+          </td>
+
+          <td style="text-align:right; color:#64748b;"><%= row[:printable] %></td>
+          <td style="text-align:right; color:#22c55e;"><%= row[:printed] %></td>
+
+          <td style="text-align:right; font-family:var(--font-mono); font-size:0.78rem;">
+            <%= row[:printable] > 0 ? (row[:printed] * 100.0 / row[:printable]).round(1) : 0 %>%
+          </td>
+
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<script>
+var growthData = <%= @growth_data.to_json %>;
+
+(function() {
+  var canvas = document.getElementById('growth-chart');
+  if (!canvas) return;
+
+  var months  = growthData.map(function(d) { return d.month; });
+  var totals     = growthData.map(function(d) { return d.total; });
+  var printed    = growthData.map(function(d) { return d.printed; });
+  var painted    = growthData.map(function(d) { return d.painted; });
+  var printable  = growthData.map(function(d) { return d.printable; });
+  var released   = growthData.map(function(d) { return d.released; });
+
+  var style   = getComputedStyle(document.documentElement);
+  var accent  = style.getPropertyValue('--accent').trim() || '#00d4ff';
+  var purple  = '#a78bfa';
+  var dim     = style.getPropertyValue('--text-faint').trim() || '#555';
+  var border  = style.getPropertyValue('--border').trim() || '#222';
+  var bg      = style.getPropertyValue('--bg2').trim() || '#111';
+
+  var W = canvas.parentElement.offsetWidth;
+  var H = Math.min(340, Math.max(220, Math.floor(W * 0.35)));
+  canvas.width  = W;
+  canvas.height = H;
+
+  var ctx = canvas.getContext('2d');
+  var pad = { top: 24, right: 20, bottom: 48, left: 56 };
+  var cw  = W - pad.left - pad.right;
+  var ch  = H - pad.top  - pad.bottom;
+
+  var maxVal = Math.max.apply(null, printable) || 1;
+  var n      = months.length;
+  var step   = n > 1 ? cw / (n - 1) : cw;
+
+  function xPos(i) { return pad.left + (n > 1 ? i * step : cw / 2); }
+  function yPos(v) { return pad.top  + ch - (v / maxVal) * ch; }
+
+  // Grid lines
+  var gridLines = 5;
+  ctx.strokeStyle = border;
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([3, 4]);
+  for (var g = 0; g <= gridLines; g++) {
+    var gy = pad.top + (ch / gridLines) * g;
+    ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(pad.left + cw, gy); ctx.stroke();
+    var labelVal = Math.round(maxVal * (1 - g / gridLines));
+    ctx.fillStyle = dim; ctx.font = '10px DM Mono, monospace'; ctx.textAlign = 'right';
+    ctx.fillText(labelVal, pad.left - 6, gy + 4);
+  }
+  ctx.setLineDash([]);
+
+  function drawLine(data, color, fill) {
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(data[0]));
+    for (var i = 1; i < data.length; i++) ctx.lineTo(xPos(i), yPos(data[i]));
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+
+    if (fill) {
+      ctx.lineTo(xPos(data.length - 1), pad.top + ch);
+      ctx.lineTo(pad.left, pad.top + ch);
+      ctx.closePath();
+      ctx.fillStyle = color.replace(')', ', 0.08)').replace('rgb', 'rgba');
+      ctx.fill();
+    }
+
+    // Draw + markers at each data point
+    var r = 3;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    data.forEach(function(v, i) {
+      var x = xPos(i), y = yPos(v);
+      ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.stroke();
+    });
+  }
+
+  drawLine(printable,  '#64748b',  false);
+  drawLine(printed,    '#22c55e',  false);
+
+
+  // X-axis labels (every N months)
+  var labelEvery = Math.ceil(n / 12);
+  ctx.fillStyle = dim; ctx.font = '9px DM Mono, monospace'; ctx.textAlign = 'center';
+  months.forEach(function(m, i) {
+    if (i % labelEvery === 0 || i === n - 1) {
+      ctx.save();
+      ctx.translate(xPos(i), pad.top + ch + 14);
+      ctx.rotate(-Math.PI / 4);
+      ctx.fillText(m, 0, 0);
+      ctx.restore();
+    }
+  });
+
+  // Legend
+  var lx = pad.left; var ly = H - 10;
+  [['#64748b', 'Printable'], ['#22c55e', 'Printed']].forEach(function(item, i) {
+    ctx.fillStyle = item[0];
+    ctx.fillRect(lx + i * 90, ly - 8, 14, 3);
+    ctx.fillStyle = dim; ctx.font = '10px DM Mono, monospace'; ctx.textAlign = 'left';
+    ctx.fillText(item[1], lx + i * 90 + 18, ly);
+  });
+})();
+</script>
+
+<% end %>

@@ -126,6 +126,14 @@
         🎨 Unpainted only
       </label>
       <label class="search-check-label">
+        <input type="checkbox" name="printed" value="1" <%= @params['printed'] == '1' ? 'checked' : '' %>>
+        🖨 Printed only
+      </label>
+      <label class="search-check-label">
+        <input type="checkbox" name="painted" value="1" <%= @params['painted'] == '1' ? 'checked' : '' %>>
+        🎨 Painted only
+      </label>
+      <label class="search-check-label">
         <input type="checkbox" name="tagged" value="1" <%= @params['tagged'] == '1' ? 'checked' : '' %>>
         ✓ Tagged only
       </label>

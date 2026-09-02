@@ -34,7 +34,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "3.10"
+APP_VERSION = "3.34"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -495,6 +495,122 @@ end
 
 # ── 2b. Random images ───────────────────────────────────────────────────────
 
+get '/growth' do
+  @resolution = params[:resolution] || 'month'  # day, week, month, quarter, year
+
+  # Base: same definition as statistics "trackable" — non-bundle, non-secondary
+  all_images = Images
+    .where(primary_image_id: nil)
+    .where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
+    .exclude(Sequel.ilike(:mini_name, 'bundle'))
+    .select(:id, :collection_id, :created_at, :printed, :painted, :colorized)
+    .all
+
+  # Printable = grey (colorized=false), non-bundle, non-secondary
+  # Released = earliest created_at per collection, keyed by collection release_month
+  collections_map = Collections.select(:id, :release_month, :folder_path).each_with_object({}) { |c, h| h[c[:id]] = c }
+
+  # Release date derived from folder name: "2021-11-mmf" or "2021-11" → 2021-11-02
+  # Folder name is the authoritative source of release date
+  release_date_for_col = lambda do |col|
+    folder = File.basename(col[:folder_path].to_s)
+    # Extract YYYY-MM from folder name (first 7 chars if pattern matches)
+    if (m = folder.match(/^(\d{4})-(\d{2})/))
+      "#{m[1]}-#{m[2]}-02"
+    else
+      nil
+    end
+  end
+
+  # Group key based on resolution — accepts Time, Date, or "YYYY-MM-DD" string
+  group_key = lambda do |val|
+    s = val.to_s
+    y = s[0..3]; m = s[5..6].to_i
+    case @resolution
+    when 'day'
+      s[0..9]
+    when 'week'
+      begin
+        d = Date.parse(s[0..10])
+        wstart = d - ((d.wday + 6) % 7)
+        wstart.strftime('%Y-W%V')
+      rescue
+        "#{y}-W??"
+      end
+    when 'year'
+      y
+    when 'quarter'
+      q = m > 0 ? ((m - 1) / 3) + 1 : 1
+      "#{y}-Q#{q}"
+    else
+      s[0..6]   # YYYY-MM
+    end
+  end
+
+  by_period = Hash.new { |h, k| h[k] = { total: 0, printed: 0, painted: 0, printable: 0, released: 0 } }
+
+  # Build printable/printed/painted per collection, keyed by release date
+  # This ensures 2021 images show in 2021 regardless of when they were scanned
+  by_collection = all_images.group_by { |img| img[:collection_id] }
+
+  by_collection.each do |col_id, imgs|
+    col = collections_map[col_id]
+    next unless col
+
+    # Use folder name as authoritative release date: "2021-11-mmf" → 2021-11-02
+    date_str = release_date_for_col.call(col)
+    next if date_str.nil?
+
+    key = group_key.call(date_str)
+    next if key.to_s.empty?
+
+    imgs.each do |img|
+      by_period[key][:total] += 1
+      # Only count printed/painted for printable (grey) images
+      if img[:colorized] == false
+        by_period[key][:printable] += 1
+        by_period[key][:released]  += 1
+        by_period[key][:printed]   += 1 if img[:printed].to_i > 0
+        by_period[key][:painted]   += 1 if img[:painted].to_i > 0
+      end
+    end
+  end
+
+  sorted_periods = by_period.keys.sort
+  cum_total     = 0
+  cum_printed   = 0
+  cum_painted   = 0
+  cum_printable = 0
+  cum_released  = 0
+
+  # Build a lookup: period key → collection id (for linking)
+  # Uses the same folder-name date logic as above
+  period_to_col = {}
+  collections_map.each do |col_id, col|
+    date_str = release_date_for_col.call(col)
+    next unless date_str
+    key = group_key.call(date_str)
+    next if key.to_s.empty?
+    period_to_col[key] ||= []
+    period_to_col[key] << col_id
+  end
+
+  @growth_data = sorted_periods.map do |m|
+    cum_total     += by_period[m][:total]
+    cum_printed   += by_period[m][:printed]
+    cum_painted   += by_period[m][:painted]
+    cum_printable += by_period[m][:printable]
+    cum_released  += by_period[m][:released]
+    col_ids = period_to_col[m] || []
+    col_link = col_ids.length == 1 ? "/collection/#{col_ids.first}" : nil
+    { month: m, total: cum_total, printed: cum_printed, painted: cum_painted,
+      printable: cum_printable, released: cum_released, col_link: col_link, col_count: col_ids.length }
+  end
+
+  @page_title = 'Growth'
+  erb :growth
+end
+
 get '/history' do
   @per_page    = 50
   @page        = [params[:page].to_i, 1].max
@@ -646,7 +762,10 @@ get '/random' do
   @colorized_filter  = params[:colorized].to_s
   @no_bundles        = params[:no_bundles]  == '1'
   @no_vehicles       = params[:no_vehicles] == '1'
+  @no_robots         = params[:no_robots]   == '1'
+  @no_drones         = params[:no_drones]   == '1'
   @unprinted_only    = params[:unprinted]   == '1'
+  @printed_only      = params[:printed]     == '1'
   @random_count      = [params[:n].to_i, 10].max
   @random_count      = [@random_count, 240].min
   @random_count      = 60 if params[:n].to_s.empty?
@@ -678,8 +797,21 @@ get '/random' do
     all_vehicle_ids = (vehicle_ids + xref_vehicle_ids).uniq
     base = base.exclude(id: all_vehicle_ids) unless all_vehicle_ids.empty?
   end
+  if @no_robots
+    robot_ids = Images.where(Sequel.ilike(:species, '%ROBOT%')).select_map(:id)
+    xref_robot_ids = Images.where(primary_image_id: robot_ids).select_map(:id)
+    all_robot_ids = (robot_ids + xref_robot_ids).uniq
+    base = base.exclude(id: all_robot_ids) unless all_robot_ids.empty?
+  end
+  if @no_drones
+    drone_ids = Images.where(Sequel.ilike(:species, '%DRONE%')).select_map(:id)
+    xref_drone_ids = Images.where(primary_image_id: drone_ids).select_map(:id)
+    all_drone_ids = (drone_ids + xref_drone_ids).uniq
+    base = base.exclude(id: all_drone_ids) unless all_drone_ids.empty?
+  end
   if @unprinted_only
     base = base.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil))
+    base = base.where(Sequel.expr { printed > 0 }) if @printed_only
     base = base.where(primary_image_id: nil)
     base = base.where(Sequel.expr { mini_count < 4 } | Sequel.expr(mini_count: nil))
     base = base.exclude(Sequel.ilike(:mini_name, 'bundle'))
@@ -820,6 +952,8 @@ get '/search' do
     # Status filters
     dataset = dataset.where(Sequel.expr { printed < 1 } | Sequel.expr(printed: nil)) if params['unprinted'] == '1'
     dataset = dataset.where(Sequel.expr { painted < 1 } | Sequel.expr(painted: nil)) if params['unpainted'] == '1'
+    dataset = dataset.where(Sequel.expr { printed > 0 })                               if params['printed']   == '1'
+    dataset = dataset.where(Sequel.expr { painted > 0 })                               if params['painted']   == '1'
     dataset = dataset.where(tagged: true)  if params['tagged']   == '1'
     dataset = dataset.where(tagged: false) if params['untagged'] == '1'
     if params['no_bundles'] == '1'
@@ -865,6 +999,8 @@ get '/search' do
       if matching_by_col.any?
         dataset = dataset.or(collection_id: matching_by_col)
       end
+      # Also pre-include rows where filename matches (so they get scored)
+      dataset = dataset.or(Sequel.ilike(:filename, "%#{q_str}%"))
     end
 
     scored = dataset.all.map do |row|

@@ -28,11 +28,11 @@
     <div class="stats-row-group">
       <div class="stats-row">
         <a href="/catalog?show_all=1" class="stats-label stats-link">Tagged</a>
-        <span class="stats-value"><%= @total_tagged %> <span class="stats-pct">(<%= @total_images > 0 ? (@total_tagged * 100 / @total_images) : 0 %>%)</span></span>
+        <span class="stats-value"><%= @total_tagged %> <span class="stats-pct">(<%= @total_images > 0 ? (@total_tagged * 100.0 / @total_images).round(1) : 0 %>%)</span></span>
       </div>
       <div class="stats-row">
         <a href="/catalog" class="stats-label stats-link stats-warn">Untagged</a>
-        <span class="stats-value stats-warn"><%= @total_untagged %> <span class="stats-pct">(<%= @total_images > 0 ? (@total_untagged * 100 / @total_images) : 0 %>%)</span></span>
+        <span class="stats-value stats-warn"><%= @total_untagged %> <span class="stats-pct">(<%= @total_images > 0 ? (@total_untagged * 100.0 / @total_images).round(1) : 0 %>%)</span></span>
       </div>
     </div>
   </div>
@@ -47,15 +47,15 @@
     <div class="stats-row-group">
       <div class="stats-row">
         <a href="/catalog?show_all=1&colorized=true" class="stats-label stats-link">🎨 Colorized</a>
-        <span class="stats-value"><%= @colorized_color %> <span class="stats-pct">(<%= @total_images > 0 ? (@colorized_color * 100 / @total_images) : 0 %>%)</span></span>
+        <span class="stats-value"><%= @colorized_color %> <span class="stats-pct">(<%= @total_images > 0 ? (@colorized_color * 100.0 / @total_images).round(1) : 0 %>%)</span></span>
       </div>
       <div class="stats-row">
         <a href="/catalog?show_all=1&colorized=false" class="stats-label stats-link">⬜ Grey</a>
-        <span class="stats-value"><%= @colorized_grey %> <span class="stats-pct">(<%= @total_images > 0 ? (@colorized_grey * 100 / @total_images) : 0 %>%)</span></span>
+        <span class="stats-value"><%= @colorized_grey %> <span class="stats-pct">(<%= @total_images > 0 ? (@colorized_grey * 100.0 / @total_images).round(1) : 0 %>%)</span></span>
       </div>
       <div class="stats-row">
         <a href="/bulk?field=colorized" class="stats-label stats-link stats-warn">❓ Unknown</a>
-        <span class="stats-value stats-warn"><%= @colorized_unknown %> <span class="stats-pct">(<%= @total_images > 0 ? (@colorized_unknown * 100 / @total_images) : 0 %>%)</span></span>
+        <span class="stats-value stats-warn"><%= @colorized_unknown %> <span class="stats-pct">(<%= @total_images > 0 ? (@colorized_unknown * 100.0 / @total_images).round(1) : 0 %>%)</span></span>
       </div>
       <div class="stats-row">
         <a href="/catalog?show_all=1&colorized=true" class="stats-label stats-link <%= @unlinked_colorized > 0 ? 'stats-warn' : '' %>">🔗 Unlinked colorized</a>
@@ -71,11 +71,11 @@
     <div class="stats-row-group">
       <div class="stats-row">
         <a href="/catalog?show_all=1&f_unprinted=0" class="stats-label stats-link">Any printed</a>
-        <span class="stats-value"><%= @total_printed %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_printed * 100 / @total_trackable) : 0 %>%)</span></span>
+        <span class="stats-value"><%= @total_printed %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_printed * 100.0 / @total_trackable).round(1) : 0 %>%)</span></span>
       </div>
       <div class="stats-row">
         <a href="/catalog?show_all=1&f_unprinted=1" class="stats-label stats-link stats-warn">Unprinted</a>
-        <span class="stats-value stats-warn"><%= @total_unprinted %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_unprinted * 100 / @total_trackable) : 0 %>%)</span></span>
+        <span class="stats-value stats-warn"><%= @total_unprinted %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_unprinted * 100.0 / @total_trackable).round(1) : 0 %>%)</span></span>
       </div>
       <div class="stats-row">
         <span class="stats-label">Total copies</span>
@@ -91,11 +91,11 @@
     <div class="stats-row-group">
       <div class="stats-row">
         <a href="/catalog?show_all=1&f_unpainted=0" class="stats-label stats-link">Any painted</a>
-        <span class="stats-value"><%= @total_painted %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_painted * 100 / @total_trackable) : 0 %>%)</span></span>
+        <span class="stats-value"><%= @total_painted %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_painted * 100.0 / @total_trackable).round(1) : 0 %>%)</span></span>
       </div>
       <div class="stats-row">
         <a href="/catalog?show_all=1&f_unpainted=1" class="stats-label stats-link stats-warn">Unpainted</a>
-        <span class="stats-value stats-warn"><%= @total_unpainted %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_unpainted * 100 / @total_trackable) : 0 %>%)</span></span>
+        <span class="stats-value stats-warn"><%= @total_unpainted %> <span class="stats-pct">(<%= @total_trackable > 0 ? (@total_unpainted * 100.0 / @total_trackable).round(1) : 0 %>%)</span></span>
       </div>
       <div class="stats-row">
         <span class="stats-label">Total copies</span>
@@ -125,7 +125,7 @@
             <tr>
               <td><a href="/search?species=<%= CGI.escape(s) %>" class="stats-link"><%= s %></a></td>
               <td><%= count %></td>
-              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
+              <td class="stats-pct"><%= @total_images > 0 ? (count * 100.0 / @total_images).round(1) : 0 %>%</td>
             </tr>
           <% end %>
         </tbody>
@@ -164,7 +164,7 @@
             <tr data-mm="<%= s.to_s.scan(/\d+/).first.to_i %>">
               <td><a href="/search?mini_size=<%= CGI.escape(s) %>" class="stats-link"><%= s %></a></td>
               <td><%= count %></td>
-              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
+              <td class="stats-pct"><%= @total_images > 0 ? (count * 100.0 / @total_images).round(1) : 0 %>%</td>
             </tr>
           <% end %>
         </tbody>
@@ -189,7 +189,7 @@
             <tr>
               <td><a href="/search?weapons=<%= CGI.escape(w) %>" class="stats-link"><%= w %></a></td>
               <td><%= count %></td>
-              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
+              <td class="stats-pct"><%= @total_images > 0 ? (count * 100.0 / @total_images).round(1) : 0 %>%</td>
             </tr>
           <% end %>
         </tbody>
@@ -214,7 +214,7 @@
             <tr>
               <td><a href="/search?stance=<%= CGI.escape(s) %>" class="stats-link"><%= s %></a></td>
               <td><%= count %></td>
-              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
+              <td class="stats-pct"><%= @total_images > 0 ? (count * 100.0 / @total_images).round(1) : 0 %>%</td>
             </tr>
           <% end %>
         </tbody>
@@ -239,7 +239,7 @@
             <tr>
               <td><a href="/search?armour=<%= CGI.escape(a) %>" class="stats-link"><%= a %></a></td>
               <td><%= count %></td>
-              <td class="stats-pct"><%= @total_images > 0 ? (count * 100 / @total_images) : 0 %>%</td>
+              <td class="stats-pct"><%= @total_images > 0 ? (count * 100.0 / @total_images).round(1) : 0 %>%</td>
             </tr>
           <% end %>
         </tbody>

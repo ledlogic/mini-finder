@@ -38,9 +38,21 @@
      class="col-year-btn <%= @no_vehicles ? 'col-year-active' : '' %>">
     🚫 Vehicles
   </a>
-  <a href="<%= url_random(unprinted: !@unprinted_only) %>"
+  <a href="<%= url_random(no_robots: !@no_robots) %>"
+     class="col-year-btn <%= @no_robots ? 'col-year-active' : '' %>">
+    🤖 No Robots
+  </a>
+  <a href="<%= url_random(no_drones: !@no_drones) %>"
+     class="col-year-btn <%= @no_drones ? 'col-year-active' : '' %>">
+    🚁 No Drones
+  </a>
+  <a href="<%= url_random(unprinted: !@unprinted_only, printed: false) %>"
      class="col-year-btn <%= @unprinted_only ? 'col-year-active' : '' %>">
     🖨 Unprinted only
+  </a>
+  <a href="<%= url_random(printed: !@printed_only, unprinted: false) %>"
+     class="col-year-btn <%= @printed_only ? 'col-year-active' : '' %>">
+    🖨 Printed only
   </a>
 </div>
 <div class="col-year-bar" style="margin-bottom:18px;">
