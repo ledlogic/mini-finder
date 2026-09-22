@@ -317,7 +317,7 @@
                            img[:weapons].to_s.strip.empty?)
         %>
         <tr class="img-row <%= img[:tagged] ? 'row-tagged' : 'row-untagged' %> <%= is_secondary ? 'row-is-secondary' : '' %> <%= _incomplete ? 'row-incomplete' : '' %> <%= _is_bundle ? 'row-is-bundle' : '' %>" data-id="<%= img[:id] %>" id="row-<%= img[:id] %>">
-          <% _ctx = url_query({folder: @folder_filter, show_all: (@show_all ? '1' : ''), f_untagged: (@f_untagged ? '1' : ''), f_unprinted: (@f_unprinted ? '1' : ''), f_unpainted: (@f_unpainted ? '1' : ''), colorized: @colorized_catalog}) %>
+          <% _ctx = url_query({folder: @folder_filter, show_all: (@show_all ? '1' : ''), f_untagged: (@f_untagged ? '1' : ''), f_unprinted: (@f_unprinted ? '1' : ''), f_unpainted: (@f_unpainted ? '1' : '')}) %>
           <td class="cell-thumb">
             <div class="thumb-wrap">
               <img

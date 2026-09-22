@@ -152,10 +152,15 @@ function saveRow(id, ctx, btn) {
   });
 
   // Append context params (folder filter, flags etc)
+  // Skip fields that are already set by the row form to avoid duplicates overriding the row value
+  var SKIP_CTX_FIELDS = ['colorized', 'mini_name', 'species', 'gender', 'stance', 'weapons', 'armour', 'mini_size', 'mini_count', 'printed', 'painted', 'orientation', 'description'];
   if (ctx) {
     ctx.split('&').forEach(function(pair) {
       var parts = pair.split('=');
-      if (parts[0]) data.append(decodeURIComponent(parts[0]), decodeURIComponent(parts[1] || ''));
+      var key = decodeURIComponent(parts[0] || '');
+      if (key && SKIP_CTX_FIELDS.indexOf(key) === -1) {
+        data.append(key, decodeURIComponent(parts[1] || ''));
+      }
     });
   }
 

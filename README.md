@@ -278,6 +278,18 @@ mini-finder/
 
 ## Changelog
 
+### v3.38 — July 25, 2026
+- Random page: standardised filter button labels — all exclusions now "No X", status filters are "Unprinted" / "Printed"
+
+### v3.37 — July 25, 2026
+- Fixed root cause: colorized removed from _ctx so it is never appended to save POST — was overriding the row's own colorized value
+
+### v3.36 — July 25, 2026
+- Fixed: saveRow was appending colorized=true from URL query string after the row's colorized=false, causing the wrong value to be saved; row fields are now skipped when appending context params
+
+### v3.35 — July 25, 2026
+- Fixed: changing colorized from color→grey on a filtered view (?colorized=true) now works — query string param was overriding the form body value; save route now reads from request.POST first
+
 ### v3.34 — July 25, 2026
 - Search: free-text query (q field) now also searches filenames — e.g. "september" matches files like "september22.jpg"
 
