@@ -23,11 +23,14 @@
 </div>
 
 <div class="growth-table-wrap">
-  <table class="stats-table" style="max-width:520px;">
+  <table class="stats-table" style="max-width:700px;">
     <thead>
       <tr>
         <th>Period</th>
 
+        <th style="text-align:right; color:#f59e0b;">+New</th>
+        <th style="text-align:right; color:#86efac;">+Printed</th>
+        <th style="text-align:right; color:#ef4444;">+Unprinted</th>
         <th style="text-align:right; color:#64748b;">Printable</th>
         <th style="text-align:right; color:#22c55e;">Printed</th>
 
@@ -46,6 +49,9 @@
             <% end %>
           </td>
 
+          <td style="text-align:right; color:#f59e0b;"><%= row[:new_printable] %></td>
+          <td style="text-align:right; color:#86efac;"><%= row[:new_printed] %></td>
+          <td style="text-align:right; color:#ef4444;"><%= row[:new_printable].to_i - row[:new_printed].to_i %></td>
           <td style="text-align:right; color:#64748b;"><%= row[:printable] %></td>
           <td style="text-align:right; color:#22c55e;"><%= row[:printed] %></td>
 
@@ -70,7 +76,9 @@ var growthData = <%= @growth_data.to_json %>;
   var totals     = growthData.map(function(d) { return d.total; });
   var printed    = growthData.map(function(d) { return d.printed; });
   var painted    = growthData.map(function(d) { return d.painted; });
-  var printable  = growthData.map(function(d) { return d.printable; });
+  var printable     = growthData.map(function(d) { return d.printable; });
+  var newPrintable  = growthData.map(function(d) { return d.new_printable; });
+  var newPrinted    = growthData.map(function(d) { return d.new_printed; });
   var released   = growthData.map(function(d) { return d.released; });
 
   var style   = getComputedStyle(document.documentElement);
@@ -90,7 +98,9 @@ var growthData = <%= @growth_data.to_json %>;
   var cw  = W - pad.left - pad.right;
   var ch  = H - pad.top  - pad.bottom;
 
-  var maxVal = Math.max.apply(null, printable) || 1;
+  if (!months.length) return;
+  var maxVal = Math.max.apply(null, printable.concat(newPrintable).filter(function(v){ return v != null; }));
+  if (!isFinite(maxVal) || maxVal <= 0) maxVal = 1;
   var n      = months.length;
   var step   = n > 1 ? cw / (n - 1) : cw;
 
@@ -112,6 +122,7 @@ var growthData = <%= @growth_data.to_json %>;
   ctx.setLineDash([]);
 
   function drawLine(data, color, fill) {
+    if (!data || !data.length) return;
     ctx.beginPath();
     ctx.moveTo(xPos(0), yPos(data[0]));
     for (var i = 1; i < data.length; i++) ctx.lineTo(xPos(i), yPos(data[i]));
@@ -136,8 +147,10 @@ var growthData = <%= @growth_data.to_json %>;
     });
   }
 
-  drawLine(printable,  '#64748b',  false);
-  drawLine(printed,    '#22c55e',  false);
+  drawLine(printable,   '#64748b',  false);
+  drawLine(printed,     '#22c55e',  false);
+  drawLine(newPrintable,'#f59e0b',  false);
+  drawLine(newPrinted,  '#86efac',  false);
 
 
   // X-axis labels (every N months)
@@ -155,7 +168,7 @@ var growthData = <%= @growth_data.to_json %>;
 
   // Legend
   var lx = pad.left; var ly = H - 10;
-  [['#64748b', 'Printable'], ['#22c55e', 'Printed']].forEach(function(item, i) {
+  [['#64748b', 'Cum. Printable'], ['#22c55e', 'Cum. Printed'], ['#f59e0b', 'New Printable'], ['#86efac', 'New Printed']].forEach(function(item, i) {
     ctx.fillStyle = item[0];
     ctx.fillRect(lx + i * 90, ly - 8, 14, 3);
     ctx.fillStyle = dim; ctx.font = '10px DM Mono, monospace'; ctx.textAlign = 'left';

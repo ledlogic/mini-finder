@@ -10,6 +10,61 @@ require 'fileutils'
 require 'rtesseract'
 require 'mini_magick'
 
+# ── Auto-update watcher ────────────────────────────────────────────────────────
+# Drop any mini-finder*.zip into the project root folder and this thread will
+# detect it, extract it over the existing files, and restart the server.
+Thread.new do
+  watch_dir  = File.dirname(__FILE__)
+  # Support both 'uploads' and 'upload' folder names
+  upload_dir = [File.join(watch_dir, 'uploads'), File.join(watch_dir, 'upload')].find { |d| Dir.exist?(d) } ||
+               File.join(watch_dir, 'uploads')
+  FileUtils.mkdir_p(upload_dir)
+  puts "[watcher] Monitoring #{upload_dir} for mini-finder*.zip drops..."
+  loop do
+    # Match any zip with 'mini-finder' in the name (handles spaces, parens, version numbers)
+    zips = Dir.glob(File.join(upload_dir, '*mini-finder*.zip')).sort_by { |f| File.mtime(f) }
+    if zips.any?
+      zip = zips.last
+      puts "[watcher] Detected #{File.basename(zip)} — extracting..."
+      begin
+        # Extract zip contents into project root, overwriting existing files
+        # Use Ruby's built-in unzip via system call
+        ps_zip = zip.gsub("'","''"); ps_dst = watch_dir.gsub("'","''")
+        result = system('powershell', '-Command', "Expand-Archive -Force -Path '#{zip}' -DestinationPath '#{watch_dir}'")
+        if result
+          # Move extracted files up from mini-finder/ subfolder if present
+          extracted_dir = File.join(watch_dir, 'mini-finder')
+          if Dir.exist?(extracted_dir)
+            Dir.glob(File.join(extracted_dir, '**', '*')).each do |src|
+              rel = src.sub(extracted_dir + File::SEPARATOR, '')
+              dst = File.join(watch_dir, rel)
+              if File.directory?(src)
+                FileUtils.mkdir_p(dst)
+              else
+                FileUtils.mkdir_p(File.dirname(dst))
+                FileUtils.cp(src, dst)
+              end
+            end
+            FileUtils.rm_rf(extracted_dir)
+          end
+          # Remove the zip so we don't re-process it
+          File.delete(zip)
+          puts "[watcher] Extraction complete. Restarting server..."
+          # Signal the process to restart (works with rerun/foreman, or just exits for manual restart)
+          exec $0, *ARGV
+        else
+          puts "[watcher] Extraction failed for #{File.basename(zip)}"
+          File.rename(zip, zip + '.failed')
+        end
+      rescue => e
+        puts "[watcher] Error: #{e.message}"
+      end
+    end
+    sleep 3
+  end
+end
+
+
 require_relative 'lib/helpers'
 require_relative 'lib/url_helpers'
 require_relative 'lib/file_helpers'
@@ -34,7 +89,7 @@ BACKUP_DIR   = File.join(File.dirname(__FILE__), 'db', 'backups')
 BACKUP_KEEP  = 20   # how many backups to retain
 
 CHANGES_BEFORE_REMINDER = 25
-APP_VERSION = "3.38"
+APP_VERSION = "3.47"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -595,16 +650,21 @@ get '/growth' do
     period_to_col[key] << col_id
   end
 
+  puts "[growth-debug] by_period sample: #{sorted_periods.first} => #{by_period[sorted_periods.first].inspect}"
   @growth_data = sorted_periods.map do |m|
+    period_printable = by_period[m][:printable]
+    period_printed   = by_period[m][:printed]
     cum_total     += by_period[m][:total]
-    cum_printed   += by_period[m][:printed]
+    cum_printed   += period_printed
     cum_painted   += by_period[m][:painted]
-    cum_printable += by_period[m][:printable]
+    cum_printable += period_printable
     cum_released  += by_period[m][:released]
     col_ids = period_to_col[m] || []
     col_link = col_ids.length == 1 ? "/collection/#{col_ids.first}" : nil
     { month: m, total: cum_total, printed: cum_printed, painted: cum_painted,
-      printable: cum_printable, released: cum_released, col_link: col_link, col_count: col_ids.length }
+      printable: cum_printable, released: cum_released,
+      new_printable: period_printable, new_printed: period_printed,
+      col_link: col_link, col_count: col_ids.length }
   end
 
   @page_title = 'Growth'

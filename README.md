@@ -278,6 +278,33 @@ mini-finder/
 
 ## Changelog
 
+### v3.47 — July 25, 2026
+- Growth table: added +Unprinted column (new_printable minus new_printed per period)
+
+### v3.46 — July 25, 2026
+- Growth table: reordered columns to +New · +Printed · Printable · Printed
+
+### v3.45 — July 25, 2026
+- Fixed syntax error in watcher PowerShell command — now uses array-form system() call to avoid quoting issues
+
+### v3.44 — July 25, 2026
+- Auto-update watcher: supports both upload/ and uploads/ folder; matches any *mini-finder*.zip (handles spaces and parens like "mini-finder (11).zip"); PowerShell path quoting fixed for paths with spaces
+
+### v3.43 — July 25, 2026
+- Auto-update watcher: now monitors uploads/ subdirectory instead of project root
+
+### v3.42 — July 25, 2026
+- Auto-update watcher: drop any mini-finder*.zip into the project root and the server detects it, extracts it over existing files, and restarts automatically (checks every 3 seconds; failed zips renamed .failed)
+
+### v3.41 — July 25, 2026
+- Growth table: widened to 700px to fit New and +Printed columns
+
+### v3.40 — July 25, 2026
+- Growth chart: fixed renderer crash from invalid maxVal when arrays are empty; guard added to drawLine and early-exit if no data
+
+### v3.39 — July 25, 2026
+- Growth chart: added New Printable (amber) and New Printed (light green) per-period lines alongside cumulative lines; table shows all four columns
+
 ### v3.38 — July 25, 2026
 - Random page: standardised filter button labels — all exclusions now "No X", status filters are "Unprinted" / "Printed"
 
